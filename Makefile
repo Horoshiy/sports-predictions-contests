@@ -1,0 +1,73 @@
+.PHONY: help setup build test clean docker-up docker-down proto frontend backend
+
+# Default target
+help: ## Show this help message
+	@echo "Sports Prediction Contests - Development Commands"
+	@echo "================================================="
+	@awk 'BEGIN {FS = ":.*##"} /^[a-zA-Z_-]+:.*##/ { printf "  %-15s %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
+
+setup: ## Setup development environment
+	@echo "Setting up development environment..."
+	@cp .env.example .env 2>/dev/null || true
+	@chmod +x scripts/setup.sh
+	@./scripts/setup.sh
+
+build: ## Build all services
+	@echo "Building all services..."
+	@$(MAKE) backend
+	@$(MAKE) frontend
+
+backend: ## Build backend services
+	@echo "Building backend services..."
+	@cd backend && go work sync
+	@cd backend/shared && go mod tidy
+	@echo "Backend services ready for development"
+
+frontend: ## Build frontend application
+	@echo "Building frontend application..."
+	@cd frontend && npm install
+	@cd frontend && npm run build
+
+test: ## Run all tests
+	@echo "Running tests..."
+	@cd backend && go test ./...
+	@cd frontend && npm test
+
+proto: ## Generate Protocol Buffers code
+	@echo "Generating Protocol Buffers code..."
+	@protoc --proto_path=backend/proto \
+		--go_out=backend/shared \
+		--go-grpc_out=backend/shared \
+		backend/proto/*.proto
+
+docker-up: ## Start development environment with Docker
+	@echo "Starting development environment..."
+	@docker-compose up -d postgres redis
+
+docker-down: ## Stop development environment
+	@echo "Stopping development environment..."
+	@docker-compose down
+
+docker-services: ## Start all services with Docker
+	@echo "Starting all services..."
+	@docker-compose --profile services up -d
+
+clean: ## Clean build artifacts
+	@echo "Cleaning build artifacts..."
+	@rm -rf backend/*/bin
+	@rm -rf frontend/build
+	@rm -rf frontend/node_modules
+	@docker-compose down -v
+
+dev: ## Start development servers
+	@echo "Starting development servers..."
+	@$(MAKE) docker-up
+	@echo "Development environment ready!"
+	@echo "PostgreSQL: localhost:5432"
+	@echo "Redis: localhost:6379"
+
+logs: ## Show Docker logs
+	@docker-compose logs -f
+
+status: ## Show service status
+	@docker-compose ps

@@ -1,0 +1,90 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: sports-postgres
+    environment:
+      POSTGRES_DB: sports_prediction
+      POSTGRES_USER: sports_user
+      POSTGRES_PASSWORD: sports_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    networks:
+      - sports-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: sports-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - sports-network
+
+  # API Gateway service placeholder
+  api-gateway:
+    build:
+      context: ./backend/api-gateway
+      dockerfile: Dockerfile
+    container_name: sports-api-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      - DATABASE_URL=postgres://sports_user:sports_password@postgres:5432/sports_prediction?sslmode=disable
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - sports-network
+    profiles:
+      - services
+
+  # Contest service placeholder
+  contest-service:
+    build:
+      context: ./backend/contest-service
+      dockerfile: Dockerfile
+    container_name: sports-contest-service
+    ports:
+      - "8081:8081"
+    environment:
+      - DATABASE_URL=postgres://sports_user:sports_password@postgres:5432/sports_prediction?sslmode=disable
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - sports-network
+    profiles:
+      - services
+
+  # Frontend service placeholder
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: sports-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_URL=http://api-gateway:8080
+    depends_on:
+      - api-gateway
+    networks:
+      - sports-network
+    profiles:
+      - services
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  sports-network:
+    driver: bridge

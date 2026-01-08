@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+package common;
+
+option go_package = "github.com/sports-prediction-contests/shared/proto/common";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+// Common response wrapper
+message Response {
+  bool success = 1;
+  string message = 2;
+  int32 code = 3;
+  google.protobuf.Timestamp timestamp = 4;
+}
+
+// Pagination request
+message PaginationRequest {
+  int32 page = 1;
+  int32 limit = 2;
+  string sort_by = 3;
+  string sort_order = 4; // "asc" or "desc"
+}
+
+// Pagination response
+message PaginationResponse {
+  int32 page = 1;
+  int32 limit = 2;
+  int32 total = 3;
+  int32 total_pages = 4;
+}
+
+// Generic ID request
+message IdRequest {
+  string id = 1;
+}
+
+// Health check service
+service HealthService {
+  rpc Check(google.protobuf.Empty) returns (Response);
+  rpc Ready(google.protobuf.Empty) returns (Response);
+}
+
+// Common error codes
+enum ErrorCode {
+  UNKNOWN = 0;
+  INVALID_ARGUMENT = 1;
+  NOT_FOUND = 2;
+  ALREADY_EXISTS = 3;
+  PERMISSION_DENIED = 4;
+  UNAUTHENTICATED = 5;
+  INTERNAL_ERROR = 6;
+  UNAVAILABLE = 7;
+}

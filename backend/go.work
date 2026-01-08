@@ -1,0 +1,12 @@
+go 1.21
+
+use (
+	./shared
+	./api-gateway
+	./contest-service
+	./prediction-service
+	./scoring-service
+	./user-service
+	./sports-service
+	./notification-service
+)

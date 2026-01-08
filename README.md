@@ -1,8 +1,20 @@
-# Dynamous Kiro Hackathon Quickstart Template
+# Sports Prediction Contests Platform
 
-🚀 **Your starting point for the Dynamous and Kiro Hackathon** - A comprehensive template with pre-configured Kiro CLI setup, development workflows, and submission guidelines.
+🏆 **A multilingual, multi-sport API-first platform for creating and running sports prediction competitions** - Built for the Dynamous Kiro Hackathon with comprehensive microservices architecture.
 
 > **📖 New to Kiro?** Check out [kiro-guide.md](kiro-guide.md) to quickly get accustomed to how Kiro works and understand its unique features for the hackathon.
+
+## Project Overview
+
+Sports Prediction Contests is a gamification platform that transforms sports prediction competitions from niche products into universal engagement engines for sports communities. The platform enables quick creation of prediction contests across multiple sports, languages, and platforms.
+
+### Key Features
+
+- **Contest Constructor**: Customizable rules, scoring systems, and sport types
+- **Multi-platform Support**: Web, mobile apps, Telegram/Facebook bots
+- **API-First Architecture**: gRPC-based microservices with open API
+- **Real-time Updates**: Live scoring and leaderboards
+- **Gamification**: Statistics tracking, achievements, and rankings
 
 ## About the Hackathon
 
@@ -22,29 +34,75 @@ This template provides everything you need to get started:
 - **📖 Examples**: Sample README and DEVLOG showing best practices
 - **🏆 Hackathon Tools**: Specialized code review prompt for submission evaluation
 
+## Prerequisites
+
+Before setting up the development environment, ensure you have the following installed:
+
+- **Go 1.21+** - [Installation Guide](https://golang.org/doc/install)
+- **Node.js 18+** - [Installation Guide](https://nodejs.org/en/download/)
+- **Docker & Docker Compose** - [Installation Guide](https://docs.docker.com/get-docker/)
+- **Protocol Buffers Compiler** - [Installation Guide](https://grpc.io/docs/protoc-installation/)
+
 ## Quick Start
 
-### 1. Clone This Template
+### 1. Clone and Setup
 ```bash
 git clone https://github.com/coleam00/dynamous-kiro-hackathon
 cd dynamous-kiro-hackathon
+make setup
 ```
 
-### 2. Run the Setup Wizard
+### 2. Start Development Environment
 ```bash
-@quickstart
+make dev
 ```
 
-This assumes you already have Kiro CLI installed and that you started with the `kiro-cli` command in your terminal.
+This will:
+- Start PostgreSQL database (localhost:5432)
+- Start Redis cache (localhost:6379)
+- Set up all project dependencies
 
-This interactive wizard will:
-- ✅ Fill out your steering documents with project details
-- ✅ Configure your development workflow
-- ✅ Set up Kiro CLI for your specific project
-- ✅ Explain all available prompts and features
+### 3. Verify Setup
+```bash
+make status
+```
 
-### 3. Start Building
-Your project is now configured! Use these core prompts:
+## Architecture Overview
+
+### Microservices Structure
+```
+backend/
+├── api-gateway/           # API Gateway and routing
+├── contest-service/       # Contest management
+├── prediction-service/    # User predictions
+├── scoring-service/       # Points calculation
+├── user-service/          # Authentication & users
+├── sports-service/        # Sports events
+├── notification-service/  # Alerts & bots
+├── proto/                 # gRPC definitions
+└── shared/                # Common libraries
+```
+
+### Technology Stack
+- **Backend**: Go, gRPC, PostgreSQL, Redis
+- **Frontend**: React, TypeScript, Material-UI, Vite
+- **Infrastructure**: Docker, Docker Compose
+- **Communication**: gRPC for services, gRPC-Web for browser
+
+## Development Workflow
+
+### Core Commands
+```bash
+make help          # Show all available commands
+make setup         # Initial environment setup
+make dev           # Start development environment
+make build         # Build all services
+make test          # Run all tests
+make clean         # Clean build artifacts
+```
+
+### Using Kiro CLI
+This project is optimized for development with Kiro CLI:
 - **`@prime`** - Load project context
 - **`@plan-feature`** - Plan new features
 - **`@execute`** - Implement plans systematically
