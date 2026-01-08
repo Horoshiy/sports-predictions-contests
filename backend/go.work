@@ -1,12 +1,12 @@
 go 1.21
 
 use (
-	./shared
 	./api-gateway
 	./contest-service
+	./notification-service
 	./prediction-service
 	./scoring-service
-	./user-service
+	./shared
 	./sports-service
-	./notification-service
+	./user-service
 )

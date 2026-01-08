@@ -1,0 +1,75 @@
+syntax = "proto3";
+
+package user;
+
+option go_package = "github.com/sports-prediction-contests/shared/proto/user";
+
+import "google/protobuf/timestamp.proto";
+import "common.proto";
+
+// User message
+message User {
+  uint32 id = 1;
+  string email = 2;
+  string name = 3;
+  google.protobuf.Timestamp created_at = 4;
+  google.protobuf.Timestamp updated_at = 5;
+}
+
+// Registration request
+message RegisterRequest {
+  string email = 1;
+  string password = 2;
+  string name = 3;
+}
+
+// Registration response
+message RegisterResponse {
+  common.Response response = 1;
+  User user = 2;
+  string token = 3;
+}
+
+// Login request
+message LoginRequest {
+  string email = 1;
+  string password = 2;
+}
+
+// Login response
+message LoginResponse {
+  common.Response response = 1;
+  User user = 2;
+  string token = 3;
+}
+
+// Get profile request
+message GetProfileRequest {
+  // User ID will be extracted from JWT token
+}
+
+// Get profile response
+message GetProfileResponse {
+  common.Response response = 1;
+  User user = 2;
+}
+
+// Update profile request
+message UpdateProfileRequest {
+  string name = 1;
+  string email = 2;
+}
+
+// Update profile response
+message UpdateProfileResponse {
+  common.Response response = 1;
+  User user = 2;
+}
+
+// User service definition
+service UserService {
+  rpc Register(RegisterRequest) returns (RegisterResponse);
+  rpc Login(LoginRequest) returns (LoginResponse);
+  rpc GetProfile(GetProfileRequest) returns (GetProfileResponse);
+  rpc UpdateProfile(UpdateProfileRequest) returns (UpdateProfileResponse);
+}

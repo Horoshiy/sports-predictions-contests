@@ -45,17 +45,41 @@ services:
     profiles:
       - services
 
-  # Contest service placeholder
+  # User service
+  user-service:
+    build:
+      context: ./backend/user-service
+      dockerfile: Dockerfile
+    container_name: sports-user-service
+    ports:
+      - "8084:8084"
+    environment:
+      - DATABASE_URL=postgres://sports_user:sports_password@postgres:5432/sports_prediction?sslmode=disable
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=your_jwt_secret_key_here
+      - JWT_EXPIRATION=24h
+      - USER_SERVICE_PORT=8084
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - sports-network
+    profiles:
+      - services
+
+  # Contest service
   contest-service:
     build:
       context: ./backend/contest-service
       dockerfile: Dockerfile
     container_name: sports-contest-service
     ports:
-      - "8081:8081"
+      - "8085:8085"
     environment:
       - DATABASE_URL=postgres://sports_user:sports_password@postgres:5432/sports_prediction?sslmode=disable
       - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=your_jwt_secret_key_here
+      - CONTEST_SERVICE_PORT=8085
     depends_on:
       - postgres
       - redis

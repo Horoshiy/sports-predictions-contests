@@ -1,0 +1,145 @@
+syntax = "proto3";
+
+package contest;
+
+option go_package = "github.com/sports-prediction-contests/shared/proto/contest";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+import "common.proto";
+
+// Contest represents a sports prediction contest
+message Contest {
+  uint32 id = 1;
+  string title = 2;
+  string description = 3;
+  string sport_type = 4;
+  string rules = 5; // JSON string for flexible rule configuration
+  string status = 6; // "draft", "active", "completed", "cancelled"
+  google.protobuf.Timestamp start_date = 7;
+  google.protobuf.Timestamp end_date = 8;
+  uint32 max_participants = 9;
+  uint32 current_participants = 10;
+  uint32 creator_id = 11;
+  google.protobuf.Timestamp created_at = 12;
+  google.protobuf.Timestamp updated_at = 13;
+}
+
+// Participant represents a contest participant
+message Participant {
+  uint32 id = 1;
+  uint32 contest_id = 2;
+  uint32 user_id = 3;
+  string role = 4; // "admin", "participant"
+  string status = 5; // "active", "inactive", "banned"
+  google.protobuf.Timestamp joined_at = 6;
+}
+
+// Request messages
+message CreateContestRequest {
+  string title = 1;
+  string description = 2;
+  string sport_type = 3;
+  string rules = 4;
+  google.protobuf.Timestamp start_date = 5;
+  google.protobuf.Timestamp end_date = 6;
+  uint32 max_participants = 7;
+}
+
+message UpdateContestRequest {
+  uint32 id = 1;
+  string title = 2;
+  string description = 3;
+  string sport_type = 4;
+  string rules = 5;
+  google.protobuf.Timestamp start_date = 6;
+  google.protobuf.Timestamp end_date = 7;
+  uint32 max_participants = 8;
+  string status = 9;
+}
+
+message GetContestRequest {
+  uint32 id = 1;
+}
+
+message DeleteContestRequest {
+  uint32 id = 1;
+}
+
+message ListContestsRequest {
+  common.PaginationRequest pagination = 1;
+  string status = 2; // Filter by status
+  string sport_type = 3; // Filter by sport type
+}
+
+message JoinContestRequest {
+  uint32 contest_id = 1;
+}
+
+message LeaveContestRequest {
+  uint32 contest_id = 1;
+}
+
+message ListParticipantsRequest {
+  uint32 contest_id = 1;
+  common.PaginationRequest pagination = 2;
+}
+
+// Response messages
+message CreateContestResponse {
+  common.Response response = 1;
+  Contest contest = 2;
+}
+
+message UpdateContestResponse {
+  common.Response response = 1;
+  Contest contest = 2;
+}
+
+message GetContestResponse {
+  common.Response response = 1;
+  Contest contest = 2;
+}
+
+message DeleteContestResponse {
+  common.Response response = 1;
+}
+
+message ListContestsResponse {
+  common.Response response = 1;
+  repeated Contest contests = 2;
+  common.PaginationResponse pagination = 3;
+}
+
+message JoinContestResponse {
+  common.Response response = 1;
+  Participant participant = 2;
+}
+
+message LeaveContestResponse {
+  common.Response response = 1;
+}
+
+message ListParticipantsResponse {
+  common.Response response = 1;
+  repeated Participant participants = 2;
+  common.PaginationResponse pagination = 3;
+}
+
+// Contest Service
+service ContestService {
+  // Contest management
+  rpc CreateContest(CreateContestRequest) returns (CreateContestResponse);
+  rpc UpdateContest(UpdateContestRequest) returns (UpdateContestResponse);
+  rpc GetContest(GetContestRequest) returns (GetContestResponse);
+  rpc DeleteContest(DeleteContestRequest) returns (DeleteContestResponse);
+  rpc ListContests(ListContestsRequest) returns (ListContestsResponse);
+  
+  // Participant management
+  rpc JoinContest(JoinContestRequest) returns (JoinContestResponse);
+  rpc LeaveContest(LeaveContestRequest) returns (LeaveContestResponse);
+  rpc ListParticipants(ListParticipantsRequest) returns (ListParticipantsResponse);
+  
+  // Health check
+  rpc Check(google.protobuf.Empty) returns (common.Response);
+}
