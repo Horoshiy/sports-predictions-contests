@@ -1,0 +1,216 @@
+syntax = "proto3";
+
+package scoring;
+
+option go_package = "github.com/sports-prediction-contests/shared/proto/scoring";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+import "google/api/annotations.proto";
+import "common.proto";
+
+// Score represents a user's score for a specific prediction
+message Score {
+  uint32 id = 1;
+  uint32 user_id = 2;
+  uint32 contest_id = 3;
+  uint32 prediction_id = 4;
+  double points = 5;
+  google.protobuf.Timestamp scored_at = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+}
+
+// LeaderboardEntry represents a user's position in a contest leaderboard
+message LeaderboardEntry {
+  uint32 user_id = 1;
+  string user_name = 2;
+  double total_points = 3;
+  uint32 rank = 4;
+  google.protobuf.Timestamp updated_at = 5;
+}
+
+// Leaderboard represents a contest leaderboard
+message Leaderboard {
+  uint32 contest_id = 1;
+  repeated LeaderboardEntry entries = 2;
+  google.protobuf.Timestamp updated_at = 3;
+}
+
+// Request messages
+message CreateScoreRequest {
+  uint32 user_id = 1;
+  uint32 contest_id = 2;
+  uint32 prediction_id = 3;
+  double points = 4;
+}
+
+message UpdateScoreRequest {
+  uint32 id = 1;
+  double points = 2;
+}
+
+message GetScoreRequest {
+  uint32 id = 1;
+}
+
+message DeleteScoreRequest {
+  uint32 id = 1;
+}
+
+message ListScoresRequest {
+  common.PaginationRequest pagination = 1;
+  uint32 contest_id = 2;
+  uint32 user_id = 3;
+}
+
+message GetUserScoresRequest {
+  uint32 user_id = 1;
+  uint32 contest_id = 2;
+}
+
+message GetLeaderboardRequest {
+  uint32 contest_id = 1;
+  uint32 limit = 2; // Number of top entries to return
+}
+
+message GetUserRankRequest {
+  uint32 contest_id = 1;
+  uint32 user_id = 2;
+}
+
+message UpdateLeaderboardRequest {
+  uint32 contest_id = 1;
+}
+
+message CalculateScoreRequest {
+  uint32 prediction_id = 1;
+  string prediction_data = 2; // JSON string
+  string result_data = 3; // JSON string
+}
+
+// Response messages
+message CreateScoreResponse {
+  common.Response response = 1;
+  Score score = 2;
+}
+
+message UpdateScoreResponse {
+  common.Response response = 1;
+  Score score = 2;
+}
+
+message GetScoreResponse {
+  common.Response response = 1;
+  Score score = 2;
+}
+
+message DeleteScoreResponse {
+  common.Response response = 1;
+}
+
+message ListScoresResponse {
+  common.Response response = 1;
+  repeated Score scores = 2;
+  common.PaginationResponse pagination = 3;
+}
+
+message GetUserScoresResponse {
+  common.Response response = 1;
+  repeated Score scores = 2;
+  double total_points = 3;
+}
+
+message GetLeaderboardResponse {
+  common.Response response = 1;
+  Leaderboard leaderboard = 2;
+}
+
+message GetUserRankResponse {
+  common.Response response = 1;
+  uint32 rank = 2;
+  double total_points = 3;
+}
+
+message UpdateLeaderboardResponse {
+  common.Response response = 1;
+  Leaderboard leaderboard = 2;
+}
+
+message CalculateScoreResponse {
+  common.Response response = 1;
+  double points = 2;
+  string calculation_details = 3; // JSON string with calculation breakdown
+}
+
+// Scoring Service
+service ScoringService {
+  // Score management
+  rpc CreateScore(CreateScoreRequest) returns (CreateScoreResponse) {
+    option (google.api.http) = {
+      post: "/v1/scores"
+      body: "*"
+    };
+  }
+  rpc UpdateScore(UpdateScoreRequest) returns (UpdateScoreResponse) {
+    option (google.api.http) = {
+      put: "/v1/scores/{id}"
+      body: "*"
+    };
+  }
+  rpc GetScore(GetScoreRequest) returns (GetScoreResponse) {
+    option (google.api.http) = {
+      get: "/v1/scores/{id}"
+    };
+  }
+  rpc DeleteScore(DeleteScoreRequest) returns (DeleteScoreResponse) {
+    option (google.api.http) = {
+      delete: "/v1/scores/{id}"
+    };
+  }
+  rpc ListScores(ListScoresRequest) returns (ListScoresResponse) {
+    option (google.api.http) = {
+      get: "/v1/scores"
+    };
+  }
+  
+  // User score queries
+  rpc GetUserScores(GetUserScoresRequest) returns (GetUserScoresResponse) {
+    option (google.api.http) = {
+      get: "/v1/users/{user_id}/contests/{contest_id}/scores"
+    };
+  }
+  
+  // Leaderboard operations
+  rpc GetLeaderboard(GetLeaderboardRequest) returns (GetLeaderboardResponse) {
+    option (google.api.http) = {
+      get: "/v1/contests/{contest_id}/leaderboard"
+    };
+  }
+  rpc GetUserRank(GetUserRankRequest) returns (GetUserRankResponse) {
+    option (google.api.http) = {
+      get: "/v1/contests/{contest_id}/users/{user_id}/rank"
+    };
+  }
+  rpc UpdateLeaderboard(UpdateLeaderboardRequest) returns (UpdateLeaderboardResponse) {
+    option (google.api.http) = {
+      post: "/v1/contests/{contest_id}/leaderboard/update"
+      body: "*"
+    };
+  }
+  
+  // Scoring calculations
+  rpc CalculateScore(CalculateScoreRequest) returns (CalculateScoreResponse) {
+    option (google.api.http) = {
+      post: "/v1/scores/calculate"
+      body: "*"
+    };
+  }
+  
+  // Health check
+  rpc Check(google.protobuf.Empty) returns (common.Response) {
+    option (google.api.http) = {
+      get: "/v1/scoring/health"
+    };
+  }
+}

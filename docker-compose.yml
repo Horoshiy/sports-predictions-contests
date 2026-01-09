@@ -39,6 +39,7 @@ services:
       - USER_SERVICE_ENDPOINT=user-service:8084
       - CONTEST_SERVICE_ENDPOINT=contest-service:8085
       - PREDICTION_SERVICE_ENDPOINT=prediction-service:8086
+      - SCORING_SERVICE_ENDPOINT=scoring-service:8087
       - JWT_SECRET=your_jwt_secret_key_here
       - CORS_ALLOWED_ORIGINS=*
       - LOG_LEVEL=info
@@ -110,6 +111,30 @@ services:
     depends_on:
       - postgres
       - contest-service
+    networks:
+      - sports-network
+    profiles:
+      - services
+
+  # Scoring service
+  scoring-service:
+    build:
+      context: ./backend/scoring-service
+      dockerfile: Dockerfile
+    container_name: sports-scoring-service
+    ports:
+      - "8087:8087"
+    environment:
+      - DATABASE_URL=postgres://sports_user:sports_password@postgres:5432/sports_prediction?sslmode=disable
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=your_jwt_secret_key_here
+      - SCORING_SERVICE_PORT=8087
+      - CONTEST_SERVICE_ENDPOINT=contest-service:8085
+      - PREDICTION_SERVICE_ENDPOINT=prediction-service:8086
+      - LOG_LEVEL=info
+    depends_on:
+      - postgres
+      - redis
     networks:
       - sports-network
     profiles:

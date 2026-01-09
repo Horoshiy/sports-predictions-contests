@@ -1,0 +1,369 @@
+package service
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"log"
+
+	"github.com/sports-prediction-contests/scoring-service/internal/models"
+	"github.com/sports-prediction-contests/scoring-service/internal/repository"
+	"github.com/sports-prediction-contests/shared/auth"
+	pb "github.com/sports-prediction-contests/shared/proto/scoring"
+	"github.com/sports-prediction-contests/shared/proto/common"
+	"google.golang.org/protobuf/types/known/timestamppb"
+)
+
+// ScoringService implements the gRPC ScoringService
+type ScoringService struct {
+	pb.UnimplementedScoringServiceServer
+	scoreRepo       repository.ScoreRepositoryInterface
+	leaderboardRepo repository.LeaderboardRepositoryInterface
+}
+
+// NewScoringService creates a new ScoringService instance
+func NewScoringService(scoreRepo repository.ScoreRepositoryInterface, leaderboardRepo repository.LeaderboardRepositoryInterface) *ScoringService {
+	return &ScoringService{
+		scoreRepo:       scoreRepo,
+		leaderboardRepo: leaderboardRepo,
+	}
+}
+
+// PredictionData represents the structure of prediction data
+type PredictionData struct {
+	Type       string      `json:"type"`        // "exact_score", "winner", "over_under"
+	HomeScore  *int        `json:"home_score"`  // For exact score predictions
+	AwayScore  *int        `json:"away_score"`  // For exact score predictions
+	Winner     *string     `json:"winner"`      // "home", "away", "draw"
+	OverUnder  *string     `json:"over_under"`  // "over", "under"
+	Threshold  *float64    `json:"threshold"`   // For over/under predictions
+	Value      interface{} `json:"value"`       // Generic value for other prediction types
+}
+
+// ResultData represents the structure of event result data
+type ResultData struct {
+	HomeScore int     `json:"home_score"`
+	AwayScore int     `json:"away_score"`
+	Winner    string  `json:"winner"` // "home", "away", "draw"
+	TotalGoals int    `json:"total_goals"`
+}
+
+// CreateScore creates a new score record
+func (s *ScoringService) CreateScore(ctx context.Context, req *pb.CreateScoreRequest) (*pb.CreateScoreResponse, error) {
+	// Extract user ID from JWT token for authorization
+	_, err := auth.GetUserIDFromContext(ctx)
+	if err != nil {
+		log.Printf("[ERROR] Failed to get user ID from context: %v", err)
+		return &pb.CreateScoreResponse{
+			Response: &common.Response{
+				Success:   false,
+				Message:   "Authentication required",
+				Code:      int32(common.ErrorCode_UNAUTHENTICATED),
+				Timestamp: timestamppb.Now(),
+			},
+		}, nil
+	}
+
+	// Create score model
+	score := &models.Score{
+		UserID:       req.UserId,
+		ContestID:    req.ContestId,
+		PredictionID: req.PredictionId,
+		Points:       req.Points,
+	}
+
+	// Save to database
+	if err := s.scoreRepo.Create(ctx, score); err != nil {
+		log.Printf("[ERROR] Failed to create score: %v", err)
+		return &pb.CreateScoreResponse{
+			Response: &common.Response{
+				Success:   false,
+				Message:   "Failed to create score",
+				Code:      int32(common.ErrorCode_INTERNAL_ERROR),
+				Timestamp: timestamppb.Now(),
+			},
+		}, nil
+	}
+
+	// Update leaderboard
+	totalPoints, err := s.scoreRepo.GetTotalPointsByContestAndUser(ctx, req.ContestId, req.UserId)
+	if err != nil {
+		log.Printf("[ERROR] Failed to get total points: %v", err)
+		return &pb.CreateScoreResponse{
+			Response: &common.Response{
+				Success:   false,
+				Message:   "Failed to update leaderboard after score creation",
+				Code:      int32(common.ErrorCode_INTERNAL_ERROR),
+				Timestamp: timestamppb.Now(),
+			},
+		}, nil
+	}
+	
+	if err := s.leaderboardRepo.UpsertUserScore(ctx, req.ContestId, req.UserId, totalPoints); err != nil {
+		log.Printf("[ERROR] Failed to update leaderboard: %v", err)
+		return &pb.CreateScoreResponse{
+			Response: &common.Response{
+				Success:   false,
+				Message:   "Score created but leaderboard update failed",
+				Code:      int32(common.ErrorCode_INTERNAL_ERROR),
+				Timestamp: timestamppb.Now(),
+			},
+		}, nil
+	}
+
+	return &pb.CreateScoreResponse{
+		Response: &common.Response{
+			Success:   true,
+			Message:   "Score created successfully",
+			Code:      int32(common.ErrorCode_SUCCESS),
+			Timestamp: timestamppb.Now(),
+		},
+		Score: s.modelToProto(score),
+	}, nil
+}
+
+// GetScore retrieves a score by ID
+func (s *ScoringService) GetScore(ctx context.Context, req *pb.GetScoreRequest) (*pb.GetScoreResponse, error) {
+	score, err := s.scoreRepo.GetByID(ctx, req.Id)
+	if err != nil {
+		log.Printf("[ERROR] Failed to get score: %v", err)
+		return &pb.GetScoreResponse{
+			Response: &common.Response{
+				Success:   false,
+				Message:   "Score not found",
+				Code:      int32(common.ErrorCode_NOT_FOUND),
+				Timestamp: timestamppb.Now(),
+			},
+		}, nil
+	}
+
+	return &pb.GetScoreResponse{
+		Response: &common.Response{
+			Success:   true,
+			Message:   "Score retrieved successfully",
+			Code:      int32(common.ErrorCode_SUCCESS),
+			Timestamp: timestamppb.Now(),
+		},
+		Score: s.modelToProto(score),
+	}, nil
+}
+
+// CalculateScore calculates points based on prediction accuracy
+func (s *ScoringService) CalculateScore(ctx context.Context, req *pb.CalculateScoreRequest) (*pb.CalculateScoreResponse, error) {
+	// Parse prediction data
+	var predictionData PredictionData
+	if err := json.Unmarshal([]byte(req.PredictionData), &predictionData); err != nil {
+		return &pb.CalculateScoreResponse{
+			Response: &common.Response{
+				Success:   false,
+				Message:   "Invalid prediction data format",
+				Code:      int32(common.ErrorCode_INVALID_ARGUMENT),
+				Timestamp: timestamppb.Now(),
+			},
+		}, nil
+	}
+
+	// Parse result data
+	var resultData ResultData
+	if err := json.Unmarshal([]byte(req.ResultData), &resultData); err != nil {
+		return &pb.CalculateScoreResponse{
+			Response: &common.Response{
+				Success:   false,
+				Message:   "Invalid result data format",
+				Code:      int32(common.ErrorCode_INVALID_ARGUMENT),
+				Timestamp: timestamppb.Now(),
+			},
+		}, nil
+	}
+
+	// Calculate points based on prediction type
+	points, details := s.calculatePoints(predictionData, resultData)
+
+	detailsJSON, _ := json.Marshal(details)
+
+	return &pb.CalculateScoreResponse{
+		Response: &common.Response{
+			Success:   true,
+			Message:   "Score calculated successfully",
+			Code:      int32(common.ErrorCode_SUCCESS),
+			Timestamp: timestamppb.Now(),
+		},
+		Points:             points,
+		CalculationDetails: string(detailsJSON),
+	}, nil
+}
+
+// calculatePoints implements the scoring algorithm
+func (s *ScoringService) calculatePoints(prediction PredictionData, result ResultData) (float64, map[string]interface{}) {
+	details := map[string]interface{}{
+		"prediction_type": prediction.Type,
+		"result":          result,
+	}
+
+	switch prediction.Type {
+	case "exact_score":
+		return s.calculateExactScorePoints(prediction, result, details)
+	case "winner":
+		return s.calculateWinnerPoints(prediction, result, details)
+	case "over_under":
+		return s.calculateOverUnderPoints(prediction, result, details)
+	default:
+		details["error"] = "Unknown prediction type"
+		return 0, details
+	}
+}
+
+// calculateExactScorePoints calculates points for exact score predictions
+func (s *ScoringService) calculateExactScorePoints(prediction PredictionData, result ResultData, details map[string]interface{}) (float64, map[string]interface{}) {
+	if prediction.HomeScore == nil || prediction.AwayScore == nil {
+		details["error"] = "Missing score prediction"
+		return 0, details
+	}
+
+	predictedHome := *prediction.HomeScore
+	predictedAway := *prediction.AwayScore
+
+	details["predicted_score"] = fmt.Sprintf("%d-%d", predictedHome, predictedAway)
+	details["actual_score"] = fmt.Sprintf("%d-%d", result.HomeScore, result.AwayScore)
+
+	// Exact match: 10 points
+	if predictedHome == result.HomeScore && predictedAway == result.AwayScore {
+		details["match_type"] = "exact"
+		return 10, details
+	}
+
+	// Correct goal difference: 5 points
+	predictedDiff := predictedHome - predictedAway
+	actualDiff := result.HomeScore - result.AwayScore
+	if predictedDiff == actualDiff {
+		details["match_type"] = "goal_difference"
+		return 5, details
+	}
+
+	// Correct winner: 3 points
+	predictedWinner := s.determineWinner(predictedHome, predictedAway)
+	if predictedWinner == result.Winner {
+		details["match_type"] = "winner"
+		return 3, details
+	}
+
+	details["match_type"] = "none"
+	return 0, details
+}
+
+// calculateWinnerPoints calculates points for winner predictions
+func (s *ScoringService) calculateWinnerPoints(prediction PredictionData, result ResultData, details map[string]interface{}) (float64, map[string]interface{}) {
+	if prediction.Winner == nil {
+		details["error"] = "Missing winner prediction"
+		return 0, details
+	}
+
+	predictedWinner := *prediction.Winner
+	details["predicted_winner"] = predictedWinner
+	details["actual_winner"] = result.Winner
+
+	if predictedWinner == result.Winner {
+		details["match"] = true
+		return 3, details
+	}
+
+	details["match"] = false
+	return 0, details
+}
+
+// calculateOverUnderPoints calculates points for over/under predictions
+func (s *ScoringService) calculateOverUnderPoints(prediction PredictionData, result ResultData, details map[string]interface{}) (float64, map[string]interface{}) {
+	if prediction.OverUnder == nil || prediction.Threshold == nil {
+		details["error"] = "Missing over/under prediction or threshold"
+		return 0, details
+	}
+
+	predictedOverUnder := *prediction.OverUnder
+	threshold := *prediction.Threshold
+	totalGoals := float64(result.TotalGoals)
+
+	details["predicted"] = predictedOverUnder
+	details["threshold"] = threshold
+	details["total_goals"] = totalGoals
+
+	var correct bool
+	if predictedOverUnder == "over" {
+		correct = totalGoals > threshold
+	} else if predictedOverUnder == "under" {
+		correct = totalGoals < threshold
+	} else {
+		details["error"] = "Invalid over/under value"
+		return 0, details
+	}
+
+	details["correct"] = correct
+	if correct {
+		return 2, details
+	}
+
+	return 0, details
+}
+
+// determineWinner determines the winner based on scores
+func (s *ScoringService) determineWinner(homeScore, awayScore int) string {
+	if homeScore > awayScore {
+		return "home"
+	} else if awayScore > homeScore {
+		return "away"
+	}
+	return "draw"
+}
+
+// GetUserScores retrieves all scores for a user in a contest
+func (s *ScoringService) GetUserScores(ctx context.Context, req *pb.GetUserScoresRequest) (*pb.GetUserScoresResponse, error) {
+	scores, err := s.scoreRepo.GetByContestAndUser(ctx, req.ContestId, req.UserId)
+	if err != nil {
+		log.Printf("[ERROR] Failed to get user scores: %v", err)
+		return &pb.GetUserScoresResponse{
+			Response: &common.Response{
+				Success:   false,
+				Message:   "Failed to retrieve user scores",
+				Code:      int32(common.ErrorCode_INTERNAL_ERROR),
+				Timestamp: timestamppb.Now(),
+			},
+		}, nil
+	}
+
+	// Calculate total points
+	totalPoints, err := s.scoreRepo.GetTotalPointsByContestAndUser(ctx, req.ContestId, req.UserId)
+	if err != nil {
+		log.Printf("[ERROR] Failed to get total points: %v", err)
+		totalPoints = 0
+	}
+
+	// Convert to proto
+	protoScores := make([]*pb.Score, len(scores))
+	for i, score := range scores {
+		protoScores[i] = s.modelToProto(score)
+	}
+
+	return &pb.GetUserScoresResponse{
+		Response: &common.Response{
+			Success:   true,
+			Message:   "User scores retrieved successfully",
+			Code:      int32(common.ErrorCode_SUCCESS),
+			Timestamp: timestamppb.Now(),
+		},
+		Scores:      protoScores,
+		TotalPoints: totalPoints,
+	}, nil
+}
+
+// modelToProto converts a Score model to protobuf message
+func (s *ScoringService) modelToProto(score *models.Score) *pb.Score {
+	return &pb.Score{
+		Id:           uint32(score.ID),
+		UserId:       uint32(score.UserID),
+		ContestId:    uint32(score.ContestID),
+		PredictionId: uint32(score.PredictionID),
+		Points:       score.Points,
+		ScoredAt:     timestamppb.New(score.ScoredAt),
+		CreatedAt:    timestamppb.New(score.CreatedAt),
+		UpdatedAt:    timestamppb.New(score.UpdatedAt),
+	}
+}
