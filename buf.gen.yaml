@@ -12,3 +12,9 @@ plugins:
   - plugin: buf.build/grpc-ecosystem/openapiv2
     out: backend/shared
     opt: logtostderr=false
+  - plugin: buf.build/protocolbuffers/js
+    out: frontend/src/generated
+    opt: import_style=commonjs,binary
+  - plugin: buf.build/grpc/web
+    out: frontend/src/generated
+    opt: import_style=typescript,mode=grpcwebtext
