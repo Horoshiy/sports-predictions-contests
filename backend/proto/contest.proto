@@ -6,6 +6,7 @@ option go_package = "github.com/sports-prediction-contests/shared/proto/contest"
 
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/empty.proto";
+import "google/api/annotations.proto";
 import "common.proto";
 
 // Contest represents a sports prediction contest
@@ -129,17 +130,57 @@ message ListParticipantsResponse {
 // Contest Service
 service ContestService {
   // Contest management
-  rpc CreateContest(CreateContestRequest) returns (CreateContestResponse);
-  rpc UpdateContest(UpdateContestRequest) returns (UpdateContestResponse);
-  rpc GetContest(GetContestRequest) returns (GetContestResponse);
-  rpc DeleteContest(DeleteContestRequest) returns (DeleteContestResponse);
-  rpc ListContests(ListContestsRequest) returns (ListContestsResponse);
+  rpc CreateContest(CreateContestRequest) returns (CreateContestResponse) {
+    option (google.api.http) = {
+      post: "/v1/contests"
+      body: "*"
+    };
+  }
+  rpc UpdateContest(UpdateContestRequest) returns (UpdateContestResponse) {
+    option (google.api.http) = {
+      put: "/v1/contests/{id}"
+      body: "*"
+    };
+  }
+  rpc GetContest(GetContestRequest) returns (GetContestResponse) {
+    option (google.api.http) = {
+      get: "/v1/contests/{id}"
+    };
+  }
+  rpc DeleteContest(DeleteContestRequest) returns (DeleteContestResponse) {
+    option (google.api.http) = {
+      delete: "/v1/contests/{id}"
+    };
+  }
+  rpc ListContests(ListContestsRequest) returns (ListContestsResponse) {
+    option (google.api.http) = {
+      get: "/v1/contests"
+    };
+  }
   
   // Participant management
-  rpc JoinContest(JoinContestRequest) returns (JoinContestResponse);
-  rpc LeaveContest(LeaveContestRequest) returns (LeaveContestResponse);
-  rpc ListParticipants(ListParticipantsRequest) returns (ListParticipantsResponse);
+  rpc JoinContest(JoinContestRequest) returns (JoinContestResponse) {
+    option (google.api.http) = {
+      post: "/v1/contests/{contest_id}/join"
+      body: "*"
+    };
+  }
+  rpc LeaveContest(LeaveContestRequest) returns (LeaveContestResponse) {
+    option (google.api.http) = {
+      post: "/v1/contests/{contest_id}/leave"
+      body: "*"
+    };
+  }
+  rpc ListParticipants(ListParticipantsRequest) returns (ListParticipantsResponse) {
+    option (google.api.http) = {
+      get: "/v1/contests/{contest_id}/participants"
+    };
+  }
   
   // Health check
-  rpc Check(google.protobuf.Empty) returns (common.Response);
+  rpc Check(google.protobuf.Empty) returns (common.Response) {
+    option (google.api.http) = {
+      get: "/v1/contests/health"
+    };
+  }
 }

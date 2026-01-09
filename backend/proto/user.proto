@@ -5,6 +5,7 @@ package user;
 option go_package = "github.com/sports-prediction-contests/shared/proto/user";
 
 import "google/protobuf/timestamp.proto";
+import "google/api/annotations.proto";
 import "common.proto";
 
 // User message
@@ -68,8 +69,27 @@ message UpdateProfileResponse {
 
 // User service definition
 service UserService {
-  rpc Register(RegisterRequest) returns (RegisterResponse);
-  rpc Login(LoginRequest) returns (LoginResponse);
-  rpc GetProfile(GetProfileRequest) returns (GetProfileResponse);
-  rpc UpdateProfile(UpdateProfileRequest) returns (UpdateProfileResponse);
+  rpc Register(RegisterRequest) returns (RegisterResponse) {
+    option (google.api.http) = {
+      post: "/v1/auth/register"
+      body: "*"
+    };
+  }
+  rpc Login(LoginRequest) returns (LoginResponse) {
+    option (google.api.http) = {
+      post: "/v1/auth/login"
+      body: "*"
+    };
+  }
+  rpc GetProfile(GetProfileRequest) returns (GetProfileResponse) {
+    option (google.api.http) = {
+      get: "/v1/users/profile"
+    };
+  }
+  rpc UpdateProfile(UpdateProfileRequest) returns (UpdateProfileResponse) {
+    option (google.api.http) = {
+      put: "/v1/users/profile"
+      body: "*"
+    };
+  }
 }
