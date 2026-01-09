@@ -9,6 +9,7 @@ import (
 	"github.com/sports-prediction-contests/api-gateway/internal/config"
 	"github.com/sports-prediction-contests/api-gateway/internal/middleware"
 	contestpb "github.com/sports-prediction-contests/shared/proto/contest"
+	predictionpb "github.com/sports-prediction-contests/shared/proto/prediction"
 	userpb "github.com/sports-prediction-contests/shared/proto/user"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -47,6 +48,12 @@ func NewServer(cfg *config.Config) (*Server, error) {
 
 	// Register contest service
 	err = contestpb.RegisterContestServiceHandlerFromEndpoint(ctx, mux, cfg.ContestService, opts)
+	if err != nil {
+		return nil, err
+	}
+
+	// Register prediction service
+	err = predictionpb.RegisterPredictionServiceHandlerFromEndpoint(ctx, mux, cfg.PredictionService, opts)
 	if err != nil {
 		return nil, err
 	}

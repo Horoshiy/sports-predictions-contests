@@ -12,8 +12,9 @@ type Config struct {
 	Port string
 
 	// Service endpoints
-	UserService    string
-	ContestService string
+	UserService       string
+	ContestService    string
+	PredictionService string
 
 	// JWT configuration
 	JWTSecret string
@@ -28,12 +29,13 @@ type Config struct {
 // Load loads configuration from environment variables
 func Load() *Config {
 	return &Config{
-		Port:           getEnvOrDefault("API_GATEWAY_PORT", "8080"),
-		UserService:    getEnvOrDefault("USER_SERVICE_ENDPOINT", "user-service:8084"),
-		ContestService: getEnvOrDefault("CONTEST_SERVICE_ENDPOINT", "contest-service:8085"),
-		JWTSecret:      getEnvOrDefault("JWT_SECRET", "your_jwt_secret_key_here"),
-		AllowedOrigins: getEnvOrDefault("CORS_ALLOWED_ORIGINS", "*"),
-		LogLevel:       getEnvOrDefault("LOG_LEVEL", "info"),
+		Port:              getEnvOrDefault("API_GATEWAY_PORT", "8080"),
+		UserService:       getEnvOrDefault("USER_SERVICE_ENDPOINT", "user-service:8084"),
+		ContestService:    getEnvOrDefault("CONTEST_SERVICE_ENDPOINT", "contest-service:8085"),
+		PredictionService: getEnvOrDefault("PREDICTION_SERVICE_ENDPOINT", "prediction-service:8086"),
+		JWTSecret:         getEnvOrDefault("JWT_SECRET", "your_jwt_secret_key_here"),
+		AllowedOrigins:    getEnvOrDefault("CORS_ALLOWED_ORIGINS", "*"),
+		LogLevel:          getEnvOrDefault("LOG_LEVEL", "info"),
 	}
 }
 

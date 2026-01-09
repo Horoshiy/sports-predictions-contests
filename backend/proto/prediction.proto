@@ -1,0 +1,200 @@
+syntax = "proto3";
+
+package prediction;
+
+option go_package = "github.com/sports-prediction-contests/shared/proto/prediction";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+import "google/api/annotations.proto";
+import "common.proto";
+
+// Prediction represents a user's prediction for a sports event
+message Prediction {
+  uint32 id = 1;
+  uint32 contest_id = 2;
+  uint32 user_id = 3;
+  uint32 event_id = 4;
+  string prediction_data = 5; // JSON string for flexible prediction data
+  string status = 6; // "pending", "scored", "cancelled"
+  google.protobuf.Timestamp submitted_at = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
+}
+
+// Event represents a sports event that can be predicted
+message Event {
+  uint32 id = 1;
+  string title = 2;
+  string sport_type = 3;
+  string home_team = 4;
+  string away_team = 5;
+  google.protobuf.Timestamp event_date = 6;
+  string status = 7; // "scheduled", "live", "completed", "cancelled"
+  string result_data = 8; // JSON string for event results
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp updated_at = 10;
+}
+
+// Request messages
+message SubmitPredictionRequest {
+  uint32 contest_id = 1;
+  uint32 event_id = 2;
+  string prediction_data = 3;
+}
+
+message GetPredictionRequest {
+  uint32 id = 1;
+}
+
+message GetUserPredictionsRequest {
+  uint32 contest_id = 1;
+  common.PaginationRequest pagination = 2;
+}
+
+message UpdatePredictionRequest {
+  uint32 id = 1;
+  string prediction_data = 2;
+}
+
+message DeletePredictionRequest {
+  uint32 id = 1;
+}
+
+message CreateEventRequest {
+  string title = 1;
+  string sport_type = 2;
+  string home_team = 3;
+  string away_team = 4;
+  google.protobuf.Timestamp event_date = 5;
+}
+
+message GetEventRequest {
+  uint32 id = 1;
+}
+
+message ListEventsRequest {
+  string sport_type = 1;
+  string status = 2;
+  common.PaginationRequest pagination = 3;
+}
+
+message UpdateEventRequest {
+  uint32 id = 1;
+  string title = 2;
+  string home_team = 3;
+  string away_team = 4;
+  google.protobuf.Timestamp event_date = 5;
+  string status = 6;
+  string result_data = 7;
+}
+
+// Response messages
+message SubmitPredictionResponse {
+  common.Response response = 1;
+  Prediction prediction = 2;
+}
+
+message GetPredictionResponse {
+  common.Response response = 1;
+  Prediction prediction = 2;
+}
+
+message GetUserPredictionsResponse {
+  common.Response response = 1;
+  repeated Prediction predictions = 2;
+  common.PaginationResponse pagination = 3;
+}
+
+message UpdatePredictionResponse {
+  common.Response response = 1;
+  Prediction prediction = 2;
+}
+
+message DeletePredictionResponse {
+  common.Response response = 1;
+}
+
+message CreateEventResponse {
+  common.Response response = 1;
+  Event event = 2;
+}
+
+message GetEventResponse {
+  common.Response response = 1;
+  Event event = 2;
+}
+
+message ListEventsResponse {
+  common.Response response = 1;
+  repeated Event events = 2;
+  common.PaginationResponse pagination = 3;
+}
+
+message UpdateEventResponse {
+  common.Response response = 1;
+  Event event = 2;
+}
+
+// Prediction Service
+service PredictionService {
+  // Prediction management
+  rpc SubmitPrediction(SubmitPredictionRequest) returns (SubmitPredictionResponse) {
+    option (google.api.http) = {
+      post: "/v1/predictions"
+      body: "*"
+    };
+  }
+  rpc GetPrediction(GetPredictionRequest) returns (GetPredictionResponse) {
+    option (google.api.http) = {
+      get: "/v1/predictions/{id}"
+    };
+  }
+  rpc GetUserPredictions(GetUserPredictionsRequest) returns (GetUserPredictionsResponse) {
+    option (google.api.http) = {
+      get: "/v1/predictions/contest/{contest_id}"
+    };
+  }
+  rpc UpdatePrediction(UpdatePredictionRequest) returns (UpdatePredictionResponse) {
+    option (google.api.http) = {
+      put: "/v1/predictions/{id}"
+      body: "*"
+    };
+  }
+  rpc DeletePrediction(DeletePredictionRequest) returns (DeletePredictionResponse) {
+    option (google.api.http) = {
+      delete: "/v1/predictions/{id}"
+    };
+  }
+  
+  // Event management
+  rpc CreateEvent(CreateEventRequest) returns (CreateEventResponse) {
+    option (google.api.http) = {
+      post: "/v1/events"
+      body: "*"
+    };
+  }
+  rpc GetEvent(GetEventRequest) returns (GetEventResponse) {
+    option (google.api.http) = {
+      get: "/v1/events/{id}"
+    };
+  }
+  rpc ListEvents(ListEventsRequest) returns (ListEventsResponse) {
+    option (google.api.http) = {
+      get: "/v1/events"
+    };
+  }
+  rpc UpdateEvent(UpdateEventRequest) returns (UpdateEventResponse) {
+    option (google.api.http) = {
+      put: "/v1/events/{id}"
+      body: "*"
+    };
+  }
+  
+  // Health check
+  rpc Check(google.protobuf.Empty) returns (common.Response) {
+    option (google.api.http) = {
+      get: "/v1/predictions/health"
+    };
+  }
+}
