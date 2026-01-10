@@ -16,6 +16,7 @@ import {
   useUpdateContest,
 } from '../hooks/use-contests'
 import { useToast } from '../contexts/ToastContext'
+import { useAuth } from '../contexts/AuthContext'
 import type { Contest, ContestFormData } from '../types/contest.types'
 import { toISOString } from '../utils/date-utils'
 
@@ -28,6 +29,7 @@ export const ContestsPage: React.FC = () => {
   const createContestMutation = useCreateContest()
   const updateContestMutation = useUpdateContest()
   const { showToast } = useToast()
+  const { user } = useAuth()
 
   const handleCreateContest = () => {
     setSelectedContest(null)
@@ -136,7 +138,7 @@ export const ContestsPage: React.FC = () => {
           {selectedContest ? (
             <LeaderboardTable 
               contestId={selectedContest.id}
-              currentUserId={1} // TODO: Get from auth context
+              currentUserId={user?.id || 0}
             />
           ) : (
             <Paper sx={{ p: 4, textAlign: 'center' }}>
