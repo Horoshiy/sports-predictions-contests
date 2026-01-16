@@ -21,6 +21,7 @@ import { ProtectedRoute } from './components/auth/ProtectedRoute'
 import ContestsPage from './pages/ContestsPage'
 import SportsPage from './pages/SportsPage'
 import PredictionsPage from './pages/PredictionsPage'
+import AnalyticsPage from './pages/AnalyticsPage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 
@@ -67,6 +68,7 @@ const AppBarContent: React.FC = () => {
           <Button color="inherit" component={Link} to="/contests">Contests</Button>
           <Button color="inherit" component={Link} to="/predictions">Predictions</Button>
           <Button color="inherit" component={Link} to="/sports">Sports</Button>
+          <Button color="inherit" component={Link} to="/analytics">Analytics</Button>
           <Box sx={{ flexGrow: 1 }} />
           <Typography variant="body2" sx={{ mr: 2 }}>
             Welcome, {user.name}
@@ -148,6 +150,14 @@ function App() {
                   element={
                     <ProtectedRoute>
                       <PredictionsPage />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/analytics" 
+                  element={
+                    <ProtectedRoute>
+                      <AnalyticsPage />
                     </ProtectedRoute>
                   } 
                 />

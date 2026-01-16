@@ -158,6 +158,83 @@ message CalculateScoreResponse {
   string calculation_details = 3; // JSON string with calculation breakdown
 }
 
+// Analytics messages
+message SportAccuracy {
+  string sport_type = 1;
+  uint32 total_predictions = 2;
+  uint32 correct_predictions = 3;
+  double accuracy_percentage = 4;
+  double total_points = 5;
+}
+
+message LeagueAccuracy {
+  uint32 league_id = 1;
+  string league_name = 2;
+  string sport_type = 3;
+  uint32 total_predictions = 4;
+  uint32 correct_predictions = 5;
+  double accuracy_percentage = 6;
+}
+
+message PredictionTypeAccuracy {
+  string prediction_type = 1;
+  uint32 total_predictions = 2;
+  uint32 correct_predictions = 3;
+  double accuracy_percentage = 4;
+  double average_points = 5;
+}
+
+message AccuracyTrend {
+  string period = 1;
+  uint32 total_predictions = 2;
+  uint32 correct_predictions = 3;
+  double accuracy_percentage = 4;
+  double total_points = 5;
+}
+
+message PlatformStats {
+  double average_accuracy = 1;
+  double average_points_per_prediction = 2;
+  uint32 total_users = 3;
+  uint32 total_predictions = 4;
+}
+
+message UserAnalytics {
+  uint32 user_id = 1;
+  uint32 total_predictions = 2;
+  uint32 correct_predictions = 3;
+  double overall_accuracy = 4;
+  double total_points = 5;
+  repeated SportAccuracy by_sport = 6;
+  repeated LeagueAccuracy by_league = 7;
+  repeated PredictionTypeAccuracy by_type = 8;
+  repeated AccuracyTrend trends = 9;
+  PlatformStats platform_comparison = 10;
+  string time_range = 11;
+}
+
+message GetUserAnalyticsRequest {
+  uint32 user_id = 1;
+  string time_range = 2;
+}
+
+message GetUserAnalyticsResponse {
+  common.Response response = 1;
+  UserAnalytics analytics = 2;
+}
+
+message ExportAnalyticsRequest {
+  uint32 user_id = 1;
+  string time_range = 2;
+  string format = 3;
+}
+
+message ExportAnalyticsResponse {
+  common.Response response = 1;
+  string data = 2;
+  string filename = 3;
+}
+
 // Scoring Service
 service ScoringService {
   // Score management
@@ -224,6 +301,18 @@ service ScoringService {
     option (google.api.http) = {
       post: "/v1/scores/calculate"
       body: "*"
+    };
+  }
+  
+  // Analytics
+  rpc GetUserAnalytics(GetUserAnalyticsRequest) returns (GetUserAnalyticsResponse) {
+    option (google.api.http) = {
+      get: "/v1/users/{user_id}/analytics"
+    };
+  }
+  rpc ExportAnalytics(ExportAnalyticsRequest) returns (ExportAnalyticsResponse) {
+    option (google.api.http) = {
+      get: "/v1/users/{user_id}/analytics/export"
     };
   }
   

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/sports-prediction-contests/scoring-service/internal/models"
 	"github.com/sports-prediction-contests/scoring-service/internal/repository"
@@ -20,14 +21,16 @@ type ScoringService struct {
 	scoreRepo       repository.ScoreRepositoryInterface
 	leaderboardRepo repository.LeaderboardRepositoryInterface
 	streakRepo      repository.StreakRepositoryInterface
+	analyticsRepo   repository.AnalyticsRepositoryInterface
 }
 
 // NewScoringService creates a new ScoringService instance
-func NewScoringService(scoreRepo repository.ScoreRepositoryInterface, leaderboardRepo repository.LeaderboardRepositoryInterface, streakRepo repository.StreakRepositoryInterface) *ScoringService {
+func NewScoringService(scoreRepo repository.ScoreRepositoryInterface, leaderboardRepo repository.LeaderboardRepositoryInterface, streakRepo repository.StreakRepositoryInterface, analyticsRepo repository.AnalyticsRepositoryInterface) *ScoringService {
 	return &ScoringService{
 		scoreRepo:       scoreRepo,
 		leaderboardRepo: leaderboardRepo,
 		streakRepo:      streakRepo,
+		analyticsRepo:   analyticsRepo,
 	}
 }
 
@@ -412,4 +415,228 @@ func (s *ScoringService) modelToProto(score *models.Score) *pb.Score {
 		CreatedAt:    timestamppb.New(score.CreatedAt),
 		UpdatedAt:    timestamppb.New(score.UpdatedAt),
 	}
+}
+
+// GetUserAnalytics retrieves comprehensive analytics for a user
+func (s *ScoringService) GetUserAnalytics(ctx context.Context, req *pb.GetUserAnalyticsRequest) (*pb.GetUserAnalyticsResponse, error) {
+	if req.UserId == 0 {
+		return &pb.GetUserAnalyticsResponse{
+			Response: &common.Response{
+				Success:   false,
+				Message:   "User ID is required",
+				Code:      int32(common.ErrorCode_INVALID_ARGUMENT),
+				Timestamp: timestamppb.Now(),
+			},
+		}, nil
+	}
+
+	timeRange := req.TimeRange
+	if timeRange == "" {
+		timeRange = "30d"
+	}
+	since := models.TimeRangeToDate(timeRange)
+
+	analytics, err := s.analyticsRepo.GetUserOverallStats(ctx, uint(req.UserId), since)
+	if err != nil {
+		log.Printf("[ERROR] Failed to get user overall stats: %v", err)
+		return &pb.GetUserAnalyticsResponse{
+			Response: &common.Response{
+				Success:   false,
+				Message:   "Failed to retrieve analytics",
+				Code:      int32(common.ErrorCode_INTERNAL_ERROR),
+				Timestamp: timestamppb.Now(),
+			},
+		}, nil
+	}
+	analytics.TimeRange = timeRange
+
+	if bySport, err := s.analyticsRepo.GetAccuracyBySport(ctx, uint(req.UserId), since); err != nil {
+		log.Printf("[WARN] Failed to get accuracy by sport: %v", err)
+	} else {
+		analytics.BySport = bySport
+	}
+
+	if byLeague, err := s.analyticsRepo.GetAccuracyByLeague(ctx, uint(req.UserId), since); err != nil {
+		log.Printf("[WARN] Failed to get accuracy by league: %v", err)
+	} else {
+		analytics.ByLeague = byLeague
+	}
+
+	if byType, err := s.analyticsRepo.GetAccuracyByType(ctx, uint(req.UserId), since); err != nil {
+		log.Printf("[WARN] Failed to get accuracy by type: %v", err)
+	} else {
+		analytics.ByType = byType
+	}
+
+	groupBy := "day"
+	if timeRange == "90d" || timeRange == "all" {
+		groupBy = "week"
+	}
+	if trends, err := s.analyticsRepo.GetAccuracyTrends(ctx, uint(req.UserId), since, groupBy); err != nil {
+		log.Printf("[WARN] Failed to get accuracy trends: %v", err)
+	} else {
+		analytics.Trends = trends
+	}
+
+	if platformStats, err := s.analyticsRepo.GetPlatformStats(ctx, since); err != nil {
+		log.Printf("[WARN] Failed to get platform stats: %v", err)
+	} else {
+		analytics.PlatformComparison = platformStats
+	}
+
+	return &pb.GetUserAnalyticsResponse{
+		Response: &common.Response{
+			Success:   true,
+			Message:   "Analytics retrieved successfully",
+			Code:      int32(common.ErrorCode_SUCCESS),
+			Timestamp: timestamppb.Now(),
+		},
+		Analytics: s.analyticsToProto(analytics),
+	}, nil
+}
+
+// ExportAnalytics exports user analytics as CSV
+func (s *ScoringService) ExportAnalytics(ctx context.Context, req *pb.ExportAnalyticsRequest) (*pb.ExportAnalyticsResponse, error) {
+	timeRange := req.TimeRange
+	if timeRange == "" {
+		timeRange = "30d"
+	}
+
+	analyticsResp, err := s.GetUserAnalytics(ctx, &pb.GetUserAnalyticsRequest{
+		UserId:    req.UserId,
+		TimeRange: timeRange,
+	})
+	if err != nil || !analyticsResp.Response.Success {
+		return &pb.ExportAnalyticsResponse{
+			Response: &common.Response{
+				Success:   false,
+				Message:   "Failed to retrieve analytics for export",
+				Code:      int32(common.ErrorCode_INTERNAL_ERROR),
+				Timestamp: timestamppb.Now(),
+			},
+		}, nil
+	}
+
+	csv := s.generateCSV(analyticsResp.Analytics)
+	filename := fmt.Sprintf("analytics_%d_%s.csv", req.UserId, timeRange)
+
+	return &pb.ExportAnalyticsResponse{
+		Response: &common.Response{
+			Success:   true,
+			Message:   "Export generated successfully",
+			Code:      int32(common.ErrorCode_SUCCESS),
+			Timestamp: timestamppb.Now(),
+		},
+		Data:     csv,
+		Filename: filename,
+	}, nil
+}
+
+func (s *ScoringService) analyticsToProto(a *models.UserAnalytics) *pb.UserAnalytics {
+	proto := &pb.UserAnalytics{
+		UserId:             uint32(a.UserID),
+		TotalPredictions:   uint32(a.TotalPredictions),
+		CorrectPredictions: uint32(a.CorrectPredictions),
+		OverallAccuracy:    a.OverallAccuracy,
+		TotalPoints:        a.TotalPoints,
+		TimeRange:          a.TimeRange,
+	}
+
+	for _, sp := range a.BySport {
+		proto.BySport = append(proto.BySport, &pb.SportAccuracy{
+			SportType:          sp.SportType,
+			TotalPredictions:   uint32(sp.TotalPredictions),
+			CorrectPredictions: uint32(sp.CorrectPredictions),
+			AccuracyPercentage: sp.AccuracyPercentage,
+			TotalPoints:        sp.TotalPoints,
+		})
+	}
+
+	for _, l := range a.ByLeague {
+		proto.ByLeague = append(proto.ByLeague, &pb.LeagueAccuracy{
+			LeagueId:           uint32(l.LeagueID),
+			LeagueName:         l.LeagueName,
+			SportType:          l.SportType,
+			TotalPredictions:   uint32(l.TotalPredictions),
+			CorrectPredictions: uint32(l.CorrectPredictions),
+			AccuracyPercentage: l.AccuracyPercentage,
+		})
+	}
+
+	for _, t := range a.ByType {
+		proto.ByType = append(proto.ByType, &pb.PredictionTypeAccuracy{
+			PredictionType:     t.PredictionType,
+			TotalPredictions:   uint32(t.TotalPredictions),
+			CorrectPredictions: uint32(t.CorrectPredictions),
+			AccuracyPercentage: t.AccuracyPercentage,
+			AveragePoints:      t.AveragePoints,
+		})
+	}
+
+	for _, tr := range a.Trends {
+		proto.Trends = append(proto.Trends, &pb.AccuracyTrend{
+			Period:             tr.Period,
+			TotalPredictions:   uint32(tr.TotalPredictions),
+			CorrectPredictions: uint32(tr.CorrectPredictions),
+			AccuracyPercentage: tr.AccuracyPercentage,
+			TotalPoints:        tr.TotalPoints,
+		})
+	}
+
+	if a.PlatformComparison != nil {
+		proto.PlatformComparison = &pb.PlatformStats{
+			AverageAccuracy:            a.PlatformComparison.AverageAccuracy,
+			AveragePointsPerPrediction: a.PlatformComparison.AveragePointsPerPrediction,
+			TotalUsers:                 uint32(a.PlatformComparison.TotalUsers),
+			TotalPredictions:           uint32(a.PlatformComparison.TotalPredictions),
+		}
+	}
+
+	return proto
+}
+
+func (s *ScoringService) generateCSV(a *pb.UserAnalytics) string {
+	var b strings.Builder
+
+	b.WriteString("User Analytics Report\n")
+	b.WriteString(fmt.Sprintf("User ID,%d\n", a.UserId))
+	b.WriteString(fmt.Sprintf("Time Range,%s\n\n", a.TimeRange))
+
+	b.WriteString("Overall Statistics\n")
+	b.WriteString("Metric,Value\n")
+	b.WriteString(fmt.Sprintf("Total Predictions,%d\n", a.TotalPredictions))
+	b.WriteString(fmt.Sprintf("Correct Predictions,%d\n", a.CorrectPredictions))
+	b.WriteString(fmt.Sprintf("Overall Accuracy,%.2f%%\n", a.OverallAccuracy))
+	b.WriteString(fmt.Sprintf("Total Points,%.2f\n\n", a.TotalPoints))
+
+	if len(a.BySport) > 0 {
+		b.WriteString("Performance by Sport\n")
+		b.WriteString("Sport,Total,Correct,Accuracy,Points\n")
+		for _, sp := range a.BySport {
+			b.WriteString(fmt.Sprintf("%s,%d,%d,%.2f%%,%.2f\n",
+				sp.SportType, sp.TotalPredictions, sp.CorrectPredictions, sp.AccuracyPercentage, sp.TotalPoints))
+		}
+		b.WriteString("\n")
+	}
+
+	if len(a.ByType) > 0 {
+		b.WriteString("Performance by Prediction Type\n")
+		b.WriteString("Type,Total,Correct,Accuracy,Avg Points\n")
+		for _, t := range a.ByType {
+			b.WriteString(fmt.Sprintf("%s,%d,%d,%.2f%%,%.2f\n",
+				t.PredictionType, t.TotalPredictions, t.CorrectPredictions, t.AccuracyPercentage, t.AveragePoints))
+		}
+		b.WriteString("\n")
+	}
+
+	if len(a.Trends) > 0 {
+		b.WriteString("Accuracy Trends\n")
+		b.WriteString("Period,Total,Correct,Accuracy,Points\n")
+		for _, tr := range a.Trends {
+			b.WriteString(fmt.Sprintf("%s,%d,%d,%.2f%%,%.2f\n",
+				tr.Period, tr.TotalPredictions, tr.CorrectPredictions, tr.AccuracyPercentage, tr.TotalPoints))
+		}
+	}
+
+	return b.String()
 }

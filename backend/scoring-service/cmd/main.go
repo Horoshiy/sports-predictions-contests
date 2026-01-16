@@ -54,9 +54,10 @@ func main() {
 	scoreRepo := repository.NewScoreRepository(db)
 	leaderboardRepo := repository.NewLeaderboardRepository(db, redisCache)
 	streakRepo := repository.NewStreakRepository(db)
+	analyticsRepo := repository.NewAnalyticsRepository(db)
 
 	// Initialize services
-	scoringService := service.NewScoringService(scoreRepo, leaderboardRepo, streakRepo)
+	scoringService := service.NewScoringService(scoreRepo, leaderboardRepo, streakRepo, analyticsRepo)
 	leaderboardService := service.NewLeaderboardService(leaderboardRepo, scoreRepo, streakRepo)
 
 	// Create combined service that implements all methods
@@ -164,4 +165,12 @@ func (s *CombinedScoringService) Check(ctx context.Context, req *emptypb.Empty) 
 		Code:      0,
 		Timestamp: timestamppb.Now(),
 	}, nil
+}
+
+func (s *CombinedScoringService) GetUserAnalytics(ctx context.Context, req *pb.GetUserAnalyticsRequest) (*pb.GetUserAnalyticsResponse, error) {
+	return s.ScoringService.GetUserAnalytics(ctx, req)
+}
+
+func (s *CombinedScoringService) ExportAnalytics(ctx context.Context, req *pb.ExportAnalyticsRequest) (*pb.ExportAnalyticsResponse, error) {
+	return s.ScoringService.ExportAnalytics(ctx, req)
 }
