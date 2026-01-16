@@ -193,6 +193,31 @@ services:
     profiles:
       - services
 
+  # Telegram bot
+  telegram-bot:
+    build:
+      context: .
+      dockerfile: bots/telegram/Dockerfile
+    container_name: sports-telegram-bot
+    restart: unless-stopped
+    environment:
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - USER_SERVICE_ENDPOINT=user-service:8084
+      - CONTEST_SERVICE_ENDPOINT=contest-service:8085
+      - PREDICTION_SERVICE_ENDPOINT=prediction-service:8086
+      - SCORING_SERVICE_ENDPOINT=scoring-service:8087
+      - NOTIFICATION_SERVICE_ENDPOINT=notification-service:8089
+      - LOG_LEVEL=info
+    depends_on:
+      - user-service
+      - contest-service
+      - scoring-service
+      - notification-service
+    networks:
+      - sports-network
+    profiles:
+      - services
+
   # Frontend service placeholder
   frontend:
     build:

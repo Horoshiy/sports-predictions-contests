@@ -9,4 +9,5 @@ use (
 	./shared
 	./sports-service
 	./user-service
+	../bots/telegram
 )
