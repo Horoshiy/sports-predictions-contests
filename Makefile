@@ -71,3 +71,11 @@ logs: ## Show Docker logs
 
 status: ## Show service status
 	@docker-compose ps
+
+e2e-test: ## Run end-to-end tests with Docker services
+	@echo "Running E2E tests..."
+	@./scripts/e2e-test.sh
+
+e2e-test-only: ## Run E2E tests (assumes services are running)
+	@echo "Running E2E tests against running services..."
+	@cd tests/e2e && go test -tags=e2e -v -timeout 5m ./...
