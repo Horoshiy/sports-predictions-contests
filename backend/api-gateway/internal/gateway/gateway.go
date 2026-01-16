@@ -9,6 +9,7 @@ import (
 	"github.com/sports-prediction-contests/api-gateway/internal/config"
 	"github.com/sports-prediction-contests/api-gateway/internal/middleware"
 	contestpb "github.com/sports-prediction-contests/shared/proto/contest"
+	notificationpb "github.com/sports-prediction-contests/shared/proto/notification"
 	predictionpb "github.com/sports-prediction-contests/shared/proto/prediction"
 	scoringpb "github.com/sports-prediction-contests/shared/proto/scoring"
 	sportspb "github.com/sports-prediction-contests/shared/proto/sports"
@@ -68,6 +69,12 @@ func NewServer(cfg *config.Config) (*Server, error) {
 
 	// Register sports service
 	err = sportspb.RegisterSportsServiceHandlerFromEndpoint(ctx, mux, cfg.SportsService, opts)
+	if err != nil {
+		return nil, err
+	}
+
+	// Register notification service
+	err = notificationpb.RegisterNotificationServiceHandlerFromEndpoint(ctx, mux, cfg.NotificationService, opts)
 	if err != nil {
 		return nil, err
 	}

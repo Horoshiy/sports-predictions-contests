@@ -1,0 +1,196 @@
+syntax = "proto3";
+
+package notification;
+
+option go_package = "github.com/sports-prediction-contests/shared/proto/notification";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+import "google/api/annotations.proto";
+import "common.proto";
+
+enum NotificationType {
+  NOTIFICATION_TYPE_UNSPECIFIED = 0;
+  PREDICTION_RESULT = 1;
+  LEADERBOARD_UPDATE = 2;
+  CONTEST_START = 3;
+  CONTEST_END = 4;
+  MATCH_REMINDER = 5;
+  NEW_CONTEST = 6;
+}
+
+enum NotificationChannel {
+  CHANNEL_UNSPECIFIED = 0;
+  IN_APP = 1;
+  TELEGRAM = 2;
+  EMAIL = 3;
+}
+
+message Notification {
+  uint32 id = 1;
+  uint32 user_id = 2;
+  NotificationType type = 3;
+  string title = 4;
+  string message = 5;
+  string data = 6;
+  NotificationChannel channel = 7;
+  bool is_read = 8;
+  google.protobuf.Timestamp sent_at = 9;
+  google.protobuf.Timestamp read_at = 10;
+  google.protobuf.Timestamp created_at = 11;
+  google.protobuf.Timestamp updated_at = 12;
+}
+
+message NotificationPreference {
+  uint32 id = 1;
+  uint32 user_id = 2;
+  NotificationChannel channel = 3;
+  bool enabled = 4;
+  int64 telegram_chat_id = 5;
+  string email = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+}
+
+message SendNotificationRequest {
+  uint32 user_id = 1;
+  NotificationType type = 2;
+  string title = 3;
+  string message = 4;
+  string data = 5;
+  repeated NotificationChannel channels = 6;
+}
+
+message SendNotificationResponse {
+  common.Response response = 1;
+  Notification notification = 2;
+}
+
+message GetNotificationRequest {
+  uint32 id = 1;
+}
+
+message GetNotificationResponse {
+  common.Response response = 1;
+  Notification notification = 2;
+}
+
+message GetNotificationsRequest {
+  uint32 user_id = 1;
+  bool unread_only = 2;
+  common.PaginationRequest pagination = 3;
+}
+
+message GetNotificationsResponse {
+  common.Response response = 1;
+  repeated Notification notifications = 2;
+  common.PaginationResponse pagination = 3;
+}
+
+message MarkAsReadRequest {
+  uint32 id = 1;
+}
+
+message MarkAsReadResponse {
+  common.Response response = 1;
+}
+
+message MarkAllAsReadRequest {
+  uint32 user_id = 1;
+}
+
+message MarkAllAsReadResponse {
+  common.Response response = 1;
+  uint32 count = 2;
+}
+
+message GetUnreadCountRequest {
+  uint32 user_id = 1;
+}
+
+message GetUnreadCountResponse {
+  common.Response response = 1;
+  uint32 count = 2;
+}
+
+message GetPreferencesRequest {
+  uint32 user_id = 1;
+}
+
+message GetPreferencesResponse {
+  common.Response response = 1;
+  repeated NotificationPreference preferences = 2;
+}
+
+message UpdatePreferenceRequest {
+  uint32 user_id = 1;
+  NotificationChannel channel = 2;
+  bool enabled = 3;
+  int64 telegram_chat_id = 4;
+  string email = 5;
+}
+
+message UpdatePreferenceResponse {
+  common.Response response = 1;
+  NotificationPreference preference = 2;
+}
+
+service NotificationService {
+  rpc SendNotification(SendNotificationRequest) returns (SendNotificationResponse) {
+    option (google.api.http) = {
+      post: "/v1/notifications"
+      body: "*"
+    };
+  }
+
+  rpc GetNotification(GetNotificationRequest) returns (GetNotificationResponse) {
+    option (google.api.http) = {
+      get: "/v1/notifications/{id}"
+    };
+  }
+
+  rpc GetNotifications(GetNotificationsRequest) returns (GetNotificationsResponse) {
+    option (google.api.http) = {
+      get: "/v1/users/{user_id}/notifications"
+    };
+  }
+
+  rpc MarkAsRead(MarkAsReadRequest) returns (MarkAsReadResponse) {
+    option (google.api.http) = {
+      put: "/v1/notifications/{id}/read"
+      body: "*"
+    };
+  }
+
+  rpc MarkAllAsRead(MarkAllAsReadRequest) returns (MarkAllAsReadResponse) {
+    option (google.api.http) = {
+      put: "/v1/users/{user_id}/notifications/read-all"
+      body: "*"
+    };
+  }
+
+  rpc GetUnreadCount(GetUnreadCountRequest) returns (GetUnreadCountResponse) {
+    option (google.api.http) = {
+      get: "/v1/users/{user_id}/notifications/unread-count"
+    };
+  }
+
+  rpc GetPreferences(GetPreferencesRequest) returns (GetPreferencesResponse) {
+    option (google.api.http) = {
+      get: "/v1/users/{user_id}/notification-preferences"
+    };
+  }
+
+  rpc UpdatePreference(UpdatePreferenceRequest) returns (UpdatePreferenceResponse) {
+    option (google.api.http) = {
+      put: "/v1/users/{user_id}/notification-preferences"
+      body: "*"
+    };
+  }
+
+  rpc Check(google.protobuf.Empty) returns (common.Response) {
+    option (google.api.http) = {
+      get: "/v1/notifications/health"
+    };
+  }
+}

@@ -134,3 +134,41 @@ CREATE INDEX IF NOT EXISTS idx_matches_away_team_id ON matches(away_team_id);
 CREATE INDEX IF NOT EXISTS idx_matches_scheduled_at ON matches(scheduled_at);
 CREATE INDEX IF NOT EXISTS idx_matches_status ON matches(status);
 CREATE INDEX IF NOT EXISTS idx_matches_deleted_at ON matches(deleted_at);
+
+
+-- Create notifications table
+CREATE TABLE IF NOT EXISTS notifications (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL,
+    type VARCHAR(50) NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    message TEXT NOT NULL,
+    data TEXT,
+    channel VARCHAR(20) NOT NULL DEFAULT 'in_app',
+    is_read BOOLEAN DEFAULT false,
+    sent_at TIMESTAMP,
+    read_at TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_read ON notifications(user_id, is_read);
+CREATE INDEX IF NOT EXISTS idx_notifications_deleted_at ON notifications(deleted_at);
+
+-- Create notification_preferences table
+CREATE TABLE IF NOT EXISTS notification_preferences (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL,
+    channel VARCHAR(20) NOT NULL,
+    enabled BOOLEAN DEFAULT true,
+    telegram_chat_id BIGINT,
+    email VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL,
+    UNIQUE(user_id, channel)
+);
+
+CREATE INDEX IF NOT EXISTS idx_notification_preferences_user ON notification_preferences(user_id);
