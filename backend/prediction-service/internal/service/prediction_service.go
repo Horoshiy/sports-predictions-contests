@@ -22,6 +22,7 @@ type PredictionService struct {
 	pb.UnimplementedPredictionServiceServer
 	predictionRepo repository.PredictionRepositoryInterface
 	eventRepo      repository.EventRepositoryInterface
+	propTypeRepo   *repository.PropTypeRepository
 	contestClient  *clients.ContestClient
 }
 
@@ -29,11 +30,13 @@ type PredictionService struct {
 func NewPredictionService(
 	predictionRepo repository.PredictionRepositoryInterface,
 	eventRepo repository.EventRepositoryInterface,
+	propTypeRepo *repository.PropTypeRepository,
 	contestClient *clients.ContestClient,
 ) *PredictionService {
 	return &PredictionService{
 		predictionRepo: predictionRepo,
 		eventRepo:      eventRepo,
+		propTypeRepo:   propTypeRepo,
 		contestClient:  contestClient,
 	}
 }
@@ -581,4 +584,117 @@ func (s *PredictionService) eventModelToPB(event *models.Event) *pb.Event {
 		CreatedAt:  timestamppb.New(event.CreatedAt),
 		UpdatedAt:  timestamppb.New(event.UpdatedAt),
 	}
+}
+
+// GetPropTypes returns prop types for a sport
+func (s *PredictionService) GetPropTypes(ctx context.Context, req *pb.GetPropTypesRequest) (*pb.GetPropTypesResponse, error) {
+	if req.SportType == "" {
+		return &pb.GetPropTypesResponse{
+			Response: &common.Response{
+				Success:   false,
+				Message:   "Sport type is required",
+				Code:      int32(common.ErrorCode_INVALID_ARGUMENT),
+				Timestamp: timestamppb.Now(),
+			},
+		}, nil
+	}
+
+	propTypes, err := s.propTypeRepo.GetBySportType(ctx, req.SportType)
+	if err != nil {
+		return &pb.GetPropTypesResponse{
+			Response: &common.Response{
+				Success:   false,
+				Message:   "Failed to retrieve prop types",
+				Code:      int32(common.ErrorCode_INTERNAL_ERROR),
+				Timestamp: timestamppb.Now(),
+			},
+		}, nil
+	}
+
+	protoPropTypes := make([]*pb.PropType, len(propTypes))
+	for i, pt := range propTypes {
+		protoPropTypes[i] = s.propTypeToProto(pt)
+	}
+
+	return &pb.GetPropTypesResponse{
+		Response: &common.Response{
+			Success:   true,
+			Message:   "Prop types retrieved successfully",
+			Code:      0,
+			Timestamp: timestamppb.Now(),
+		},
+		PropTypes: protoPropTypes,
+	}, nil
+}
+
+// ListPropTypes returns paginated prop types with filtering
+func (s *PredictionService) ListPropTypes(ctx context.Context, req *pb.ListPropTypesRequest) (*pb.ListPropTypesResponse, error) {
+	page, limit := 1, 20
+	if req.Pagination != nil {
+		if req.Pagination.Page > 0 {
+			page = int(req.Pagination.Page)
+		}
+		if req.Pagination.Limit > 0 {
+			limit = int(req.Pagination.Limit)
+		}
+	}
+
+	propTypes, total, err := s.propTypeRepo.List(ctx, req.SportType, req.Category, req.ActiveOnly, page, limit)
+	if err != nil {
+		return &pb.ListPropTypesResponse{
+			Response: &common.Response{
+				Success:   false,
+				Message:   "Failed to list prop types",
+				Code:      int32(common.ErrorCode_INTERNAL_ERROR),
+				Timestamp: timestamppb.Now(),
+			},
+		}, nil
+	}
+
+	protoPropTypes := make([]*pb.PropType, len(propTypes))
+	for i, pt := range propTypes {
+		protoPropTypes[i] = s.propTypeToProto(pt)
+	}
+
+	totalPages := (int(total) + limit - 1) / limit
+
+	return &pb.ListPropTypesResponse{
+		Response: &common.Response{
+			Success:   true,
+			Message:   "Prop types listed successfully",
+			Code:      0,
+			Timestamp: timestamppb.Now(),
+		},
+		PropTypes: protoPropTypes,
+		Pagination: &common.PaginationResponse{
+			Page:       int32(page),
+			Limit:      int32(limit),
+			Total:      int32(total),
+			TotalPages: int32(totalPages),
+		},
+	}, nil
+}
+
+func (s *PredictionService) propTypeToProto(pt *models.PropType) *pb.PropType {
+	proto := &pb.PropType{
+		Id:            uint32(pt.ID),
+		SportType:     pt.SportType,
+		Name:          pt.Name,
+		Slug:          pt.Slug,
+		Description:   pt.Description,
+		Category:      pt.Category,
+		ValueType:     pt.ValueType,
+		PointsCorrect: pt.PointsCorrect,
+		IsActive:      pt.IsActive,
+	}
+	if pt.DefaultLine != nil {
+		proto.DefaultLine = *pt.DefaultLine
+	}
+	if pt.MinValue != nil {
+		proto.MinValue = *pt.MinValue
+	}
+	if pt.MaxValue != nil {
+		proto.MaxValue = *pt.MaxValue
+	}
+	return proto
 }

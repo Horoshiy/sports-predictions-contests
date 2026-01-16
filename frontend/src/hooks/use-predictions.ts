@@ -26,6 +26,22 @@ export const eventKeys = {
   detail: (id: number) => [...eventKeys.details(), id] as const,
 }
 
+export const propTypeKeys = {
+  all: ['propTypes'] as const,
+  lists: () => [...propTypeKeys.all, 'list'] as const,
+  list: (sportType: string) => [...propTypeKeys.lists(), sportType] as const,
+}
+
+// Fetch prop types for a sport
+export const usePropTypes = (sportType: string) => {
+  return useQuery({
+    queryKey: propTypeKeys.list(sportType),
+    queryFn: () => predictionService.getPropTypes(sportType),
+    enabled: !!sportType,
+    staleTime: 10 * 60 * 1000,
+  })
+}
+
 // Fetch user predictions for a contest
 export const useUserPredictions = (request: GetUserPredictionsRequest) => {
   return useQuery({

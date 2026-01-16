@@ -16,17 +16,22 @@ import {
   Divider,
   Grid,
   FormHelperText,
+  Alert,
 } from '@mui/material'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { 
   predictionSchema, 
   type PredictionFormData,
+  type PropPredictionFormData,
   predictionDataToFormData,
   formDataToPredictionData,
+  propsFormDataToPredictionData,
 } from '../../utils/prediction-validation'
 import type { Event, Prediction } from '../../types/prediction.types'
 import { formatDate } from '../../utils/date-utils'
+import { usePropTypes } from '../../hooks/use-predictions'
+import { PropTypeSelector } from './PropTypeSelector'
 
 interface PredictionFormProps {
   open: boolean
@@ -46,6 +51,9 @@ export const PredictionForm: React.FC<PredictionFormProps> = ({
   loading = false,
 }) => {
   const isEditing = !!prediction
+  const [selectedProps, setSelectedProps] = React.useState<PropPredictionFormData[]>([])
+  const [propsError, setPropsError] = React.useState<string | null>(null)
+  const { data: propTypes = [] } = usePropTypes(event?.sportType || '')
 
   const defaultValues = React.useMemo(() => {
     if (prediction && event) {
@@ -77,16 +85,35 @@ export const PredictionForm: React.FC<PredictionFormProps> = ({
   React.useEffect(() => {
     if (open) {
       reset(defaultValues)
+      setSelectedProps([])
+      setPropsError(null)
     }
   }, [open, defaultValues, reset])
 
   const handleFormSubmit = (data: PredictionFormData) => {
-    const predictionData = formDataToPredictionData(data)
+    let predictionData: string
+    if (data.predictionType === 'props') {
+      if (selectedProps.length === 0) {
+        setPropsError('Please add at least one prop prediction')
+        return
+      }
+      const invalidProps = selectedProps.filter(p => !p.selection)
+      if (invalidProps.length > 0) {
+        setPropsError('Please make a selection for all props')
+        return
+      }
+      setPropsError(null)
+      predictionData = propsFormDataToPredictionData(selectedProps)
+    } else {
+      predictionData = formDataToPredictionData(data)
+    }
     onSubmit(predictionData)
   }
 
   const handleClose = () => {
     reset()
+    setSelectedProps([])
+    setPropsError(null)
     onClose()
   }
 
@@ -127,10 +154,32 @@ export const PredictionForm: React.FC<PredictionFormProps> = ({
                   <FormControlLabel value="winner" control={<Radio />} label="Winner Only" />
                   <FormControlLabel value="score" control={<Radio />} label="Exact Score" />
                   <FormControlLabel value="combined" control={<Radio />} label="Both" />
+                  {propTypes.length > 0 && (
+                    <FormControlLabel value="props" control={<Radio />} label="Props" />
+                  )}
                 </RadioGroup>
               </FormControl>
             )}
           />
+
+          {predictionType === 'props' && propTypes.length > 0 && (
+            <>
+              {propsError && (
+                <Alert severity="error" sx={{ mb: 2 }}>{propsError}</Alert>
+              )}
+              <PropTypeSelector
+                propTypes={propTypes}
+                selectedProps={selectedProps}
+                onPropsChange={(props) => {
+                  setSelectedProps(props)
+                  setPropsError(null)
+                }}
+                homeTeam={event.homeTeam}
+                awayTeam={event.awayTeam}
+                disabled={loading}
+              />
+            </>
+          )}
 
           {(predictionType === 'winner' || predictionType === 'combined') && (
             <Controller

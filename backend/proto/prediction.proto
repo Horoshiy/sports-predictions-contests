@@ -36,6 +36,53 @@ message Event {
   google.protobuf.Timestamp updated_at = 10;
 }
 
+// PropType represents a type of prop prediction
+message PropType {
+  uint32 id = 1;
+  string sport_type = 2;
+  string name = 3;
+  string slug = 4;
+  string description = 5;
+  string category = 6;
+  string value_type = 7;
+  double default_line = 8;
+  double min_value = 9;
+  double max_value = 10;
+  double points_correct = 11;
+  bool is_active = 12;
+}
+
+// PropPrediction represents a props prediction within prediction_data
+message PropPrediction {
+  uint32 prop_type_id = 1;
+  string prop_slug = 2;
+  double line = 3;
+  string selection = 4;
+  string player_id = 5;
+}
+
+message GetPropTypesRequest {
+  string sport_type = 1;
+}
+
+message GetPropTypesResponse {
+  common.Response response = 1;
+  repeated PropType prop_types = 2;
+}
+
+message ListPropTypesRequest {
+  string sport_type = 1;
+  string category = 2;
+  bool active_only = 3;
+  common.PaginationRequest pagination = 4;
+}
+
+message ListPropTypesResponse {
+  common.Response response = 1;
+  repeated PropType prop_types = 2;
+  common.PaginationResponse pagination = 3;
+}
+
 // Request messages
 message SubmitPredictionRequest {
   uint32 contest_id = 1;
@@ -188,6 +235,18 @@ service PredictionService {
     option (google.api.http) = {
       put: "/v1/events/{id}"
       body: "*"
+    };
+  }
+  
+  // Prop types
+  rpc GetPropTypes(GetPropTypesRequest) returns (GetPropTypesResponse) {
+    option (google.api.http) = {
+      get: "/v1/prop-types/{sport_type}"
+    };
+  }
+  rpc ListPropTypes(ListPropTypesRequest) returns (ListPropTypesResponse) {
+    option (google.api.http) = {
+      get: "/v1/prop-types"
     };
   }
   

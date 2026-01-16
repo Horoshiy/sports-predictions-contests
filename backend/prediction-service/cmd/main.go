@@ -32,7 +32,7 @@ func main() {
 	}
 
 	// Auto-migrate database schema
-	if err := db.AutoMigrate(&models.Prediction{}, &models.Event{}); err != nil {
+	if err := db.AutoMigrate(&models.Prediction{}, &models.Event{}, &models.PropType{}); err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)
 	}
 
@@ -46,9 +46,10 @@ func main() {
 	// Initialize repositories
 	predictionRepo := repository.NewPredictionRepository(db)
 	eventRepo := repository.NewEventRepository(db)
+	propTypeRepo := repository.NewPropTypeRepository(db)
 
 	// Initialize services
-	predictionService := service.NewPredictionService(predictionRepo, eventRepo, contestClient)
+	predictionService := service.NewPredictionService(predictionRepo, eventRepo, propTypeRepo, contestClient)
 
 	// Create gRPC server with JWT interceptor
 	server := grpc.NewServer(

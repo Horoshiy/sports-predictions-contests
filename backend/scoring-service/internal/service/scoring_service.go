@@ -43,14 +43,27 @@ type PredictionData struct {
 	OverUnder  *string     `json:"over_under"`  // "over", "under"
 	Threshold  *float64    `json:"threshold"`   // For over/under predictions
 	Value      interface{} `json:"value"`       // Generic value for other prediction types
+	Props      []PropPrediction `json:"props,omitempty"` // Props predictions
+}
+
+// PropPrediction represents a single prop prediction
+type PropPrediction struct {
+	PropTypeID  uint    `json:"prop_type_id"`
+	PropSlug    string  `json:"prop_slug"`
+	Line        float64 `json:"line"`
+	Selection   string  `json:"selection"`
+	PlayerID    string  `json:"player_id,omitempty"`
+	PointsValue float64 `json:"points_value"`
 }
 
 // ResultData represents the structure of event result data
 type ResultData struct {
-	HomeScore int     `json:"home_score"`
-	AwayScore int     `json:"away_score"`
-	Winner    string  `json:"winner"` // "home", "away", "draw"
-	TotalGoals int    `json:"total_goals"`
+	HomeScore   int                    `json:"home_score"`
+	AwayScore   int                    `json:"away_score"`
+	Winner      string                 `json:"winner"`
+	TotalGoals  int                    `json:"total_goals"`
+	Stats       map[string]interface{} `json:"stats,omitempty"`
+	PlayerStats map[string]interface{} `json:"player_stats,omitempty"`
 }
 
 // CreateScore creates a new score record
@@ -256,6 +269,8 @@ func (s *ScoringService) calculatePoints(prediction PredictionData, result Resul
 		return s.calculateWinnerPoints(prediction, result, details)
 	case "over_under":
 		return s.calculateOverUnderPoints(prediction, result, details)
+	case "props":
+		return s.calculatePropsPoints(prediction, result, details)
 	default:
 		details["error"] = "Unknown prediction type"
 		return 0, details
@@ -639,4 +654,113 @@ func (s *ScoringService) generateCSV(a *pb.UserAnalytics) string {
 	}
 
 	return b.String()
+}
+
+// calculatePropsPoints calculates points for props predictions
+func (s *ScoringService) calculatePropsPoints(prediction PredictionData, result ResultData, details map[string]interface{}) (float64, map[string]interface{}) {
+	if len(prediction.Props) == 0 {
+		details["error"] = "No props predictions found"
+		return 0, details
+	}
+
+	var totalPoints float64
+	propResults := make([]map[string]interface{}, 0)
+
+	for _, prop := range prediction.Props {
+		propResult := map[string]interface{}{
+			"prop_slug": prop.PropSlug,
+			"selection": prop.Selection,
+			"line":      prop.Line,
+		}
+
+		correct := s.evaluateProp(prop, result)
+		propResult["correct"] = correct
+
+		if correct {
+			points := prop.PointsValue
+			if points == 0 {
+				points = 2
+			}
+			totalPoints += points
+			propResult["points"] = points
+		} else {
+			propResult["points"] = float64(0)
+		}
+
+		propResults = append(propResults, propResult)
+	}
+
+	details["props_results"] = propResults
+	details["total_props"] = len(prediction.Props)
+	details["correct_props"] = s.countCorrectProps(propResults)
+
+	return totalPoints, details
+}
+
+func (s *ScoringService) evaluateProp(prop PropPrediction, result ResultData) bool {
+	switch prop.PropSlug {
+	case "total-goals-ou":
+		totalGoals := float64(result.TotalGoals)
+		if prop.Selection == "over" {
+			return totalGoals > prop.Line
+		}
+		return totalGoals < prop.Line
+
+	case "total-corners-ou":
+		var corners float64
+		switch v := result.Stats["corners"].(type) {
+		case float64:
+			corners = v
+		case int:
+			corners = float64(v)
+		default:
+			return false
+		}
+		if prop.Selection == "over" {
+			return corners > prop.Line
+		}
+		return corners < prop.Line
+
+	case "btts":
+		btts := result.HomeScore > 0 && result.AwayScore > 0
+		if prop.Selection == "yes" {
+			return btts
+		}
+		return !btts
+
+	case "first-to-score":
+		if firstScorer, ok := result.Stats["first_to_score"].(string); ok {
+			return firstScorer == prop.Selection
+		}
+		return false
+
+	case "total-cards-ou":
+		var cards float64
+		switch v := result.Stats["cards"].(type) {
+		case float64:
+			cards = v
+		case int:
+			cards = float64(v)
+		default:
+			return false
+		}
+		if prop.Selection == "over" {
+			return cards > prop.Line
+		}
+		return cards < prop.Line
+
+	default:
+		log.Printf("[WARN] Unknown prop slug: %s", prop.PropSlug)
+		return false
+	}
+}
+
+func (s *ScoringService) countCorrectProps(results []map[string]interface{}) int {
+	count := 0
+	for _, r := range results {
+		if correct, ok := r["correct"].(bool); ok && correct {
+			count++
+		}
+	}
+	return count
 }

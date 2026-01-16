@@ -255,3 +255,39 @@ CREATE INDEX IF NOT EXISTS idx_user_team_contest_entries_team_id ON user_team_co
 CREATE INDEX IF NOT EXISTS idx_user_team_contest_entries_contest_id ON user_team_contest_entries(contest_id);
 CREATE INDEX IF NOT EXISTS idx_user_team_contest_entries_rank ON user_team_contest_entries(contest_id, rank);
 CREATE INDEX IF NOT EXISTS idx_user_team_contest_entries_deleted_at ON user_team_contest_entries(deleted_at);
+
+
+-- Create prop_types table for props predictions
+CREATE TABLE IF NOT EXISTS prop_types (
+    id SERIAL PRIMARY KEY,
+    sport_type VARCHAR(50) NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    slug VARCHAR(100) NOT NULL,
+    description TEXT,
+    category VARCHAR(50) NOT NULL,
+    value_type VARCHAR(20) NOT NULL,
+    default_line DECIMAL(10,2),
+    min_value DECIMAL(10,2),
+    max_value DECIMAL(10,2),
+    points_correct DECIMAL(10,2) NOT NULL DEFAULT 2,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL,
+    UNIQUE(sport_type, slug)
+);
+
+CREATE INDEX IF NOT EXISTS idx_prop_types_sport ON prop_types(sport_type);
+CREATE INDEX IF NOT EXISTS idx_prop_types_category ON prop_types(category);
+CREATE INDEX IF NOT EXISTS idx_prop_types_is_active ON prop_types(is_active);
+CREATE INDEX IF NOT EXISTS idx_prop_types_deleted_at ON prop_types(deleted_at);
+
+-- Insert default prop types for Soccer
+INSERT INTO prop_types (sport_type, name, slug, description, category, value_type, default_line, points_correct) VALUES
+('Soccer', 'Total Goals Over/Under', 'total-goals-ou', 'Predict if total goals will be over or under the line', 'match', 'over_under', 2.5, 2),
+('Soccer', 'Total Corners Over/Under', 'total-corners-ou', 'Predict if total corners will be over or under the line', 'match', 'over_under', 9.5, 2),
+('Soccer', 'Both Teams to Score', 'btts', 'Predict if both teams will score', 'match', 'yes_no', NULL, 2),
+('Soccer', 'First Team to Score', 'first-to-score', 'Predict which team scores first', 'match', 'team_select', NULL, 3),
+('Soccer', 'Player to Score Anytime', 'player-goal', 'Predict if a specific player will score', 'player', 'yes_no', NULL, 4),
+('Soccer', 'Total Cards Over/Under', 'total-cards-ou', 'Predict if total cards will be over or under the line', 'match', 'over_under', 3.5, 2)
+ON CONFLICT (sport_type, slug) DO NOTHING;
