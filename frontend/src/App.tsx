@@ -1,5 +1,5 @@
 import React from 'react'
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom'
 import { ThemeProvider, createTheme } from '@mui/material/styles'
 import { 
   CssBaseline, 
@@ -19,6 +19,7 @@ import { ToastProvider } from './contexts/ToastContext'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { ProtectedRoute } from './components/auth/ProtectedRoute'
 import ContestsPage from './pages/ContestsPage'
+import SportsPage from './pages/SportsPage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 
@@ -56,12 +57,15 @@ const AppBarContent: React.FC = () => {
 
   return (
     <Toolbar>
-      <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+      <Typography variant="h6" component="div" sx={{ mr: 2 }}>
         Sports Prediction Contests
       </Typography>
       
       {isAuthenticated && user ? (
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
+          <Button color="inherit" component={Link} to="/contests">Contests</Button>
+          <Button color="inherit" component={Link} to="/sports">Sports</Button>
+          <Box sx={{ flexGrow: 1 }} />
           <Typography variant="body2" sx={{ mr: 2 }}>
             Welcome, {user.name}
           </Typography>
@@ -126,6 +130,14 @@ function App() {
                   element={
                     <ProtectedRoute>
                       <ContestsPage />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/sports" 
+                  element={
+                    <ProtectedRoute>
+                      <SportsPage />
                     </ProtectedRoute>
                   } 
                 />
