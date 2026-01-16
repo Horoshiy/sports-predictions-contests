@@ -20,6 +20,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { ProtectedRoute } from './components/auth/ProtectedRoute'
 import ContestsPage from './pages/ContestsPage'
 import SportsPage from './pages/SportsPage'
+import PredictionsPage from './pages/PredictionsPage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 
@@ -64,6 +65,7 @@ const AppBarContent: React.FC = () => {
       {isAuthenticated && user ? (
         <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
           <Button color="inherit" component={Link} to="/contests">Contests</Button>
+          <Button color="inherit" component={Link} to="/predictions">Predictions</Button>
           <Button color="inherit" component={Link} to="/sports">Sports</Button>
           <Box sx={{ flexGrow: 1 }} />
           <Typography variant="body2" sx={{ mr: 2 }}>
@@ -138,6 +140,14 @@ function App() {
                   element={
                     <ProtectedRoute>
                       <SportsPage />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/predictions" 
+                  element={
+                    <ProtectedRoute>
+                      <PredictionsPage />
                     </ProtectedRoute>
                   } 
                 />
