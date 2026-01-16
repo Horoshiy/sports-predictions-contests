@@ -11,6 +11,8 @@ import {
 import { SportsSoccer, Edit, CheckCircle } from '@mui/icons-material'
 import type { Event, Prediction } from '../../types/prediction.types'
 import { formatDate } from '../../utils/date-utils'
+import { CoefficientIndicator } from './CoefficientIndicator'
+import { usePotentialCoefficient } from '../../hooks/use-predictions'
 
 interface EventCardProps {
   event: Event
@@ -41,6 +43,7 @@ export const EventCard: React.FC<EventCardProps> = ({
 }) => {
   const isPredictable = canAcceptPredictions(event) && !disabled
   const hasPrediction = !!existingPrediction
+  const { data: coefficientData } = usePotentialCoefficient(isPredictable ? event.id : undefined)
 
   return (
     <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -78,6 +81,17 @@ export const EventCard: React.FC<EventCardProps> = ({
         <Typography variant="body2" color="text.secondary">
           {formatDate(event.eventDate)}
         </Typography>
+
+        {coefficientData && coefficientData.coefficient > 1 && (
+          <Box sx={{ mt: 1 }}>
+            <CoefficientIndicator
+              coefficient={coefficientData.coefficient}
+              tier={coefficientData.tier}
+              hoursUntilEvent={coefficientData.hoursUntilEvent}
+              compact
+            />
+          </Box>
+        )}
 
         {hasPrediction && (
           <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 0.5 }}>

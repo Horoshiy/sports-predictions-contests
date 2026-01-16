@@ -108,7 +108,18 @@ func (s *ScoringService) CreateScore(ctx context.Context, req *pb.CreateScoreReq
 
 	// Multiplier is based on the updated streak value
 	multiplier := streak.GetMultiplier()
-	finalPoints := basePoints * multiplier
+
+	// Calculate time coefficient based on submission time vs event date
+	timeCoefficient := 1.0
+	if req.SubmittedAt != nil && req.EventDate != nil {
+		timeCoefficient = models.CalculateTimeCoefficient(
+			req.SubmittedAt.AsTime(),
+			req.EventDate.AsTime(),
+		)
+	}
+
+	// Apply both multipliers
+	finalPoints := basePoints * multiplier * timeCoefficient
 
 	// Update streak in database - fail if this fails to maintain consistency
 	if err := s.streakRepo.Update(ctx, streak); err != nil {
@@ -125,10 +136,11 @@ func (s *ScoringService) CreateScore(ctx context.Context, req *pb.CreateScoreReq
 
 	// Create score model with multiplied points
 	score := &models.Score{
-		UserID:       req.UserId,
-		ContestID:    req.ContestId,
-		PredictionID: req.PredictionId,
-		Points:       finalPoints,
+		UserID:          req.UserId,
+		ContestID:       req.ContestId,
+		PredictionID:    req.PredictionId,
+		Points:          finalPoints,
+		TimeCoefficient: timeCoefficient,
 	}
 
 	// Save to database
@@ -170,13 +182,13 @@ func (s *ScoringService) CreateScore(ctx context.Context, req *pb.CreateScoreReq
 		}, nil
 	}
 
-	log.Printf("[INFO] Score created: user=%d, contest=%d, base=%.2f, multiplier=%.2fx, final=%.2f, streak=%d",
-		req.UserId, req.ContestId, basePoints, multiplier, finalPoints, streak.CurrentStreak)
+	log.Printf("[INFO] Score created: user=%d, contest=%d, base=%.2f, streak=%.2fx, time=%.2fx, final=%.2f",
+		req.UserId, req.ContestId, basePoints, multiplier, timeCoefficient, finalPoints)
 
 	return &pb.CreateScoreResponse{
 		Response: &common.Response{
 			Success:   true,
-			Message:   fmt.Sprintf("Score created successfully (%.2fx multiplier)", multiplier),
+			Message:   fmt.Sprintf("Score created successfully (%.2fx streak, %.2fx time)", multiplier, timeCoefficient),
 			Code:      int32(common.ErrorCode_SUCCESS),
 			Timestamp: timestamppb.Now(),
 		},
@@ -421,14 +433,15 @@ func (s *ScoringService) GetUserScores(ctx context.Context, req *pb.GetUserScore
 // modelToProto converts a Score model to protobuf message
 func (s *ScoringService) modelToProto(score *models.Score) *pb.Score {
 	return &pb.Score{
-		Id:           uint32(score.ID),
-		UserId:       uint32(score.UserID),
-		ContestId:    uint32(score.ContestID),
-		PredictionId: uint32(score.PredictionID),
-		Points:       score.Points,
-		ScoredAt:     timestamppb.New(score.ScoredAt),
-		CreatedAt:    timestamppb.New(score.CreatedAt),
-		UpdatedAt:    timestamppb.New(score.UpdatedAt),
+		Id:              uint32(score.ID),
+		UserId:          uint32(score.UserID),
+		ContestId:       uint32(score.ContestID),
+		PredictionId:    uint32(score.PredictionID),
+		Points:          score.Points,
+		TimeCoefficient: score.TimeCoefficient,
+		ScoredAt:        timestamppb.New(score.ScoredAt),
+		CreatedAt:       timestamppb.New(score.CreatedAt),
+		UpdatedAt:       timestamppb.New(score.UpdatedAt),
 	}
 }
 

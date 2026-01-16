@@ -9,12 +9,13 @@ import (
 
 // Score represents a user's score for a specific prediction in a contest
 type Score struct {
-	ID           uint      `gorm:"primaryKey" json:"id"`
-	UserID       uint      `gorm:"not null;uniqueIndex:idx_user_contest_prediction" json:"user_id"`
-	ContestID    uint      `gorm:"not null;uniqueIndex:idx_user_contest_prediction;index:idx_contest_scores" json:"contest_id"`
-	PredictionID uint      `gorm:"not null;uniqueIndex:idx_user_contest_prediction" json:"prediction_id"`
-	Points       float64   `gorm:"not null;default:0" json:"points"`
-	ScoredAt     time.Time `gorm:"not null" json:"scored_at"`
+	ID              uint      `gorm:"primaryKey" json:"id"`
+	UserID          uint      `gorm:"not null;uniqueIndex:idx_user_contest_prediction" json:"user_id"`
+	ContestID       uint      `gorm:"not null;uniqueIndex:idx_user_contest_prediction;index:idx_contest_scores" json:"contest_id"`
+	PredictionID    uint      `gorm:"not null;uniqueIndex:idx_user_contest_prediction" json:"prediction_id"`
+	Points          float64   `gorm:"not null;default:0" json:"points"`
+	TimeCoefficient float64   `gorm:"not null;default:1.0" json:"time_coefficient"`
+	ScoredAt        time.Time `gorm:"not null" json:"scored_at"`
 	gorm.Model
 }
 

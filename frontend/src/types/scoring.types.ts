@@ -6,6 +6,7 @@ export interface Score {
   contestId: number
   predictionId: number
   points: number
+  timeCoefficient: number
   scoredAt: string // ISO string
   createdAt: string // ISO string
   updatedAt: string // ISO string

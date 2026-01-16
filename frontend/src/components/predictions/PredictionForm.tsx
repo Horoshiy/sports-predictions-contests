@@ -30,8 +30,9 @@ import {
 } from '../../utils/prediction-validation'
 import type { Event, Prediction } from '../../types/prediction.types'
 import { formatDate } from '../../utils/date-utils'
-import { usePropTypes } from '../../hooks/use-predictions'
+import { usePropTypes, usePotentialCoefficient } from '../../hooks/use-predictions'
 import { PropTypeSelector } from './PropTypeSelector'
+import { CoefficientIndicator } from './CoefficientIndicator'
 
 interface PredictionFormProps {
   open: boolean
@@ -54,6 +55,7 @@ export const PredictionForm: React.FC<PredictionFormProps> = ({
   const [selectedProps, setSelectedProps] = React.useState<PropPredictionFormData[]>([])
   const [propsError, setPropsError] = React.useState<string | null>(null)
   const { data: propTypes = [] } = usePropTypes(event?.sportType || '')
+  const { data: coefficientData } = usePotentialCoefficient(event?.id)
 
   const defaultValues = React.useMemo(() => {
     if (prediction && event) {
@@ -143,6 +145,16 @@ export const PredictionForm: React.FC<PredictionFormProps> = ({
           </Box>
 
           <Divider sx={{ mb: 3 }} />
+
+          {coefficientData && coefficientData.coefficient > 1 && (
+            <Box sx={{ mb: 2 }}>
+              <CoefficientIndicator
+                coefficient={coefficientData.coefficient}
+                tier={coefficientData.tier}
+                hoursUntilEvent={coefficientData.hoursUntilEvent}
+              />
+            </Box>
+          )}
 
           <Controller
             name="predictionType"

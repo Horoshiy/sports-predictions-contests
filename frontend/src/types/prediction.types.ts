@@ -101,3 +101,11 @@ export interface ScorePrediction {
 export interface CombinedPrediction extends WinnerPrediction, ScorePrediction {}
 
 export type ParsedPredictionData = WinnerPrediction | ScorePrediction | CombinedPrediction
+
+// Time coefficient types
+export interface PotentialCoefficientResponse {
+  response: ApiResponse
+  coefficient: number
+  tier: string
+  hoursUntilEvent: number
+}

@@ -32,6 +32,22 @@ export const propTypeKeys = {
   list: (sportType: string) => [...propTypeKeys.lists(), sportType] as const,
 }
 
+export const coefficientKeys = {
+  all: ['coefficients'] as const,
+  detail: (eventId: number) => [...coefficientKeys.all, eventId] as const,
+}
+
+// Fetch potential coefficient for an event
+export const usePotentialCoefficient = (eventId: number | undefined) => {
+  return useQuery({
+    queryKey: coefficientKeys.detail(eventId ?? 0),
+    queryFn: () => predictionService.getPotentialCoefficient(eventId!),
+    enabled: !!eventId,
+    refetchInterval: 60000, // Refresh every minute
+    staleTime: 30000,
+  })
+}
+
 // Fetch prop types for a sport
 export const usePropTypes = (sportType: string) => {
   return useQuery({

@@ -19,6 +19,7 @@ message Score {
   google.protobuf.Timestamp scored_at = 6;
   google.protobuf.Timestamp created_at = 7;
   google.protobuf.Timestamp updated_at = 8;
+  double time_coefficient = 9;
 }
 
 // LeaderboardEntry represents a user's position in a contest leaderboard
@@ -46,6 +47,8 @@ message CreateScoreRequest {
   uint32 contest_id = 2;
   uint32 prediction_id = 3;
   double points = 4;
+  google.protobuf.Timestamp submitted_at = 5;
+  google.protobuf.Timestamp event_date = 6;
 }
 
 message UpdateScoreRequest {

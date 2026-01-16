@@ -1787,3 +1787,129 @@ Frontend Pages (7 total):
 - ⏳ Head-to-Head Challenges (Quick Win)
 - ⏳ Multi-Sport Combo Predictions (Quick Win)
 - ⏳ Season Pass / Battle Pass (Medium)
+
+
+---
+
+## Day 9: Dynamic Point Coefficients (Jan 16)
+
+### Session 1 - Feature Planning & Implementation [~45min]
+
+#### Planning Phase
+- Used `@prime` to reload project context
+- Executed `@plan-feature` for Dynamic Point Coefficients
+- Created comprehensive implementation plan at `.agents/plans/dynamic-point-coefficients.md`
+
+#### Implementation via `@execute`
+
+**Coefficient Tiers Implemented:**
+| Time Before Event | Multiplier | Tier Name |
+|-------------------|------------|-----------|
+| 7+ days | 2.0x | Early Bird |
+| 3-7 days | 1.5x | Ahead of Time |
+| 1-3 days | 1.25x | Timely |
+| 12-24 hours | 1.1x | Last Minute |
+| <12 hours | 1.0x | Standard |
+
+**Backend Changes:**
+- Created `backend/shared/coefficient/coefficient.go` - Shared coefficient calculation package
+- Created `backend/scoring-service/internal/models/coefficient.go` - Wrapper functions
+- Modified `backend/scoring-service/internal/service/scoring_service.go` - Applied time coefficient in CreateScore
+- Modified `backend/prediction-service/internal/service/prediction_service.go` - Added GetPotentialCoefficient RPC
+- Modified `backend/proto/scoring.proto` - Added time_coefficient field to Score message
+- Modified `backend/proto/prediction.proto` - Added GetPotentialCoefficient RPC
+- Updated `scripts/init-db.sql` - Added time_coefficient column to scores table
+
+**Frontend Changes:**
+- Created `frontend/src/components/predictions/CoefficientIndicator.tsx` - Visual coefficient display with color-coded chips
+- Modified `frontend/src/hooks/use-predictions.ts` - Added usePotentialCoefficient hook with 60s polling
+- Modified `frontend/src/services/prediction-service.ts` - Added getPotentialCoefficient method
+- Modified `frontend/src/types/prediction.types.ts` - Added PotentialCoefficientResponse type
+- Modified `frontend/src/components/predictions/PredictionForm.tsx` - Integrated coefficient indicator
+- Modified `frontend/src/components/predictions/EventCard.tsx` - Added coefficient display
+
+**Key Design Decisions:**
+- Time coefficient multiplies with existing streak multiplier: `base × streak × time`
+- Coefficient stored on score record for audit trail
+- Frontend polls coefficient every 60 seconds with 30-second stale time
+- Only fetches coefficients for predictable events (optimization)
+- Shared package eliminates code duplication between services
+
+#### Code Review Phase via `@code-review`
+
+**Issues Found (8 total):**
+- 1 HIGH: Code duplication between scoring-service and prediction-service
+- 3 MEDIUM: Float comparison for tier, non-null assertion in queryKey, test file location
+- 4 LOW: Missing error handling, hardcoded values
+
+**Review Document:** `.agents/code-reviews/dynamic-point-coefficients-review.md`
+
+#### Bug Fix Phase via `@code-review-fix`
+
+**Fixes Applied (All critical issues resolved):**
+1. **HIGH**: Created shared `backend/shared/coefficient/coefficient.go` package to eliminate duplication
+2. **MEDIUM**: Added `CalculateWithTier()` function returning both coefficient and tier together
+3. **MEDIUM**: Fixed non-null assertion in queryKey with fallback value `eventId ?? ''`
+4. **MEDIUM**: Moved test file to proper location `frontend/src/components/predictions/__tests__/`
+5. **LOW**: Added error handling for API response validation
+
+**Post-Fix Review:** `.agents/code-reviews/dynamic-point-coefficients-post-fix-review.md`
+
+**Result:** All critical issues resolved, TypeScript compilation passes
+
+### Dynamic Point Coefficients Features
+- **Time-Based Multipliers**: Earlier predictions earn more points
+- **Visual Indicator**: Color-coded chip showing current multiplier and tier
+- **Countdown Display**: Shows time remaining until next tier change
+- **Real-Time Updates**: Coefficient refreshes automatically
+- **Audit Trail**: Coefficient stored with each score for transparency
+- **Stacked Multipliers**: Works alongside streak multipliers
+
+### Files Changed Summary
+- **12 files modified** with ~183 new lines, ~23 deleted lines
+- **7 new files created** (shared package, tests, review docs)
+
+### Kiro CLI Usage This Session
+- `@prime` - Context reload
+- `@plan-feature` - Dynamic Point Coefficients planning
+- `@execute` - Systematic implementation
+- `@code-review` - Quality assurance (8 issues found)
+- `@code-review-fix` - Bug resolution (all critical fixed)
+
+### Time Investment
+- **This Session**: ~45 minutes
+- **Total Project Time**: ~28.25 hours
+
+---
+
+## Updated Development Metrics
+
+### Code Statistics
+- **Total Files Created**: 143+ files
+- **Lines of Code**: ~12,700 lines
+- **Backend Services**: 8/8 implemented
+- **Frontend Pages**: 7 complete pages
+- **Database Tables**: 17 tables with indexes
+- **Test Files**: 24+ test files
+- **Issues Identified**: 148 total across all code reviews
+- **Issues Resolved**: 141/148 (95% resolution rate)
+
+### Kiro CLI Usage Statistics
+- **`@prime`**: 14 uses
+- **`@plan-feature`**: 13 uses
+- **`@execute`**: 13 uses
+- **`@code-review`**: 15 uses
+- **`@code-review-fix`**: 12 uses
+
+### Innovation Features Implemented (6/9 from roadmap)
+- ✅ **Prediction Streaks with Multipliers** - Gamification system
+- ✅ **Dynamic Point Coefficients** - Time-based multipliers (NEW)
+- ✅ **Sports Data Integration** - External API sync with TheSportsDB
+- ✅ **User Analytics Dashboard** - Performance statistics and trends
+- ✅ **Team Tournaments** - Collaborative team-based competitions
+- ✅ **Props Predictions** - Statistics-based predictions
+
+### Remaining Innovations (from roadmap)
+- ⏳ Head-to-Head Challenges (Quick Win)
+- ⏳ Multi-Sport Combo Predictions (Quick Win)
+- ⏳ Season Pass / Battle Pass (Medium)

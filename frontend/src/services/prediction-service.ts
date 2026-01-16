@@ -13,6 +13,7 @@ import type {
   DeletePredictionResponse,
   GetEventResponse,
   ListEventsResponse,
+  PotentialCoefficientResponse,
 } from '../types/prediction.types'
 import type { PaginationResponse } from '../types/common.types'
 import type {
@@ -161,6 +162,25 @@ class PredictionService {
     return {
       propTypes: response.propTypes || [],
       pagination: response.pagination || { page: 1, limit: 20, total: 0, totalPages: 0 },
+    }
+  }
+
+  // Get potential coefficient for an event
+  async getPotentialCoefficient(eventId: number): Promise<{
+    coefficient: number
+    tier: string
+    hoursUntilEvent: number
+  }> {
+    const response = await grpcClient.get<PotentialCoefficientResponse>(
+      `${this.eventsPath}/${eventId}/coefficient`
+    )
+    if (!response.response?.success) {
+      throw new Error(response.response?.message || 'Failed to get coefficient')
+    }
+    return {
+      coefficient: response.coefficient,
+      tier: response.tier,
+      hoursUntilEvent: response.hoursUntilEvent,
     }
   }
 }

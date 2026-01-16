@@ -9,6 +9,7 @@ import (
 	"github.com/sports-prediction-contests/prediction-service/internal/models"
 	"github.com/sports-prediction-contests/prediction-service/internal/repository"
 	"github.com/sports-prediction-contests/shared/auth"
+	"github.com/sports-prediction-contests/shared/coefficient"
 	"github.com/sports-prediction-contests/shared/proto/common"
 	pb "github.com/sports-prediction-contests/shared/proto/prediction"
 	"google.golang.org/grpc/codes"
@@ -697,4 +698,35 @@ func (s *PredictionService) propTypeToProto(pt *models.PropType) *pb.PropType {
 		proto.MaxValue = *pt.MaxValue
 	}
 	return proto
+}
+
+// GetPotentialCoefficient calculates the current time coefficient for an event
+func (s *PredictionService) GetPotentialCoefficient(ctx context.Context, req *pb.GetPotentialCoefficientRequest) (*pb.GetPotentialCoefficientResponse, error) {
+	event, err := s.eventRepo.GetByID(uint(req.EventId))
+	if err != nil {
+		return &pb.GetPotentialCoefficientResponse{
+			Response: &common.Response{
+				Success:   false,
+				Message:   "Event not found",
+				Code:      int32(common.ErrorCode_NOT_FOUND),
+				Timestamp: timestamppb.Now(),
+			},
+		}, nil
+	}
+
+	now := time.Now().UTC()
+	hoursUntilEvent := event.EventDate.Sub(now).Hours()
+	result := coefficient.Calculate(now, event.EventDate)
+
+	return &pb.GetPotentialCoefficientResponse{
+		Response: &common.Response{
+			Success:   true,
+			Message:   "Coefficient calculated",
+			Code:      0,
+			Timestamp: timestamppb.Now(),
+		},
+		Coefficient:     result.Coefficient,
+		Tier:            result.Tier,
+		HoursUntilEvent: hoursUntilEvent,
+	}, nil
 }

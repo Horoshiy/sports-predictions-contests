@@ -83,6 +83,18 @@ message ListPropTypesResponse {
   common.PaginationResponse pagination = 3;
 }
 
+// Time coefficient messages
+message GetPotentialCoefficientRequest {
+  uint32 event_id = 1;
+}
+
+message GetPotentialCoefficientResponse {
+  common.Response response = 1;
+  double coefficient = 2;
+  string tier = 3;
+  double hours_until_event = 4;
+}
+
 // Request messages
 message SubmitPredictionRequest {
   uint32 contest_id = 1;
@@ -247,6 +259,13 @@ service PredictionService {
   rpc ListPropTypes(ListPropTypesRequest) returns (ListPropTypesResponse) {
     option (google.api.http) = {
       get: "/v1/prop-types"
+    };
+  }
+  
+  // Time coefficient
+  rpc GetPotentialCoefficient(GetPotentialCoefficientRequest) returns (GetPotentialCoefficientResponse) {
+    option (google.api.http) = {
+      get: "/v1/events/{event_id}/coefficient"
     };
   }
   
