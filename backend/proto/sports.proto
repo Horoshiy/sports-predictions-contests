@@ -1,0 +1,372 @@
+syntax = "proto3";
+
+package sports;
+
+option go_package = "github.com/sports-prediction-contests/shared/proto/sports";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+import "google/api/annotations.proto";
+import "common.proto";
+
+// Sport represents a type of sport
+message Sport {
+  uint32 id = 1;
+  string name = 2;
+  string slug = 3;
+  string description = 4;
+  string icon_url = 5;
+  bool is_active = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+}
+
+// League represents a sports league/competition
+message League {
+  uint32 id = 1;
+  uint32 sport_id = 2;
+  string name = 3;
+  string slug = 4;
+  string country = 5;
+  string season = 6;
+  bool is_active = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
+}
+
+// Team represents a sports team
+message Team {
+  uint32 id = 1;
+  uint32 sport_id = 2;
+  string name = 3;
+  string slug = 4;
+  string short_name = 5;
+  string logo_url = 6;
+  string country = 7;
+  bool is_active = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp updated_at = 10;
+}
+
+// Match represents a sports match/event
+message Match {
+  uint32 id = 1;
+  uint32 league_id = 2;
+  uint32 home_team_id = 3;
+  uint32 away_team_id = 4;
+  google.protobuf.Timestamp scheduled_at = 5;
+  string status = 6;
+  int32 home_score = 7;
+  int32 away_score = 8;
+  string result_data = 9;
+  google.protobuf.Timestamp created_at = 10;
+  google.protobuf.Timestamp updated_at = 11;
+}
+
+// Sport requests
+message CreateSportRequest {
+  string name = 1;
+  string slug = 2;
+  string description = 3;
+  string icon_url = 4;
+}
+
+message GetSportRequest {
+  uint32 id = 1;
+}
+
+message UpdateSportRequest {
+  uint32 id = 1;
+  string name = 2;
+  string slug = 3;
+  string description = 4;
+  string icon_url = 5;
+  bool is_active = 6;
+}
+
+message DeleteSportRequest {
+  uint32 id = 1;
+}
+
+message ListSportsRequest {
+  common.PaginationRequest pagination = 1;
+  bool active_only = 2;
+}
+
+// League requests
+message CreateLeagueRequest {
+  uint32 sport_id = 1;
+  string name = 2;
+  string slug = 3;
+  string country = 4;
+  string season = 5;
+}
+
+message GetLeagueRequest {
+  uint32 id = 1;
+}
+
+message UpdateLeagueRequest {
+  uint32 id = 1;
+  uint32 sport_id = 2;
+  string name = 3;
+  string slug = 4;
+  string country = 5;
+  string season = 6;
+  bool is_active = 7;
+}
+
+message DeleteLeagueRequest {
+  uint32 id = 1;
+}
+
+message ListLeaguesRequest {
+  common.PaginationRequest pagination = 1;
+  uint32 sport_id = 2;
+  bool active_only = 3;
+}
+
+// Team requests
+message CreateTeamRequest {
+  uint32 sport_id = 1;
+  string name = 2;
+  string slug = 3;
+  string short_name = 4;
+  string logo_url = 5;
+  string country = 6;
+}
+
+message GetTeamRequest {
+  uint32 id = 1;
+}
+
+message UpdateTeamRequest {
+  uint32 id = 1;
+  uint32 sport_id = 2;
+  string name = 3;
+  string slug = 4;
+  string short_name = 5;
+  string logo_url = 6;
+  string country = 7;
+  bool is_active = 8;
+}
+
+message DeleteTeamRequest {
+  uint32 id = 1;
+}
+
+message ListTeamsRequest {
+  common.PaginationRequest pagination = 1;
+  uint32 sport_id = 2;
+  bool active_only = 3;
+}
+
+// Match requests
+message CreateMatchRequest {
+  uint32 league_id = 1;
+  uint32 home_team_id = 2;
+  uint32 away_team_id = 3;
+  google.protobuf.Timestamp scheduled_at = 4;
+}
+
+message GetMatchRequest {
+  uint32 id = 1;
+}
+
+message UpdateMatchRequest {
+  uint32 id = 1;
+  uint32 league_id = 2;
+  uint32 home_team_id = 3;
+  uint32 away_team_id = 4;
+  google.protobuf.Timestamp scheduled_at = 5;
+  string status = 6;
+  int32 home_score = 7;
+  int32 away_score = 8;
+  string result_data = 9;
+}
+
+message DeleteMatchRequest {
+  uint32 id = 1;
+}
+
+message ListMatchesRequest {
+  common.PaginationRequest pagination = 1;
+  uint32 league_id = 2;
+  uint32 team_id = 3;
+  string status = 4;
+}
+
+// Responses
+message SportResponse {
+  common.Response response = 1;
+  Sport sport = 2;
+}
+
+message ListSportsResponse {
+  common.Response response = 1;
+  repeated Sport sports = 2;
+  common.PaginationResponse pagination = 3;
+}
+
+message LeagueResponse {
+  common.Response response = 1;
+  League league = 2;
+}
+
+message ListLeaguesResponse {
+  common.Response response = 1;
+  repeated League leagues = 2;
+  common.PaginationResponse pagination = 3;
+}
+
+message TeamResponse {
+  common.Response response = 1;
+  Team team = 2;
+}
+
+message ListTeamsResponse {
+  common.Response response = 1;
+  repeated Team teams = 2;
+  common.PaginationResponse pagination = 3;
+}
+
+message MatchResponse {
+  common.Response response = 1;
+  Match match = 2;
+}
+
+message ListMatchesResponse {
+  common.Response response = 1;
+  repeated Match matches = 2;
+  common.PaginationResponse pagination = 3;
+}
+
+message DeleteResponse {
+  common.Response response = 1;
+}
+
+// Sports Service
+service SportsService {
+  // Sport management
+  rpc CreateSport(CreateSportRequest) returns (SportResponse) {
+    option (google.api.http) = {
+      post: "/v1/sports"
+      body: "*"
+    };
+  }
+  rpc GetSport(GetSportRequest) returns (SportResponse) {
+    option (google.api.http) = {
+      get: "/v1/sports/{id}"
+    };
+  }
+  rpc UpdateSport(UpdateSportRequest) returns (SportResponse) {
+    option (google.api.http) = {
+      put: "/v1/sports/{id}"
+      body: "*"
+    };
+  }
+  rpc DeleteSport(DeleteSportRequest) returns (DeleteResponse) {
+    option (google.api.http) = {
+      delete: "/v1/sports/{id}"
+    };
+  }
+  rpc ListSports(ListSportsRequest) returns (ListSportsResponse) {
+    option (google.api.http) = {
+      get: "/v1/sports"
+    };
+  }
+
+  // League management
+  rpc CreateLeague(CreateLeagueRequest) returns (LeagueResponse) {
+    option (google.api.http) = {
+      post: "/v1/leagues"
+      body: "*"
+    };
+  }
+  rpc GetLeague(GetLeagueRequest) returns (LeagueResponse) {
+    option (google.api.http) = {
+      get: "/v1/leagues/{id}"
+    };
+  }
+  rpc UpdateLeague(UpdateLeagueRequest) returns (LeagueResponse) {
+    option (google.api.http) = {
+      put: "/v1/leagues/{id}"
+      body: "*"
+    };
+  }
+  rpc DeleteLeague(DeleteLeagueRequest) returns (DeleteResponse) {
+    option (google.api.http) = {
+      delete: "/v1/leagues/{id}"
+    };
+  }
+  rpc ListLeagues(ListLeaguesRequest) returns (ListLeaguesResponse) {
+    option (google.api.http) = {
+      get: "/v1/leagues"
+    };
+  }
+
+  // Team management
+  rpc CreateTeam(CreateTeamRequest) returns (TeamResponse) {
+    option (google.api.http) = {
+      post: "/v1/teams"
+      body: "*"
+    };
+  }
+  rpc GetTeam(GetTeamRequest) returns (TeamResponse) {
+    option (google.api.http) = {
+      get: "/v1/teams/{id}"
+    };
+  }
+  rpc UpdateTeam(UpdateTeamRequest) returns (TeamResponse) {
+    option (google.api.http) = {
+      put: "/v1/teams/{id}"
+      body: "*"
+    };
+  }
+  rpc DeleteTeam(DeleteTeamRequest) returns (DeleteResponse) {
+    option (google.api.http) = {
+      delete: "/v1/teams/{id}"
+    };
+  }
+  rpc ListTeams(ListTeamsRequest) returns (ListTeamsResponse) {
+    option (google.api.http) = {
+      get: "/v1/teams"
+    };
+  }
+
+  // Match management
+  rpc CreateMatch(CreateMatchRequest) returns (MatchResponse) {
+    option (google.api.http) = {
+      post: "/v1/matches"
+      body: "*"
+    };
+  }
+  rpc GetMatch(GetMatchRequest) returns (MatchResponse) {
+    option (google.api.http) = {
+      get: "/v1/matches/{id}"
+    };
+  }
+  rpc UpdateMatch(UpdateMatchRequest) returns (MatchResponse) {
+    option (google.api.http) = {
+      put: "/v1/matches/{id}"
+      body: "*"
+    };
+  }
+  rpc DeleteMatch(DeleteMatchRequest) returns (DeleteResponse) {
+    option (google.api.http) = {
+      delete: "/v1/matches/{id}"
+    };
+  }
+  rpc ListMatches(ListMatchesRequest) returns (ListMatchesResponse) {
+    option (google.api.http) = {
+      get: "/v1/matches"
+    };
+  }
+
+  // Health check
+  rpc Check(google.protobuf.Empty) returns (common.Response) {
+    option (google.api.http) = {
+      get: "/v1/sports/health"
+    };
+  }
+}
