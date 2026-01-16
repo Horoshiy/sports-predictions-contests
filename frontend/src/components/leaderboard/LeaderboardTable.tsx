@@ -19,13 +19,11 @@ import {
 } from '@mui/material'
 import {
   Refresh as RefreshIcon,
-  TrendingUp as TrendingUpIcon,
-  TrendingDown as TrendingDownIcon,
   EmojiEvents as TrophyIcon,
 } from '@mui/icons-material'
 import { useQuery } from '@tanstack/react-query'
 import scoringService from '../../services/scoring-service'
-import type { LeaderboardEntry, Leaderboard } from '../../types/scoring.types'
+import type { LeaderboardEntry } from '../../types/scoring.types'
 import { formatRelativeTime } from '../../utils/date-utils'
 
 interface LeaderboardTableProps {
@@ -98,6 +96,24 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({
     enabled: !!currentUserId,
     refetchInterval: autoRefresh ? refreshInterval : false,
   })
+
+  // Query for current user's streak if provided
+  const {
+    data: userStreak,
+    error: userStreakError,
+  } = useQuery({
+    queryKey: ['userStreak', contestId, currentUserId],
+    queryFn: () => currentUserId 
+      ? scoringService.getUserStreak({ contestId, userId: currentUserId })
+      : null,
+    enabled: !!currentUserId,
+    refetchInterval: autoRefresh ? refreshInterval : false,
+  })
+
+  // Log streak error if any (silent fail for UI)
+  if (userStreakError) {
+    console.error('Failed to fetch user streak:', userStreakError)
+  }
 
   // Define table columns
   const columns = useMemo<MRT_ColumnDef<LeaderboardEntry>[]>(
@@ -186,6 +202,29 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({
             >
               {points.toFixed(1)}
             </Typography>
+          )
+        },
+      },
+      {
+        accessorKey: 'currentStreak',
+        header: 'Streak',
+        size: 100,
+        Cell: ({ cell, row }) => {
+          const streak = cell.getValue<number>() || 0
+          const multiplier = row.original.multiplier || 1
+          return (
+            <Box display="flex" alignItems="center" gap={1}>
+              <Typography variant="body2">
+                🔥 {streak}
+              </Typography>
+              {multiplier > 1 && (
+                <Chip 
+                  label={`${multiplier}x`} 
+                  size="small" 
+                  color="warning"
+                />
+              )}
+            </Box>
           )
         },
       },
@@ -303,6 +342,24 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({
                       Points
                     </Typography>
                   </Box>
+                  {userStreak && (
+                    <Box textAlign="center">
+                      <Typography variant="h6" color="warning.main">
+                        🔥 {userStreak.currentStreak}
+                        {userStreak.multiplier > 1 && (
+                          <Chip 
+                            label={`${userStreak.multiplier}x`} 
+                            size="small" 
+                            color="warning"
+                            sx={{ ml: 0.5, height: 20 }}
+                          />
+                        )}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Streak
+                      </Typography>
+                    </Box>
+                  )}
                 </Box>
               </Box>
             </CardContent>

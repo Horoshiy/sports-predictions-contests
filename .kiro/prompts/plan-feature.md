@@ -6,6 +6,25 @@ description: "Create comprehensive feature plan with deep codebase analysis and 
 
 ## Feature: $ARGUMENTS
 
+## Innovation Reference
+
+Before planning, check if the feature relates to any strategic innovations in `.kiro/steering/innovations.md`:
+
+**Quick Wins (2-4 hours)**:
+- Prediction Streaks with Multipliers
+- Dynamic Point Coefficients  
+- Head-to-Head Challenges
+- Multi-Sport Combo Predictions
+
+**Medium Priority (4-8 hours)**:
+- User Analytics Dashboard
+- Team Tournaments
+- Social Predictions (Copy Trading)
+- Props Predictions (Statistics)
+- Season Pass (Battle Pass)
+
+If planning one of these features, read the innovation details first for implementation scope and affected services.
+
 ## Mission
 
 Transform a feature request into a **comprehensive implementation plan** through systematic codebase analysis, external research, and strategic planning.

@@ -17,6 +17,9 @@ export interface LeaderboardEntry {
   totalPoints: number
   rank: number
   updatedAt: string // ISO string
+  currentStreak: number
+  maxStreak: number
+  multiplier: number
 }
 
 export interface Leaderboard {
@@ -63,6 +66,11 @@ export interface GetLeaderboardRequest {
 }
 
 export interface GetUserRankRequest {
+  contestId: number
+  userId: number
+}
+
+export interface GetUserStreakRequest {
   contestId: number
   userId: number
 }
@@ -118,6 +126,13 @@ export interface GetUserRankResponse {
   response: ApiResponse
   rank: number
   totalPoints: number
+}
+
+export interface GetUserStreakResponse {
+  response: ApiResponse
+  currentStreak: number
+  maxStreak: number
+  multiplier: number
 }
 
 export interface UpdateLeaderboardResponse {

@@ -55,6 +55,23 @@ CREATE INDEX IF NOT EXISTS idx_leaderboards_contest_id ON leaderboards(contest_i
 CREATE INDEX IF NOT EXISTS idx_leaderboards_contest_rank ON leaderboards(contest_id, rank);
 CREATE INDEX IF NOT EXISTS idx_leaderboards_deleted_at ON leaderboards(deleted_at);
 
+-- Create user_streaks table for streak tracking
+CREATE TABLE IF NOT EXISTS user_streaks (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL,
+    contest_id INTEGER NOT NULL,
+    current_streak INTEGER NOT NULL DEFAULT 0,
+    max_streak INTEGER NOT NULL DEFAULT 0,
+    last_prediction_id INTEGER,
+    last_prediction_correct BOOLEAN,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL,
+    UNIQUE(user_id, contest_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_streaks_contest_user ON user_streaks(contest_id, user_id);
+CREATE INDEX IF NOT EXISTS idx_user_streaks_deleted_at ON user_streaks(deleted_at);
 
 -- Create sports table
 CREATE TABLE IF NOT EXISTS sports (

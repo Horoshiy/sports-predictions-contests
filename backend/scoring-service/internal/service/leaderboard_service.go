@@ -17,13 +17,15 @@ type LeaderboardService struct {
 	pb.UnimplementedScoringServiceServer
 	leaderboardRepo repository.LeaderboardRepositoryInterface
 	scoreRepo       repository.ScoreRepositoryInterface
+	streakRepo      repository.StreakRepositoryInterface
 }
 
 // NewLeaderboardService creates a new LeaderboardService instance
-func NewLeaderboardService(leaderboardRepo repository.LeaderboardRepositoryInterface, scoreRepo repository.ScoreRepositoryInterface) *LeaderboardService {
+func NewLeaderboardService(leaderboardRepo repository.LeaderboardRepositoryInterface, scoreRepo repository.ScoreRepositoryInterface, streakRepo repository.StreakRepositoryInterface) *LeaderboardService {
 	return &LeaderboardService{
 		leaderboardRepo: leaderboardRepo,
 		scoreRepo:       scoreRepo,
+		streakRepo:      streakRepo,
 	}
 }
 
@@ -48,16 +50,35 @@ func (s *LeaderboardService) GetLeaderboard(ctx context.Context, req *pb.GetLead
 		}, nil
 	}
 
-	// Convert to proto
+	// Convert to proto with streak data
 	entries := make([]*pb.LeaderboardEntry, len(leaderboards))
+	
+	// Batch fetch all streaks in one query to avoid N+1
+	userIDs := make([]uint, len(leaderboards))
 	for i, lb := range leaderboards {
-		entries[i] = &pb.LeaderboardEntry{
+		userIDs[i] = lb.UserID
+	}
+	streaks, _ := s.streakRepo.GetByContestAndUsers(ctx, uint(req.ContestId), userIDs)
+	streakMap := make(map[uint]*models.UserStreak)
+	for _, streak := range streaks {
+		streakMap[streak.UserID] = streak
+	}
+	
+	for i, lb := range leaderboards {
+		entry := &pb.LeaderboardEntry{
 			UserId:      uint32(lb.UserID),
 			UserName:    "", // TODO: Fetch user name from user service
 			TotalPoints: lb.TotalPoints,
 			Rank:        uint32(lb.Rank),
 			UpdatedAt:   timestamppb.New(lb.UpdatedAt),
 		}
+		// Use pre-fetched streak data
+		if streak, ok := streakMap[lb.UserID]; ok {
+			entry.CurrentStreak = uint32(streak.CurrentStreak)
+			entry.MaxStreak = uint32(streak.MaxStreak)
+			entry.Multiplier = streak.GetMultiplier()
+		}
+		entries[i] = entry
 	}
 
 	leaderboard := &pb.Leaderboard{
@@ -251,4 +272,32 @@ func (s *LeaderboardService) RefreshLeaderboardCache(ctx context.Context, contes
 	// Cache will be updated automatically by the repository layer
 	log.Printf("[INFO] Refreshed leaderboard cache for contest %d with %d entries", contestID, len(leaderboards))
 	return nil
+}
+
+// GetUserStreak retrieves a user's streak information for a contest
+func (s *LeaderboardService) GetUserStreak(ctx context.Context, req *pb.GetUserStreakRequest) (*pb.GetUserStreakResponse, error) {
+	streak, err := s.streakRepo.GetByContestAndUser(ctx, uint(req.ContestId), uint(req.UserId))
+	if err != nil {
+		log.Printf("[ERROR] Failed to get user streak: %v", err)
+		return &pb.GetUserStreakResponse{
+			Response: &common.Response{
+				Success:   false,
+				Message:   "Streak not found",
+				Code:      int32(common.ErrorCode_NOT_FOUND),
+				Timestamp: timestamppb.Now(),
+			},
+		}, nil
+	}
+
+	return &pb.GetUserStreakResponse{
+		Response: &common.Response{
+			Success:   true,
+			Message:   "Streak retrieved successfully",
+			Code:      int32(common.ErrorCode_SUCCESS),
+			Timestamp: timestamppb.Now(),
+		},
+		CurrentStreak: uint32(streak.CurrentStreak),
+		MaxStreak:     uint32(streak.MaxStreak),
+		Multiplier:    streak.GetMultiplier(),
+	}, nil
 }

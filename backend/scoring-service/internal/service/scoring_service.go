@@ -19,13 +19,15 @@ type ScoringService struct {
 	pb.UnimplementedScoringServiceServer
 	scoreRepo       repository.ScoreRepositoryInterface
 	leaderboardRepo repository.LeaderboardRepositoryInterface
+	streakRepo      repository.StreakRepositoryInterface
 }
 
 // NewScoringService creates a new ScoringService instance
-func NewScoringService(scoreRepo repository.ScoreRepositoryInterface, leaderboardRepo repository.LeaderboardRepositoryInterface) *ScoringService {
+func NewScoringService(scoreRepo repository.ScoreRepositoryInterface, leaderboardRepo repository.LeaderboardRepositoryInterface, streakRepo repository.StreakRepositoryInterface) *ScoringService {
 	return &ScoringService{
 		scoreRepo:       scoreRepo,
 		leaderboardRepo: leaderboardRepo,
+		streakRepo:      streakRepo,
 	}
 }
 
@@ -64,12 +66,53 @@ func (s *ScoringService) CreateScore(ctx context.Context, req *pb.CreateScoreReq
 		}, nil
 	}
 
-	// Create score model
+	// Get or create user streak
+	streak, err := s.streakRepo.GetOrCreate(ctx, uint(req.ContestId), uint(req.UserId))
+	if err != nil {
+		log.Printf("[ERROR] Failed to get/create streak: %v", err)
+		return &pb.CreateScoreResponse{
+			Response: &common.Response{
+				Success:   false,
+				Message:   "Failed to process streak",
+				Code:      int32(common.ErrorCode_INTERNAL_ERROR),
+				Timestamp: timestamppb.Now(),
+			},
+		}, nil
+	}
+
+	// Determine if prediction was correct and update streak
+	basePoints := req.Points
+	// Update streak first, then calculate multiplier based on new streak value
+	isCorrect := basePoints > 0
+	if isCorrect {
+		streak.IncrementStreak(uint(req.PredictionId))
+	} else {
+		streak.ResetStreak(uint(req.PredictionId))
+	}
+
+	// Multiplier is based on the updated streak value
+	multiplier := streak.GetMultiplier()
+	finalPoints := basePoints * multiplier
+
+	// Update streak in database - fail if this fails to maintain consistency
+	if err := s.streakRepo.Update(ctx, streak); err != nil {
+		log.Printf("[ERROR] Failed to update streak: %v", err)
+		return &pb.CreateScoreResponse{
+			Response: &common.Response{
+				Success:   false,
+				Message:   "Failed to update streak",
+				Code:      int32(common.ErrorCode_INTERNAL_ERROR),
+				Timestamp: timestamppb.Now(),
+			},
+		}, nil
+	}
+
+	// Create score model with multiplied points
 	score := &models.Score{
 		UserID:       req.UserId,
 		ContestID:    req.ContestId,
 		PredictionID: req.PredictionId,
-		Points:       req.Points,
+		Points:       finalPoints,
 	}
 
 	// Save to database
@@ -111,10 +154,13 @@ func (s *ScoringService) CreateScore(ctx context.Context, req *pb.CreateScoreReq
 		}, nil
 	}
 
+	log.Printf("[INFO] Score created: user=%d, contest=%d, base=%.2f, multiplier=%.2fx, final=%.2f, streak=%d",
+		req.UserId, req.ContestId, basePoints, multiplier, finalPoints, streak.CurrentStreak)
+
 	return &pb.CreateScoreResponse{
 		Response: &common.Response{
 			Success:   true,
-			Message:   "Score created successfully",
+			Message:   fmt.Sprintf("Score created successfully (%.2fx multiplier)", multiplier),
 			Code:      int32(common.ErrorCode_SUCCESS),
 			Timestamp: timestamppb.Now(),
 		},

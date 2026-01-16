@@ -7,6 +7,7 @@ import type {
   GetUserScoresRequest,
   GetLeaderboardRequest,
   GetUserRankRequest,
+  GetUserStreakRequest,
   UpdateLeaderboardRequest,
   CalculateScoreRequest,
   ListScoresRequest,
@@ -18,6 +19,7 @@ import type {
   GetUserScoresResponse,
   GetLeaderboardResponse,
   GetUserRankResponse,
+  GetUserStreakResponse,
   UpdateLeaderboardResponse,
   CalculateScoreResponse,
   PaginationRequest,
@@ -144,6 +146,23 @@ class ScoringService {
     return {
       rank: response.rank,
       totalPoints: response.totalPoints,
+    }
+  }
+
+  // Get user streak in a contest
+  async getUserStreak(request: GetUserStreakRequest): Promise<{
+    currentStreak: number
+    maxStreak: number
+    multiplier: number
+  }> {
+    const response = await grpcClient.get<GetUserStreakResponse>(
+      `${this.leaderboardPath}/${request.contestId}/users/${request.userId}/streak`
+    )
+    
+    return {
+      currentStreak: response.currentStreak,
+      maxStreak: response.maxStreak,
+      multiplier: response.multiplier,
     }
   }
 

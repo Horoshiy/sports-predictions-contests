@@ -9,12 +9,15 @@ import (
 
 // Leaderboard represents a user's position and total points in a contest
 type Leaderboard struct {
-	ID          uint      `gorm:"primaryKey" json:"id"`
-	ContestID   uint      `gorm:"not null;uniqueIndex:idx_contest_user;index:idx_contest_rank" json:"contest_id"`
-	UserID      uint      `gorm:"not null;uniqueIndex:idx_contest_user" json:"user_id"`
-	TotalPoints float64   `gorm:"not null;default:0" json:"total_points"`
-	Rank        uint      `gorm:"not null;default:0;index:idx_contest_rank" json:"rank"`
-	UpdatedAt   time.Time `gorm:"not null" json:"updated_at"`
+	ID            uint      `gorm:"primaryKey" json:"id"`
+	ContestID     uint      `gorm:"not null;uniqueIndex:idx_contest_user;index:idx_contest_rank" json:"contest_id"`
+	UserID        uint      `gorm:"not null;uniqueIndex:idx_contest_user" json:"user_id"`
+	TotalPoints   float64   `gorm:"not null;default:0" json:"total_points"`
+	Rank          uint      `gorm:"not null;default:0;index:idx_contest_rank" json:"rank"`
+	UpdatedAt     time.Time `gorm:"not null" json:"updated_at"`
+	CurrentStreak uint      `gorm:"-" json:"current_streak"`
+	MaxStreak     uint      `gorm:"-" json:"max_streak"`
+	Multiplier    float64   `gorm:"-" json:"multiplier"`
 	gorm.Model
 }
 

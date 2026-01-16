@@ -39,7 +39,7 @@ func main() {
 	}
 
 	// Auto-migrate database schema
-	if err := db.AutoMigrate(&models.Score{}, &models.Leaderboard{}); err != nil {
+	if err := db.AutoMigrate(&models.Score{}, &models.Leaderboard{}, &models.UserStreak{}); err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)
 	}
 
@@ -53,10 +53,11 @@ func main() {
 	// Initialize repositories
 	scoreRepo := repository.NewScoreRepository(db)
 	leaderboardRepo := repository.NewLeaderboardRepository(db, redisCache)
+	streakRepo := repository.NewStreakRepository(db)
 
 	// Initialize services
-	scoringService := service.NewScoringService(scoreRepo, leaderboardRepo)
-	leaderboardService := service.NewLeaderboardService(leaderboardRepo, scoreRepo)
+	scoringService := service.NewScoringService(scoreRepo, leaderboardRepo, streakRepo)
+	leaderboardService := service.NewLeaderboardService(leaderboardRepo, scoreRepo, streakRepo)
 
 	// Create combined service that implements all methods
 	combinedService := &CombinedScoringService{
@@ -146,6 +147,10 @@ func (s *CombinedScoringService) GetLeaderboard(ctx context.Context, req *pb.Get
 
 func (s *CombinedScoringService) GetUserRank(ctx context.Context, req *pb.GetUserRankRequest) (*pb.GetUserRankResponse, error) {
 	return s.LeaderboardService.GetUserRank(ctx, req)
+}
+
+func (s *CombinedScoringService) GetUserStreak(ctx context.Context, req *pb.GetUserStreakRequest) (*pb.GetUserStreakResponse, error) {
+	return s.LeaderboardService.GetUserStreak(ctx, req)
 }
 
 func (s *CombinedScoringService) UpdateLeaderboard(ctx context.Context, req *pb.UpdateLeaderboardRequest) (*pb.UpdateLeaderboardResponse, error) {

@@ -28,6 +28,9 @@ message LeaderboardEntry {
   double total_points = 3;
   uint32 rank = 4;
   google.protobuf.Timestamp updated_at = 5;
+  uint32 current_streak = 6;
+  uint32 max_streak = 7;
+  double multiplier = 8;
 }
 
 // Leaderboard represents a contest leaderboard
@@ -75,6 +78,11 @@ message GetLeaderboardRequest {
 }
 
 message GetUserRankRequest {
+  uint32 contest_id = 1;
+  uint32 user_id = 2;
+}
+
+message GetUserStreakRequest {
   uint32 contest_id = 1;
   uint32 user_id = 2;
 }
@@ -130,6 +138,13 @@ message GetUserRankResponse {
   common.Response response = 1;
   uint32 rank = 2;
   double total_points = 3;
+}
+
+message GetUserStreakResponse {
+  common.Response response = 1;
+  uint32 current_streak = 2;
+  uint32 max_streak = 3;
+  double multiplier = 4;
 }
 
 message UpdateLeaderboardResponse {
@@ -190,6 +205,11 @@ service ScoringService {
   rpc GetUserRank(GetUserRankRequest) returns (GetUserRankResponse) {
     option (google.api.http) = {
       get: "/v1/contests/{contest_id}/users/{user_id}/rank"
+    };
+  }
+  rpc GetUserStreak(GetUserStreakRequest) returns (GetUserStreakResponse) {
+    option (google.api.http) = {
+      get: "/v1/contests/{contest_id}/users/{user_id}/streak"
     };
   }
   rpc UpdateLeaderboard(UpdateLeaderboardRequest) returns (UpdateLeaderboardResponse) {
