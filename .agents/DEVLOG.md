@@ -1486,3 +1486,168 @@ Frontend Pages (6 total):
 - **Platform Comparison**: User performance vs platform average
 - **CSV Export**: Download analytics data for external analysis
 - **Stat Cards**: Total predictions, accuracy %, current streak, best streak
+
+
+---
+
+## Session 11: Team Tournaments Feature (January 16, 2026)
+
+### Session Overview
+- **Start Time**: ~7:00 AM AKST
+- **End Time**: ~8:00 AM AKST
+- **Duration**: ~1 hour
+- **Focus**: Team Tournaments - enabling users to create/join teams for collaborative prediction contests
+
+### Feature Implementation: Team Tournaments
+
+#### Planning Phase via `@plan-feature`
+Created comprehensive implementation plan with 24 tasks covering:
+- Database: 3 new tables (user_teams, user_team_members, user_team_contest_entries)
+- Backend: Proto definitions, GORM models, repository, service layer
+- Frontend: Types, validation, service, hooks, 5 components, page
+- Testing: Unit tests for model validation
+
+#### Implementation Phase via `@execute`
+
+**Backend Changes (8 files created):**
+1. `backend/proto/team.proto` - gRPC service with 14 RPC methods
+2. `backend/contest-service/internal/models/team.go` - Team model with invite code generation
+3. `backend/contest-service/internal/models/team_member.go` - TeamMember model with role validation
+4. `backend/contest-service/internal/models/team_contest_entry.go` - Contest entry tracking
+5. `backend/contest-service/internal/repository/team_repository.go` - 3 repository implementations
+6. `backend/contest-service/internal/service/team_service.go` - Complete service layer (~350 lines)
+7. `backend/shared/proto/team/team.pb.go` - Proto stub
+8. `backend/shared/proto/team/team.pb.gw.go` - Gateway stub
+
+**Frontend Changes (10 files created):**
+1. `frontend/src/types/team.types.ts` - TypeScript interfaces
+2. `frontend/src/utils/team-validation.ts` - Zod schemas
+3. `frontend/src/services/team-service.ts` - API service class
+4. `frontend/src/hooks/use-teams.ts` - 10 React Query hooks
+5. `frontend/src/components/teams/TeamList.tsx` - Team listing with MaterialReactTable
+6. `frontend/src/components/teams/TeamForm.tsx` - Create/edit dialog
+7. `frontend/src/components/teams/TeamMembers.tsx` - Member list with remove action
+8. `frontend/src/components/teams/TeamInvite.tsx` - Invite code display/copy/regenerate
+9. `frontend/src/components/teams/TeamLeaderboard.tsx` - Contest team rankings
+10. `frontend/src/pages/TeamsPage.tsx` - Main page with 3 tabs
+
+**Files Modified (4 files):**
+- `scripts/init-db.sql` - Added 3 tables with indexes and foreign keys
+- `backend/api-gateway/internal/config/config.go` - Added TeamService endpoint
+- `backend/api-gateway/internal/gateway/gateway.go` - Registered team service handler
+- `frontend/src/App.tsx` - Added /teams route and navigation
+
+**Test Files (1 file):**
+- `tests/contest-service/team_test.go` - Unit tests for model validation
+
+#### Code Review Phases (3 rounds)
+
+**Round 1 - Initial Review:**
+- 1 CRITICAL: Wrong table name in SQL subquery
+- 3 HIGH: Silent errors, validation gaps, infinite loop
+- 4 MEDIUM: Transaction handling, error exposure, query keys
+- 4 LOW: Duplicate types, clipboard handling
+
+**Round 2 - Post-Fix Review:**
+- 2 HIGH: Race condition in CreateTeam, soft delete filtering
+- 4 MEDIUM: Membership check, BeforeCreate hook, parseInt handling
+- 4 LOW: Unused imports, type re-exports, validation redundancy
+
+**Round 3 - Final Review:**
+- 0 CRITICAL, 0 HIGH, 0 MEDIUM issues
+- 2 LOW (informational only, no action needed)
+
+#### Bug Fixes Applied (17 total across 3 rounds)
+
+**Critical/High Fixes:**
+1. Fixed table name `team_members` → `user_team_members` in subquery
+2. Added error logging for `updateMemberCount` Update call
+3. Set default `MaxMembers=10` before validation in BeforeCreate
+4. Removed `searchParams` from useEffect dependency array
+5. Added `defer tx.Rollback()` for proper transaction handling
+6. Wrapped JoinTeam error with `fmt.Errorf`
+7. Added pagination to useTeamMembers query key
+8. Reduced hardcoded limit from 50 to 20
+9. Added `deleted_at IS NULL` to List query
+10. Created atomic `CreateWithMember` transaction method
+11. Added explicit membership check in JoinTeam
+
+**Medium/Low Fixes:**
+12. Moved duplicate check from BeforeCreate to service layer
+13. Added radix and NaN fallback to parseInt calls
+14. Simplified redundant validation condition
+15. Removed type re-exports
+16. Added try-catch for clipboard API
+17. Imported PaginationRequest/Response from common.types
+
+### Team Tournaments Features
+- **Team Creation**: Name, description, max members (2-50)
+- **Invite System**: 8-character hex codes, regeneratable by captain
+- **Role Management**: Captain and member roles
+- **Contest Participation**: Teams can join contests as a unit
+- **Team Leaderboard**: Rankings by total team points
+- **Member Management**: Captain can remove members
+
+### Updated Architecture Status
+```
+Frontend Pages (7 total):
+├── /login              ✅ Authentication
+├── /register           ✅ Registration
+├── /contests           ✅ Contest Management + Leaderboard with Streaks
+├── /sports             ✅ Sports Management
+├── /predictions        ✅ Predictions UI
+├── /analytics          ✅ User Analytics Dashboard
+└── /teams              ✅ NEW - Team Tournaments
+    ├── My Teams Tab    ✅ Teams user belongs to
+    ├── All Teams Tab   ✅ Browse all teams
+    └── Join Team Tab   ✅ Join via invite code
+```
+
+### Kiro CLI Usage This Session
+- `@prime` - Context reload
+- `@plan-feature` - Team Tournaments planning (24 tasks)
+- `@execute` - Systematic implementation
+- `@code-review` - 3 rounds of quality assurance (22 issues found)
+- `@code-review-fix` - 2 rounds of bug resolution (17 fixes applied)
+
+### Time Investment
+- **This Session**: ~1 hour
+- **Total Project Time**: ~27 hours
+
+---
+
+## Final Development Metrics
+
+### Code Statistics
+- **Total Files Created**: 130+ files
+- **Lines of Code**: ~11,900 lines
+- **Backend Services**: 8/8 implemented
+- **Frontend Pages**: 7 complete pages
+- **Database Tables**: 16 tables with indexes
+- **Test Files**: 19+ test files
+- **Issues Identified**: 130 total across all code reviews
+- **Issues Resolved**: 126/130 (97% resolution rate)
+
+### Kiro CLI Usage Statistics
+- **`@prime`**: 12 uses
+- **`@plan-feature`**: 11 uses
+- **`@execute`**: 11 uses
+- **`@code-review`**: 13 uses
+- **`@code-review-fix`**: 10 uses
+
+### Innovation Features Implemented
+- ✅ **Prediction Streaks with Multipliers** - Gamification system
+- ✅ **Sports Data Integration** - External API sync with TheSportsDB
+- ✅ **User Analytics Dashboard** - Performance statistics and trends
+- ✅ **Team Tournaments** - Collaborative team-based competitions
+
+### Platform Complete Feature Set
+1. **User Management**: Registration, authentication, JWT tokens
+2. **Contest System**: CRUD, participants, flexible rules
+3. **Sports Management**: Sports, leagues, teams, matches
+4. **Predictions**: Submit, edit, delete predictions
+5. **Scoring**: Points calculation, leaderboards, streaks
+6. **Analytics**: Accuracy trends, sport breakdown, export
+7. **Teams**: Create, join, manage team competitions
+8. **Notifications**: In-app, Telegram, email channels
+9. **External Data**: TheSportsDB integration with auto-sync

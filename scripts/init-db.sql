@@ -197,3 +197,61 @@ CREATE TABLE IF NOT EXISTS notification_preferences (
 );
 
 CREATE INDEX IF NOT EXISTS idx_notification_preferences_user ON notification_preferences(user_id);
+
+
+-- Create user_teams table (for team tournaments feature)
+CREATE TABLE IF NOT EXISTS user_teams (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    description TEXT,
+    invite_code VARCHAR(20) UNIQUE NOT NULL,
+    captain_id INTEGER NOT NULL,
+    max_members INTEGER DEFAULT 10,
+    current_members INTEGER DEFAULT 0,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_teams_invite_code ON user_teams(invite_code);
+CREATE INDEX IF NOT EXISTS idx_user_teams_captain_id ON user_teams(captain_id);
+CREATE INDEX IF NOT EXISTS idx_user_teams_is_active ON user_teams(is_active);
+CREATE INDEX IF NOT EXISTS idx_user_teams_deleted_at ON user_teams(deleted_at);
+
+-- Create user_team_members table
+CREATE TABLE IF NOT EXISTS user_team_members (
+    id SERIAL PRIMARY KEY,
+    team_id INTEGER NOT NULL REFERENCES user_teams(id) ON DELETE RESTRICT,
+    user_id INTEGER NOT NULL,
+    role VARCHAR(20) NOT NULL DEFAULT 'member',
+    status VARCHAR(20) NOT NULL DEFAULT 'active',
+    joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL,
+    UNIQUE(team_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_team_members_team_id ON user_team_members(team_id);
+CREATE INDEX IF NOT EXISTS idx_user_team_members_user_id ON user_team_members(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_team_members_deleted_at ON user_team_members(deleted_at);
+
+-- Create user_team_contest_entries table (links user teams to contests)
+CREATE TABLE IF NOT EXISTS user_team_contest_entries (
+    id SERIAL PRIMARY KEY,
+    team_id INTEGER NOT NULL REFERENCES user_teams(id) ON DELETE RESTRICT,
+    contest_id INTEGER NOT NULL,
+    total_points DECIMAL(10,2) NOT NULL DEFAULT 0,
+    rank INTEGER NOT NULL DEFAULT 0,
+    joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL,
+    UNIQUE(team_id, contest_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_team_contest_entries_team_id ON user_team_contest_entries(team_id);
+CREATE INDEX IF NOT EXISTS idx_user_team_contest_entries_contest_id ON user_team_contest_entries(contest_id);
+CREATE INDEX IF NOT EXISTS idx_user_team_contest_entries_rank ON user_team_contest_entries(contest_id, rank);
+CREATE INDEX IF NOT EXISTS idx_user_team_contest_entries_deleted_at ON user_team_contest_entries(deleted_at);

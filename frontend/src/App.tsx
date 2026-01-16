@@ -22,6 +22,7 @@ import ContestsPage from './pages/ContestsPage'
 import SportsPage from './pages/SportsPage'
 import PredictionsPage from './pages/PredictionsPage'
 import AnalyticsPage from './pages/AnalyticsPage'
+import TeamsPage from './pages/TeamsPage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 
@@ -66,6 +67,7 @@ const AppBarContent: React.FC = () => {
       {isAuthenticated && user ? (
         <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
           <Button color="inherit" component={Link} to="/contests">Contests</Button>
+          <Button color="inherit" component={Link} to="/teams">Teams</Button>
           <Button color="inherit" component={Link} to="/predictions">Predictions</Button>
           <Button color="inherit" component={Link} to="/sports">Sports</Button>
           <Button color="inherit" component={Link} to="/analytics">Analytics</Button>
@@ -158,6 +160,14 @@ function App() {
                   element={
                     <ProtectedRoute>
                       <AnalyticsPage />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/teams" 
+                  element={
+                    <ProtectedRoute>
+                      <TeamsPage />
                     </ProtectedRoute>
                   } 
                 />

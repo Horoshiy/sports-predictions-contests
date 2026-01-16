@@ -1,0 +1,211 @@
+syntax = "proto3";
+
+package team;
+
+option go_package = "github.com/sports-prediction-contests/shared/proto/team";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+import "google/api/annotations.proto";
+import "common.proto";
+
+message Team {
+  uint32 id = 1;
+  string name = 2;
+  string description = 3;
+  string invite_code = 4;
+  uint32 captain_id = 5;
+  uint32 max_members = 6;
+  uint32 current_members = 7;
+  bool is_active = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp updated_at = 10;
+}
+
+message TeamMember {
+  uint32 id = 1;
+  uint32 team_id = 2;
+  uint32 user_id = 3;
+  string user_name = 4;
+  string role = 5;
+  string status = 6;
+  google.protobuf.Timestamp joined_at = 7;
+}
+
+message TeamLeaderboardEntry {
+  uint32 team_id = 1;
+  string team_name = 2;
+  double total_points = 3;
+  uint32 rank = 4;
+  uint32 member_count = 5;
+}
+
+message CreateTeamRequest {
+  string name = 1;
+  string description = 2;
+  uint32 max_members = 3;
+}
+
+message UpdateTeamRequest {
+  uint32 id = 1;
+  string name = 2;
+  string description = 3;
+  uint32 max_members = 4;
+}
+
+message GetTeamRequest {
+  uint32 id = 1;
+}
+
+message DeleteTeamRequest {
+  uint32 id = 1;
+}
+
+message ListTeamsRequest {
+  common.PaginationRequest pagination = 1;
+  bool my_teams_only = 2;
+}
+
+message JoinTeamRequest {
+  string invite_code = 1;
+}
+
+message LeaveTeamRequest {
+  uint32 team_id = 1;
+}
+
+message RemoveMemberRequest {
+  uint32 team_id = 1;
+  uint32 user_id = 2;
+}
+
+message ListMembersRequest {
+  uint32 team_id = 1;
+  common.PaginationRequest pagination = 2;
+}
+
+message RegenerateInviteCodeRequest {
+  uint32 team_id = 1;
+}
+
+message JoinContestAsTeamRequest {
+  uint32 team_id = 1;
+  uint32 contest_id = 2;
+}
+
+message LeaveContestAsTeamRequest {
+  uint32 team_id = 1;
+  uint32 contest_id = 2;
+}
+
+message GetTeamLeaderboardRequest {
+  uint32 contest_id = 1;
+  uint32 limit = 2;
+}
+
+message CreateTeamResponse {
+  common.Response response = 1;
+  Team team = 2;
+}
+
+message UpdateTeamResponse {
+  common.Response response = 1;
+  Team team = 2;
+}
+
+message GetTeamResponse {
+  common.Response response = 1;
+  Team team = 2;
+}
+
+message DeleteTeamResponse {
+  common.Response response = 1;
+}
+
+message ListTeamsResponse {
+  common.Response response = 1;
+  repeated Team teams = 2;
+  common.PaginationResponse pagination = 3;
+}
+
+message JoinTeamResponse {
+  common.Response response = 1;
+  TeamMember member = 2;
+}
+
+message LeaveTeamResponse {
+  common.Response response = 1;
+}
+
+message RemoveMemberResponse {
+  common.Response response = 1;
+}
+
+message ListMembersResponse {
+  common.Response response = 1;
+  repeated TeamMember members = 2;
+  common.PaginationResponse pagination = 3;
+}
+
+message RegenerateInviteCodeResponse {
+  common.Response response = 1;
+  string invite_code = 2;
+}
+
+message JoinContestAsTeamResponse {
+  common.Response response = 1;
+}
+
+message LeaveContestAsTeamResponse {
+  common.Response response = 1;
+}
+
+message GetTeamLeaderboardResponse {
+  common.Response response = 1;
+  repeated TeamLeaderboardEntry entries = 2;
+}
+
+service TeamService {
+  rpc CreateTeam(CreateTeamRequest) returns (CreateTeamResponse) {
+    option (google.api.http) = { post: "/v1/teams" body: "*" };
+  }
+  rpc UpdateTeam(UpdateTeamRequest) returns (UpdateTeamResponse) {
+    option (google.api.http) = { put: "/v1/teams/{id}" body: "*" };
+  }
+  rpc GetTeam(GetTeamRequest) returns (GetTeamResponse) {
+    option (google.api.http) = { get: "/v1/teams/{id}" };
+  }
+  rpc DeleteTeam(DeleteTeamRequest) returns (DeleteTeamResponse) {
+    option (google.api.http) = { delete: "/v1/teams/{id}" };
+  }
+  rpc ListTeams(ListTeamsRequest) returns (ListTeamsResponse) {
+    option (google.api.http) = { get: "/v1/teams" };
+  }
+  rpc JoinTeam(JoinTeamRequest) returns (JoinTeamResponse) {
+    option (google.api.http) = { post: "/v1/teams/join" body: "*" };
+  }
+  rpc LeaveTeam(LeaveTeamRequest) returns (LeaveTeamResponse) {
+    option (google.api.http) = { post: "/v1/teams/{team_id}/leave" body: "*" };
+  }
+  rpc RemoveMember(RemoveMemberRequest) returns (RemoveMemberResponse) {
+    option (google.api.http) = { delete: "/v1/teams/{team_id}/members/{user_id}" };
+  }
+  rpc ListMembers(ListMembersRequest) returns (ListMembersResponse) {
+    option (google.api.http) = { get: "/v1/teams/{team_id}/members" };
+  }
+  rpc RegenerateInviteCode(RegenerateInviteCodeRequest) returns (RegenerateInviteCodeResponse) {
+    option (google.api.http) = { post: "/v1/teams/{team_id}/regenerate-invite" body: "*" };
+  }
+  rpc JoinContestAsTeam(JoinContestAsTeamRequest) returns (JoinContestAsTeamResponse) {
+    option (google.api.http) = { post: "/v1/teams/{team_id}/contests/{contest_id}/join" body: "*" };
+  }
+  rpc LeaveContestAsTeam(LeaveContestAsTeamRequest) returns (LeaveContestAsTeamResponse) {
+    option (google.api.http) = { post: "/v1/teams/{team_id}/contests/{contest_id}/leave" body: "*" };
+  }
+  rpc GetTeamLeaderboard(GetTeamLeaderboardRequest) returns (GetTeamLeaderboardResponse) {
+    option (google.api.http) = { get: "/v1/contests/{contest_id}/team-leaderboard" };
+  }
+  rpc Check(google.protobuf.Empty) returns (common.Response) {
+    option (google.api.http) = { get: "/v1/teams/health" };
+  }
+}

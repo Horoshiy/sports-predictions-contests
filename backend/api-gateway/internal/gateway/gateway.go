@@ -13,6 +13,7 @@ import (
 	predictionpb "github.com/sports-prediction-contests/shared/proto/prediction"
 	scoringpb "github.com/sports-prediction-contests/shared/proto/scoring"
 	sportspb "github.com/sports-prediction-contests/shared/proto/sports"
+	teampb "github.com/sports-prediction-contests/shared/proto/team"
 	userpb "github.com/sports-prediction-contests/shared/proto/user"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -75,6 +76,12 @@ func NewServer(cfg *config.Config) (*Server, error) {
 
 	// Register notification service
 	err = notificationpb.RegisterNotificationServiceHandlerFromEndpoint(ctx, mux, cfg.NotificationService, opts)
+	if err != nil {
+		return nil, err
+	}
+
+	// Register team service
+	err = teampb.RegisterTeamServiceHandlerFromEndpoint(ctx, mux, cfg.TeamService, opts)
 	if err != nil {
 		return nil, err
 	}
