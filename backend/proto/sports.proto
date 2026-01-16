@@ -245,6 +245,27 @@ message DeleteResponse {
   common.Response response = 1;
 }
 
+// Sync messages
+message SyncRequest {
+  string entity_type = 1; // "sports", "leagues", "teams", "matches", "results"
+  uint32 parent_id = 2;   // Optional: sport_id for leagues, league_id for teams/matches
+}
+
+message SyncResponse {
+  common.Response response = 1;
+  int32 synced_count = 2;
+  string entity_type = 3;
+}
+
+message SyncStatusRequest {}
+
+message SyncStatusResponse {
+  common.Response response = 1;
+  bool sync_enabled = 2;
+  string last_sync_at = 3;
+  int32 sync_interval_mins = 4;
+}
+
 // Sports Service
 service SportsService {
   // Sport management
@@ -367,6 +388,19 @@ service SportsService {
   rpc Check(google.protobuf.Empty) returns (common.Response) {
     option (google.api.http) = {
       get: "/v1/sports/health"
+    };
+  }
+
+  // Sync operations
+  rpc TriggerSync(SyncRequest) returns (SyncResponse) {
+    option (google.api.http) = {
+      post: "/v1/sports/sync"
+      body: "*"
+    };
+  }
+  rpc GetSyncStatus(SyncStatusRequest) returns (SyncStatusResponse) {
+    option (google.api.http) = {
+      get: "/v1/sports/sync/status"
     };
   }
 }

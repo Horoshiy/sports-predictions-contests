@@ -17,6 +17,7 @@ type Match struct {
 	HomeScore   int       `gorm:"default:0" json:"home_score"`
 	AwayScore   int       `gorm:"default:0" json:"away_score"`
 	ResultData  string    `gorm:"type:text" json:"result_data"`
+	ExternalID  string    `gorm:"uniqueIndex;size:50" json:"external_id,omitempty"`
 	League      League    `gorm:"foreignKey:LeagueID" json:"league,omitempty"`
 	HomeTeam    Team      `gorm:"foreignKey:HomeTeamID" json:"home_team,omitempty"`
 	AwayTeam    Team      `gorm:"foreignKey:AwayTeamID" json:"away_team,omitempty"`

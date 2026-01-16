@@ -3,9 +3,11 @@ package service
 import (
 	"context"
 	"log"
+	"time"
 
 	"github.com/sports-prediction-contests/sports-service/internal/models"
 	"github.com/sports-prediction-contests/sports-service/internal/repository"
+	"github.com/sports-prediction-contests/sports-service/internal/sync"
 	"github.com/sports-prediction-contests/shared/proto/common"
 	pb "github.com/sports-prediction-contests/shared/proto/sports"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -14,10 +16,13 @@ import (
 
 type SportsService struct {
 	pb.UnimplementedSportsServiceServer
-	sportRepo  repository.SportRepositoryInterface
-	leagueRepo repository.LeagueRepositoryInterface
-	teamRepo   repository.TeamRepositoryInterface
-	matchRepo  repository.MatchRepositoryInterface
+	sportRepo    repository.SportRepositoryInterface
+	leagueRepo   repository.LeagueRepositoryInterface
+	teamRepo     repository.TeamRepositoryInterface
+	matchRepo    repository.MatchRepositoryInterface
+	syncWorker   *sync.SyncWorker
+	syncEnabled  bool
+	syncInterval int
 }
 
 func NewSportsService(
@@ -32,6 +37,13 @@ func NewSportsService(
 		teamRepo:   teamRepo,
 		matchRepo:  matchRepo,
 	}
+}
+
+// SetSyncWorker sets the sync worker for the service
+func (s *SportsService) SetSyncWorker(worker *sync.SyncWorker, enabled bool, interval int) {
+	s.syncWorker = worker
+	s.syncEnabled = enabled
+	s.syncInterval = interval
 }
 
 func (s *SportsService) Check(ctx context.Context, req *emptypb.Empty) (*common.Response, error) {
@@ -603,4 +615,65 @@ func (s *SportsService) matchToProto(match *models.Match) *pb.Match {
 		CreatedAt:   timestamppb.New(match.CreatedAt),
 		UpdatedAt:   timestamppb.New(match.UpdatedAt),
 	}
+}
+
+
+// TriggerSync manually triggers a sync operation
+func (s *SportsService) TriggerSync(ctx context.Context, req *pb.SyncRequest) (*pb.SyncResponse, error) {
+	if s.syncWorker == nil {
+		return &pb.SyncResponse{
+			Response: &common.Response{
+				Success:   false,
+				Message:   "Sync is not configured",
+				Code:      int32(common.ErrorCode_INTERNAL_ERROR),
+				Timestamp: timestamppb.Now(),
+			},
+		}, nil
+	}
+
+	count, err := s.syncWorker.TriggerSync(ctx, req.EntityType, uint(req.ParentId))
+	if err != nil {
+		log.Printf("[ERROR] Sync failed for %s: %v", req.EntityType, err)
+		return &pb.SyncResponse{
+			Response: &common.Response{
+				Success:   false,
+				Message:   err.Error(),
+				Code:      int32(common.ErrorCode_INTERNAL_ERROR),
+				Timestamp: timestamppb.Now(),
+			},
+		}, nil
+	}
+
+	return &pb.SyncResponse{
+		Response: &common.Response{
+			Success:   true,
+			Message:   "Sync completed successfully",
+			Code:      0,
+			Timestamp: timestamppb.Now(),
+		},
+		SyncedCount: int32(count),
+		EntityType:  req.EntityType,
+	}, nil
+}
+
+// GetSyncStatus returns the current sync status
+func (s *SportsService) GetSyncStatus(ctx context.Context, req *pb.SyncStatusRequest) (*pb.SyncStatusResponse, error) {
+	lastSyncAt := ""
+	if s.syncWorker != nil {
+		if lastSync := s.syncWorker.GetLastSyncAt(); lastSync != nil {
+			lastSyncAt = lastSync.Format(time.RFC3339)
+		}
+	}
+
+	return &pb.SyncStatusResponse{
+		Response: &common.Response{
+			Success:   true,
+			Message:   "Sync status retrieved",
+			Code:      0,
+			Timestamp: timestamppb.Now(),
+		},
+		SyncEnabled:      s.syncEnabled,
+		LastSyncAt:       lastSyncAt,
+		SyncIntervalMins: int32(s.syncInterval),
+	}, nil
 }

@@ -10,7 +10,9 @@ import (
 type LeagueRepositoryInterface interface {
 	Create(league *models.League) error
 	GetByID(id uint) (*models.League, error)
+	GetByExternalID(externalID string) (*models.League, error)
 	Update(league *models.League) error
+	Upsert(league *models.League) error
 	Delete(id uint) error
 	List(limit, offset int, sportID uint, activeOnly bool) ([]*models.League, int64, error)
 }
@@ -91,4 +93,34 @@ func (r *LeagueRepository) List(limit, offset int, sportID uint, activeOnly bool
 	}
 
 	return leagues, total, nil
+}
+
+func (r *LeagueRepository) GetByExternalID(externalID string) (*models.League, error) {
+	if externalID == "" {
+		return nil, errors.New("external ID cannot be empty")
+	}
+	var league models.League
+	result := r.db.Where("external_id = ?", externalID).First(&league)
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, errors.New("league not found")
+		}
+		return nil, result.Error
+	}
+	return &league, nil
+}
+
+func (r *LeagueRepository) Upsert(league *models.League) error {
+	if league == nil {
+		return errors.New("league cannot be nil")
+	}
+	if league.ExternalID == "" {
+		return r.Create(league)
+	}
+	existing, err := r.GetByExternalID(league.ExternalID)
+	if err == nil {
+		league.ID = existing.ID
+		return r.Update(league)
+	}
+	return r.Create(league)
 }

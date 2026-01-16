@@ -10,7 +10,9 @@ import (
 type MatchRepositoryInterface interface {
 	Create(match *models.Match) error
 	GetByID(id uint) (*models.Match, error)
+	GetByExternalID(externalID string) (*models.Match, error)
 	Update(match *models.Match) error
+	Upsert(match *models.Match) error
 	Delete(id uint) error
 	List(limit, offset int, leagueID, teamID uint, status string) ([]*models.Match, int64, error)
 }
@@ -95,4 +97,34 @@ func (r *MatchRepository) List(limit, offset int, leagueID, teamID uint, status 
 	}
 
 	return matches, total, nil
+}
+
+func (r *MatchRepository) GetByExternalID(externalID string) (*models.Match, error) {
+	if externalID == "" {
+		return nil, errors.New("external ID cannot be empty")
+	}
+	var match models.Match
+	result := r.db.Where("external_id = ?", externalID).First(&match)
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, errors.New("match not found")
+		}
+		return nil, result.Error
+	}
+	return &match, nil
+}
+
+func (r *MatchRepository) Upsert(match *models.Match) error {
+	if match == nil {
+		return errors.New("match cannot be nil")
+	}
+	if match.ExternalID == "" {
+		return r.Create(match)
+	}
+	existing, err := r.GetByExternalID(match.ExternalID)
+	if err == nil {
+		match.ID = existing.ID
+		return r.Update(match)
+	}
+	return r.Create(match)
 }

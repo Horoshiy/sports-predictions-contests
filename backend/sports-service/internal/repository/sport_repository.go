@@ -11,7 +11,9 @@ type SportRepositoryInterface interface {
 	Create(sport *models.Sport) error
 	GetByID(id uint) (*models.Sport, error)
 	GetBySlug(slug string) (*models.Sport, error)
+	GetByExternalID(externalID string) (*models.Sport, error)
 	Update(sport *models.Sport) error
+	Upsert(sport *models.Sport) error
 	Delete(id uint) error
 	List(limit, offset int, activeOnly bool) ([]*models.Sport, int64, error)
 }
@@ -104,4 +106,34 @@ func (r *SportRepository) List(limit, offset int, activeOnly bool) ([]*models.Sp
 	}
 
 	return sports, total, nil
+}
+
+func (r *SportRepository) GetByExternalID(externalID string) (*models.Sport, error) {
+	if externalID == "" {
+		return nil, errors.New("external ID cannot be empty")
+	}
+	var sport models.Sport
+	result := r.db.Where("external_id = ?", externalID).First(&sport)
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, errors.New("sport not found")
+		}
+		return nil, result.Error
+	}
+	return &sport, nil
+}
+
+func (r *SportRepository) Upsert(sport *models.Sport) error {
+	if sport == nil {
+		return errors.New("sport cannot be nil")
+	}
+	if sport.ExternalID == "" {
+		return r.Create(sport)
+	}
+	existing, err := r.GetByExternalID(sport.ExternalID)
+	if err == nil {
+		sport.ID = existing.ID
+		return r.Update(sport)
+	}
+	return r.Create(sport)
 }

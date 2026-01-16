@@ -3,21 +3,31 @@ package config
 import (
 	"errors"
 	"os"
+	"strconv"
 )
 
 type Config struct {
-	Port        string
-	JWTSecret   string
-	DatabaseURL string
-	LogLevel    string
+	Port             string
+	JWTSecret        string
+	DatabaseURL      string
+	LogLevel         string
+	SyncEnabled      bool
+	SyncIntervalMins int
+	TheSportsDBURL   string
 }
 
 func Load() *Config {
+	syncEnabled, _ := strconv.ParseBool(getEnvOrDefault("SYNC_ENABLED", "false"))
+	syncInterval, _ := strconv.Atoi(getEnvOrDefault("SYNC_INTERVAL_MINS", "60"))
+
 	return &Config{
-		Port:        getEnvOrDefault("SPORTS_SERVICE_PORT", "8088"),
-		JWTSecret:   getEnvOrDefault("JWT_SECRET", "your_jwt_secret_key_here"),
-		DatabaseURL: getEnvOrDefault("DATABASE_URL", ""),
-		LogLevel:    getEnvOrDefault("LOG_LEVEL", "info"),
+		Port:             getEnvOrDefault("SPORTS_SERVICE_PORT", "8088"),
+		JWTSecret:        getEnvOrDefault("JWT_SECRET", "your_jwt_secret_key_here"),
+		DatabaseURL:      getEnvOrDefault("DATABASE_URL", ""),
+		LogLevel:         getEnvOrDefault("LOG_LEVEL", "info"),
+		SyncEnabled:      syncEnabled,
+		SyncIntervalMins: syncInterval,
+		TheSportsDBURL:   getEnvOrDefault("THESPORTSDB_URL", "https://www.thesportsdb.com/api/v1/json/3"),
 	}
 }
 

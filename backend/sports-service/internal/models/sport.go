@@ -14,6 +14,7 @@ type Sport struct {
 	Slug        string `gorm:"not null;uniqueIndex" json:"slug"`
 	Description string `json:"description"`
 	IconURL     string `json:"icon_url"`
+	ExternalID  string `gorm:"uniqueIndex;size:50" json:"external_id,omitempty"`
 	IsActive    bool   `gorm:"default:true" json:"is_active"`
 	gorm.Model
 }

@@ -10,7 +10,9 @@ import (
 type TeamRepositoryInterface interface {
 	Create(team *models.Team) error
 	GetByID(id uint) (*models.Team, error)
+	GetByExternalID(externalID string) (*models.Team, error)
 	Update(team *models.Team) error
+	Upsert(team *models.Team) error
 	Delete(id uint) error
 	List(limit, offset int, sportID uint, activeOnly bool) ([]*models.Team, int64, error)
 }
@@ -91,4 +93,34 @@ func (r *TeamRepository) List(limit, offset int, sportID uint, activeOnly bool) 
 	}
 
 	return teams, total, nil
+}
+
+func (r *TeamRepository) GetByExternalID(externalID string) (*models.Team, error) {
+	if externalID == "" {
+		return nil, errors.New("external ID cannot be empty")
+	}
+	var team models.Team
+	result := r.db.Where("external_id = ?", externalID).First(&team)
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, errors.New("team not found")
+		}
+		return nil, result.Error
+	}
+	return &team, nil
+}
+
+func (r *TeamRepository) Upsert(team *models.Team) error {
+	if team == nil {
+		return errors.New("team cannot be nil")
+	}
+	if team.ExternalID == "" {
+		return r.Create(team)
+	}
+	existing, err := r.GetByExternalID(team.ExternalID)
+	if err == nil {
+		team.ID = existing.ID
+		return r.Update(team)
+	}
+	return r.Create(team)
 }

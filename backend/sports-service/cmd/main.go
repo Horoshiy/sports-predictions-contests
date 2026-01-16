@@ -8,9 +8,11 @@ import (
 	"syscall"
 
 	"github.com/sports-prediction-contests/sports-service/internal/config"
+	"github.com/sports-prediction-contests/sports-service/internal/external"
 	"github.com/sports-prediction-contests/sports-service/internal/models"
 	"github.com/sports-prediction-contests/sports-service/internal/repository"
 	"github.com/sports-prediction-contests/sports-service/internal/service"
+	"github.com/sports-prediction-contests/sports-service/internal/sync"
 	"github.com/sports-prediction-contests/shared/auth"
 	"github.com/sports-prediction-contests/shared/database"
 	pb "github.com/sports-prediction-contests/shared/proto/sports"
@@ -39,6 +41,17 @@ func main() {
 
 	sportsService := service.NewSportsService(sportRepo, leagueRepo, teamRepo, matchRepo)
 
+	// Initialize sync worker if enabled
+	var syncWorker *sync.SyncWorker
+	if cfg.SyncEnabled {
+		apiClient := external.NewClient(cfg.TheSportsDBURL)
+		syncService := sync.NewSyncService(apiClient, sportRepo, leagueRepo, teamRepo, matchRepo)
+		syncWorker = sync.NewSyncWorker(syncService, cfg.SyncIntervalMins)
+		syncWorker.Start()
+		log.Printf("[INFO] Sync worker started with %d minute interval", cfg.SyncIntervalMins)
+	}
+	sportsService.SetSyncWorker(syncWorker, cfg.SyncEnabled, cfg.SyncIntervalMins)
+
 	server := grpc.NewServer(
 		grpc.UnaryInterceptor(auth.JWTUnaryInterceptor([]byte(cfg.JWTSecret))),
 	)
@@ -63,6 +76,12 @@ func main() {
 	<-c
 
 	log.Println("[INFO] Shutting down Sports Service...")
+
+	// Stop sync worker first
+	if syncWorker != nil {
+		syncWorker.Stop()
+	}
+
 	server.GracefulStop()
 
 	sqlDB, err := db.DB()

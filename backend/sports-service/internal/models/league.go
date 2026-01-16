@@ -9,14 +9,15 @@ import (
 )
 
 type League struct {
-	ID       uint   `gorm:"primaryKey" json:"id"`
-	SportID  uint   `gorm:"not null;index" json:"sport_id"`
-	Name     string `gorm:"not null" json:"name"`
-	Slug     string `gorm:"not null;uniqueIndex" json:"slug"`
-	Country  string `json:"country"`
-	Season   string `json:"season"`
-	IsActive bool   `gorm:"default:true" json:"is_active"`
-	Sport    Sport  `gorm:"foreignKey:SportID" json:"sport,omitempty"`
+	ID         uint   `gorm:"primaryKey" json:"id"`
+	SportID    uint   `gorm:"not null;index" json:"sport_id"`
+	Name       string `gorm:"not null" json:"name"`
+	Slug       string `gorm:"not null;uniqueIndex" json:"slug"`
+	Country    string `json:"country"`
+	Season     string `json:"season"`
+	ExternalID string `gorm:"uniqueIndex;size:50" json:"external_id,omitempty"`
+	IsActive   bool   `gorm:"default:true" json:"is_active"`
+	Sport      Sport  `gorm:"foreignKey:SportID" json:"sport,omitempty"`
 	gorm.Model
 }
 

@@ -9,15 +9,16 @@ import (
 )
 
 type Team struct {
-	ID        uint   `gorm:"primaryKey" json:"id"`
-	SportID   uint   `gorm:"not null;index" json:"sport_id"`
-	Name      string `gorm:"not null" json:"name"`
-	Slug      string `gorm:"not null;uniqueIndex" json:"slug"`
-	ShortName string `json:"short_name"`
-	LogoURL   string `json:"logo_url"`
-	Country   string `json:"country"`
-	IsActive  bool   `gorm:"default:true" json:"is_active"`
-	Sport     Sport  `gorm:"foreignKey:SportID" json:"sport,omitempty"`
+	ID         uint   `gorm:"primaryKey" json:"id"`
+	SportID    uint   `gorm:"not null;index" json:"sport_id"`
+	Name       string `gorm:"not null" json:"name"`
+	Slug       string `gorm:"not null;uniqueIndex" json:"slug"`
+	ShortName  string `json:"short_name"`
+	LogoURL    string `json:"logo_url"`
+	Country    string `json:"country"`
+	ExternalID string `gorm:"uniqueIndex;size:50" json:"external_id,omitempty"`
+	IsActive   bool   `gorm:"default:true" json:"is_active"`
+	Sport      Sport  `gorm:"foreignKey:SportID" json:"sport,omitempty"`
 	gorm.Model
 }
 
