@@ -43,6 +43,27 @@ Before setting up the development environment, ensure you have the following ins
 - **Docker & Docker Compose** - [Installation Guide](https://docs.docker.com/get-docker/)
 - **Protocol Buffers Compiler** - [Installation Guide](https://grpc.io/docs/protoc-installation/)
 
+## Documentation
+
+📚 **Comprehensive bilingual documentation is available in English and Russian:**
+
+### English Documentation
+- [📖 Complete Documentation](docs/en/README.md) - Full English documentation
+- [🚀 Quick Start Guide](docs/en/deployment/quick-start.md) - Get running in minutes
+- [📋 API Reference](docs/en/api/services-overview.md) - Complete API documentation
+- [🧪 Testing Guide](docs/en/testing/e2e-testing.md) - Testing procedures
+- [🔧 Troubleshooting](docs/en/troubleshooting/common-issues.md) - Common issues and solutions
+
+### Русская документация
+- [📖 Полная документация](docs/ru/README.md) - Полная русская документация
+- [🚀 Быстрый старт](docs/ru/deployment/quick-start.md) - Запуск за несколько минут
+- [📋 Справочник API](docs/ru/api/services-overview.md) - Полная документация API
+- [🧪 Руководство по тестированию](docs/ru/testing/e2e-testing.md) - Процедуры тестирования
+- [🔧 Устранение неполадок](docs/ru/troubleshooting/common-issues.md) - Частые проблемы и решения
+
+### Architecture
+- [🏗️ Architecture Diagrams](docs/assets/architecture-diagram.md) - Visual system overview
+
 ## Quick Start
 
 ### 1. Clone and Setup
