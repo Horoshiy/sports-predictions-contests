@@ -13,9 +13,12 @@ class GrpcClient {
   }
 
   // Common headers for all requests
-  getHeaders(): Record<string, string> {
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
+  getHeaders(isFormData = false): Record<string, string> {
+    const headers: Record<string, string> = {}
+
+    // Don't set Content-Type for FormData, let browser set it with boundary
+    if (!isFormData) {
+      headers['Content-Type'] = 'application/json'
     }
 
     // Add auth token if available
@@ -31,17 +34,22 @@ class GrpcClient {
   async request<T>(
     method: 'GET' | 'POST' | 'PUT' | 'DELETE',
     path: string,
-    body?: any
+    body?: any,
+    isFormData = false
   ): Promise<T> {
     const url = `${this.baseUrl}${path}`
     
     const config: RequestInit = {
       method,
-      headers: this.getHeaders(),
+      headers: this.getHeaders(isFormData),
     }
 
     if (body && method !== 'GET') {
-      config.body = JSON.stringify(body)
+      if (isFormData) {
+        config.body = body // FormData object
+      } else {
+        config.body = JSON.stringify(body)
+      }
     }
 
     try {
@@ -81,6 +89,11 @@ class GrpcClient {
   // DELETE request
   async delete<T>(path: string): Promise<T> {
     return this.request<T>('DELETE', path)
+  }
+
+  // POST FormData request (for file uploads)
+  async postFormData<T>(path: string, formData: FormData): Promise<T> {
+    return this.request<T>('POST', path, formData, true)
   }
 }
 

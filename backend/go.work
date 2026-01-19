@@ -1,6 +1,7 @@
 go 1.21
 
 use (
+	../bots/telegram
 	./api-gateway
 	./contest-service
 	./notification-service
@@ -9,5 +10,4 @@ use (
 	./shared
 	./sports-service
 	./user-service
-	../bots/telegram
 )

@@ -7,6 +7,7 @@ option go_package = "github.com/sports-prediction-contests/shared/proto/user";
 import "google/protobuf/timestamp.proto";
 import "google/api/annotations.proto";
 import "common.proto";
+import "profile.proto";
 
 // User message
 message User {
@@ -15,6 +16,8 @@ message User {
   string name = 3;
   google.protobuf.Timestamp created_at = 4;
   google.protobuf.Timestamp updated_at = 5;
+  profile.Profile profile = 6;
+  profile.UserPreferences preferences = 7;
 }
 
 // Registration request

@@ -1,0 +1,163 @@
+syntax = "proto3";
+
+package profile;
+
+option go_package = "github.com/sports-prediction-contests/shared/proto/profile";
+
+import "google/protobuf/timestamp.proto";
+import "google/api/annotations.proto";
+import "common.proto";
+
+// Profile message
+message Profile {
+  uint32 id = 1;
+  uint32 user_id = 2;
+  string bio = 3;
+  string avatar_url = 4;
+  string location = 5;
+  string website = 6;
+  string twitter_url = 7;
+  string linkedin_url = 8;
+  string github_url = 9;
+  string profile_visibility = 10;
+  google.protobuf.Timestamp created_at = 11;
+  google.protobuf.Timestamp updated_at = 12;
+}
+
+// UserPreferences message
+message UserPreferences {
+  uint32 id = 1;
+  uint32 user_id = 2;
+  bool email_notifications = 3;
+  bool push_notifications = 4;
+  bool contest_notifications = 5;
+  bool prediction_reminders = 6;
+  bool weekly_digest = 7;
+  string theme = 8;
+  string language = 9;
+  string timezone = 10;
+  string custom_settings = 11; // JSON string
+  google.protobuf.Timestamp created_at = 12;
+  google.protobuf.Timestamp updated_at = 13;
+}
+
+// Get profile request
+message GetProfileRequest {
+  // User ID will be extracted from JWT token
+}
+
+// Get profile response
+message GetProfileResponse {
+  common.Response response = 1;
+  Profile profile = 2;
+}
+
+// Update profile request
+message UpdateProfileRequest {
+  string bio = 1;
+  string location = 2;
+  string website = 3;
+  string twitter_url = 4;
+  string linkedin_url = 5;
+  string github_url = 6;
+  string profile_visibility = 7;
+}
+
+// Update profile response
+message UpdateProfileResponse {
+  common.Response response = 1;
+  Profile profile = 2;
+}
+
+// Upload avatar request
+message UploadAvatarRequest {
+  bytes file_data = 1;
+  string file_type = 2;
+  int64 file_size = 3;
+}
+
+// Upload avatar response
+message UploadAvatarResponse {
+  common.Response response = 1;
+  string avatar_url = 2;
+}
+
+// Get preferences request
+message GetPreferencesRequest {
+  // User ID will be extracted from JWT token
+}
+
+// Get preferences response
+message GetPreferencesResponse {
+  common.Response response = 1;
+  UserPreferences preferences = 2;
+}
+
+// Update preferences request
+message UpdatePreferencesRequest {
+  bool email_notifications = 1;
+  bool push_notifications = 2;
+  bool contest_notifications = 3;
+  bool prediction_reminders = 4;
+  bool weekly_digest = 5;
+  string theme = 6;
+  string language = 7;
+  string timezone = 8;
+  string custom_settings = 9; // JSON string
+}
+
+// Update preferences response
+message UpdatePreferencesResponse {
+  common.Response response = 1;
+  UserPreferences preferences = 2;
+}
+
+// Profile completion request
+message GetProfileCompletionRequest {
+  // User ID will be extracted from JWT token
+}
+
+// Profile completion response
+message GetProfileCompletionResponse {
+  common.Response response = 1;
+  int32 completion_percentage = 2;
+  repeated string missing_fields = 3;
+  repeated string suggestions = 4;
+}
+
+// Profile service definition
+service ProfileService {
+  rpc GetProfile(GetProfileRequest) returns (GetProfileResponse) {
+    option (google.api.http) = {
+      get: "/v1/profile"
+    };
+  }
+  rpc UpdateProfile(UpdateProfileRequest) returns (UpdateProfileResponse) {
+    option (google.api.http) = {
+      put: "/v1/profile"
+      body: "*"
+    };
+  }
+  rpc UploadAvatar(UploadAvatarRequest) returns (UploadAvatarResponse) {
+    option (google.api.http) = {
+      post: "/v1/profile/avatar"
+      body: "*"
+    };
+  }
+  rpc GetPreferences(GetPreferencesRequest) returns (GetPreferencesResponse) {
+    option (google.api.http) = {
+      get: "/v1/profile/preferences"
+    };
+  }
+  rpc UpdatePreferences(UpdatePreferencesRequest) returns (UpdatePreferencesResponse) {
+    option (google.api.http) = {
+      put: "/v1/profile/preferences"
+      body: "*"
+    };
+  }
+  rpc GetProfileCompletion(GetProfileCompletionRequest) returns (GetProfileCompletionResponse) {
+    option (google.api.http) = {
+      get: "/v1/profile/completion"
+    };
+  }
+}

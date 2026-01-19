@@ -4,12 +4,12 @@ import (
 	"context"
 
 	"github.com/sports-prediction-contests/shared/auth"
-	pb "github.com/sports-prediction-contests/shared/proto/user"
 	"github.com/sports-prediction-contests/shared/proto/common"
+	pb "github.com/sports-prediction-contests/shared/proto/user"
 	"github.com/sports-prediction-contests/user-service/internal/repository"
-	"google.golang.org/protobuf/types/known/timestamppb"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // UserService implements the gRPC UserService
@@ -33,9 +33,9 @@ func (s *UserService) Register(ctx context.Context, req *pb.RegisterRequest) (*p
 	if err != nil {
 		return &pb.RegisterResponse{
 			Response: &common.Response{
-				Success: false,
-				Message: err.Error(),
-				Code:    int32(common.ErrorCode_INVALID_ARGUMENT),
+				Success:   false,
+				Message:   err.Error(),
+				Code:      int32(common.ErrorCode_INVALID_ARGUMENT),
 				Timestamp: timestamppb.Now(),
 			},
 		}, nil
@@ -43,9 +43,9 @@ func (s *UserService) Register(ctx context.Context, req *pb.RegisterRequest) (*p
 
 	return &pb.RegisterResponse{
 		Response: &common.Response{
-			Success: true,
-			Message: "User registered successfully",
-			Code:    0,
+			Success:   true,
+			Message:   "User registered successfully",
+			Code:      0,
 			Timestamp: timestamppb.Now(),
 		},
 		User: &pb.User{
@@ -65,9 +65,9 @@ func (s *UserService) Login(ctx context.Context, req *pb.LoginRequest) (*pb.Logi
 	if err != nil {
 		return &pb.LoginResponse{
 			Response: &common.Response{
-				Success: false,
-				Message: err.Error(),
-				Code:    int32(common.ErrorCode_UNAUTHENTICATED),
+				Success:   false,
+				Message:   err.Error(),
+				Code:      int32(common.ErrorCode_UNAUTHENTICATED),
 				Timestamp: timestamppb.Now(),
 			},
 		}, nil
@@ -75,9 +75,9 @@ func (s *UserService) Login(ctx context.Context, req *pb.LoginRequest) (*pb.Logi
 
 	return &pb.LoginResponse{
 		Response: &common.Response{
-			Success: true,
-			Message: "Login successful",
-			Code:    0,
+			Success:   true,
+			Message:   "Login successful",
+			Code:      0,
 			Timestamp: timestamppb.Now(),
 		},
 		User: &pb.User{
@@ -103,9 +103,9 @@ func (s *UserService) GetProfile(ctx context.Context, req *pb.GetProfileRequest)
 	if err != nil {
 		return &pb.GetProfileResponse{
 			Response: &common.Response{
-				Success: false,
-				Message: err.Error(),
-				Code:    int32(common.ErrorCode_NOT_FOUND),
+				Success:   false,
+				Message:   err.Error(),
+				Code:      int32(common.ErrorCode_NOT_FOUND),
 				Timestamp: timestamppb.Now(),
 			},
 		}, nil
@@ -113,9 +113,9 @@ func (s *UserService) GetProfile(ctx context.Context, req *pb.GetProfileRequest)
 
 	return &pb.GetProfileResponse{
 		Response: &common.Response{
-			Success: true,
-			Message: "Profile retrieved successfully",
-			Code:    0,
+			Success:   true,
+			Message:   "Profile retrieved successfully",
+			Code:      0,
 			Timestamp: timestamppb.Now(),
 		},
 		User: &pb.User{
@@ -141,9 +141,9 @@ func (s *UserService) UpdateProfile(ctx context.Context, req *pb.UpdateProfileRe
 	if err != nil {
 		return &pb.UpdateProfileResponse{
 			Response: &common.Response{
-				Success: false,
-				Message: err.Error(),
-				Code:    int32(common.ErrorCode_NOT_FOUND),
+				Success:   false,
+				Message:   err.Error(),
+				Code:      int32(common.ErrorCode_NOT_FOUND),
 				Timestamp: timestamppb.Now(),
 			},
 		}, nil
@@ -161,9 +161,9 @@ func (s *UserService) UpdateProfile(ctx context.Context, req *pb.UpdateProfileRe
 	if err := s.userRepo.Update(user); err != nil {
 		return &pb.UpdateProfileResponse{
 			Response: &common.Response{
-				Success: false,
-				Message: err.Error(),
-				Code:    int32(common.ErrorCode_INTERNAL_ERROR),
+				Success:   false,
+				Message:   err.Error(),
+				Code:      int32(common.ErrorCode_INTERNAL_ERROR),
 				Timestamp: timestamppb.Now(),
 			},
 		}, nil
@@ -171,9 +171,9 @@ func (s *UserService) UpdateProfile(ctx context.Context, req *pb.UpdateProfileRe
 
 	return &pb.UpdateProfileResponse{
 		Response: &common.Response{
-			Success: true,
-			Message: "Profile updated successfully",
-			Code:    0,
+			Success:   true,
+			Message:   "Profile updated successfully",
+			Code:      0,
 			Timestamp: timestamppb.Now(),
 		},
 		User: &pb.User{

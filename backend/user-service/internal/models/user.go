@@ -11,10 +11,12 @@ import (
 
 // User represents a user in the system
 type User struct {
-	ID       uint   `gorm:"primaryKey" json:"id"`
-	Email    string `gorm:"uniqueIndex;not null" json:"email"`
-	Password string `gorm:"not null" json:"-"`
-	Name     string `gorm:"not null" json:"name"`
+	ID          uint             `gorm:"primaryKey" json:"id"`
+	Email       string           `gorm:"uniqueIndex;not null" json:"email"`
+	Password    string           `gorm:"not null" json:"-"`
+	Name        string           `gorm:"not null" json:"name"`
+	Profile     *Profile         `gorm:"foreignKey:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE" json:"profile,omitempty"`
+	Preferences *UserPreferences `gorm:"foreignKey:UserID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE" json:"preferences,omitempty"`
 	gorm.Model
 }
 

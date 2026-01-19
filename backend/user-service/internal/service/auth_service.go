@@ -17,9 +17,9 @@ type AuthServiceInterface interface {
 
 // AuthService implements AuthServiceInterface
 type AuthService struct {
-	userRepo       repository.UserRepositoryInterface
-	jwtSecret      []byte
-	jwtExpiration  time.Duration
+	userRepo      repository.UserRepositoryInterface
+	jwtSecret     []byte
+	jwtExpiration time.Duration
 }
 
 // NewAuthService creates a new authentication service instance

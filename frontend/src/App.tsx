@@ -23,6 +23,7 @@ import SportsPage from './pages/SportsPage'
 import PredictionsPage from './pages/PredictionsPage'
 import AnalyticsPage from './pages/AnalyticsPage'
 import TeamsPage from './pages/TeamsPage'
+import ProfilePage from './pages/ProfilePage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 
@@ -102,7 +103,7 @@ const AppBarContent: React.FC = () => {
             open={Boolean(anchorEl)}
             onClose={handleClose}
           >
-            <MenuItem onClick={handleClose}>
+            <MenuItem onClick={handleClose} component={Link} to="/profile">
               <AccountCircle sx={{ mr: 1 }} />
               Profile
             </MenuItem>
@@ -168,6 +169,14 @@ function App() {
                   element={
                     <ProtectedRoute>
                       <TeamsPage />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/profile" 
+                  element={
+                    <ProtectedRoute>
+                      <ProfilePage />
                     </ProtectedRoute>
                   } 
                 />
