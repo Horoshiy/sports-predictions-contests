@@ -1,4 +1,4 @@
-FROM golang:1.21-alpine AS builder
+FROM golang:1.24-alpine AS builder
 
 WORKDIR /app
 
@@ -13,7 +13,7 @@ COPY sports-service/ .
 
 RUN CGO_ENABLED=0 GOOS=linux go build -o sports-service ./cmd/main.go
 
-FROM alpine:latest
+FROM alpine:3.19
 
 RUN apk --no-cache add ca-certificates
 
