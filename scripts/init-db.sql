@@ -292,3 +292,49 @@ INSERT INTO prop_types (sport_type, name, slug, description, category, value_typ
 ('Soccer', 'Player to Score Anytime', 'player-goal', 'Predict if a specific player will score', 'player', 'yes_no', NULL, 4),
 ('Soccer', 'Total Cards Over/Under', 'total-cards-ou', 'Predict if total cards will be over or under the line', 'match', 'over_under', 3.5, 2)
 ON CONFLICT (sport_type, slug) DO NOTHING;
+
+
+-- Create challenges table for head-to-head challenges
+CREATE TABLE IF NOT EXISTS challenges (
+    id SERIAL PRIMARY KEY,
+    challenger_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    opponent_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    event_id INTEGER NOT NULL REFERENCES matches(id) ON DELETE CASCADE,
+    message TEXT,
+    status VARCHAR(20) NOT NULL DEFAULT 'pending',
+    expires_at TIMESTAMP NOT NULL,
+    accepted_at TIMESTAMP,
+    completed_at TIMESTAMP,
+    winner_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    challenger_score DECIMAL(10,2) DEFAULT 0,
+    opponent_score DECIMAL(10,2) DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL,
+    CONSTRAINT check_different_users CHECK (challenger_id != opponent_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_challenges_challenger_id ON challenges(challenger_id);
+CREATE INDEX IF NOT EXISTS idx_challenges_opponent_id ON challenges(opponent_id);
+CREATE INDEX IF NOT EXISTS idx_challenges_event_id ON challenges(event_id);
+CREATE INDEX IF NOT EXISTS idx_challenges_status ON challenges(status);
+CREATE INDEX IF NOT EXISTS idx_challenges_expires_at ON challenges(expires_at) WHERE status = 'pending';
+CREATE INDEX IF NOT EXISTS idx_challenges_deleted_at ON challenges(deleted_at);
+
+-- Create challenge_participants table
+CREATE TABLE IF NOT EXISTS challenge_participants (
+    id SERIAL PRIMARY KEY,
+    challenge_id INTEGER NOT NULL REFERENCES challenges(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL,
+    role VARCHAR(20) NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'active',
+    joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL,
+    UNIQUE(challenge_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_challenge_participants_challenge_id ON challenge_participants(challenge_id);
+CREATE INDEX IF NOT EXISTS idx_challenge_participants_user_id ON challenge_participants(user_id);
+CREATE INDEX IF NOT EXISTS idx_challenge_participants_deleted_at ON challenge_participants(deleted_at);

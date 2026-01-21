@@ -63,6 +63,34 @@ type Contest struct {
 	gorm.Model
 }
 
+// Challenge represents a head-to-head challenge (from challenge-service)
+type Challenge struct {
+	ID              uint      `gorm:"primaryKey" json:"id"`
+	ChallengerID    uint      `gorm:"not null;index" json:"challenger_id"`
+	OpponentID      uint      `gorm:"not null;index" json:"opponent_id"`
+	EventID         uint      `gorm:"not null;index" json:"event_id"`
+	Message         string    `gorm:"type:text" json:"message"`
+	Status          string    `gorm:"not null;default:'pending'" json:"status"`
+	ExpiresAt       time.Time `gorm:"not null" json:"expires_at"`
+	AcceptedAt      *time.Time `json:"accepted_at"`
+	CompletedAt     *time.Time `json:"completed_at"`
+	WinnerID        *uint     `json:"winner_id"`
+	ChallengerScore float64   `gorm:"default:0" json:"challenger_score"`
+	OpponentScore   float64   `gorm:"default:0" json:"opponent_score"`
+	gorm.Model
+}
+
+// ChallengeParticipant represents a participant in a challenge (from challenge-service)
+type ChallengeParticipant struct {
+	ID          uint      `gorm:"primaryKey" json:"id"`
+	ChallengeID uint      `gorm:"not null;index" json:"challenge_id"`
+	UserID      uint      `gorm:"not null;index" json:"user_id"`
+	Role        string    `gorm:"not null" json:"role"`
+	Status      string    `gorm:"not null;default:'active'" json:"status"`
+	JoinedAt    time.Time `gorm:"not null;default:CURRENT_TIMESTAMP" json:"joined_at"`
+	gorm.Model
+}
+
 // Sport represents a sport type (from sports-service)
 type Sport struct {
 	ID          uint   `gorm:"primaryKey" json:"id"`

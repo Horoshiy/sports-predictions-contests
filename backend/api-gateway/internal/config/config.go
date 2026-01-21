@@ -19,6 +19,7 @@ type Config struct {
 	SportsService       string
 	NotificationService string
 	TeamService         string
+	ChallengeService    string
 
 	// JWT configuration
 	JWTSecret string
@@ -41,6 +42,7 @@ func Load() *Config {
 		SportsService:       getEnvOrDefault("SPORTS_SERVICE_ENDPOINT", "sports-service:8088"),
 		NotificationService: getEnvOrDefault("NOTIFICATION_SERVICE_ENDPOINT", "notification-service:8089"),
 		TeamService:         getEnvOrDefault("TEAM_SERVICE_ENDPOINT", "contest-service:8085"),
+		ChallengeService:    getEnvOrDefault("CHALLENGE_SERVICE_ENDPOINT", "challenge-service:8090"),
 		JWTSecret:           getEnvOrDefault("JWT_SECRET", "your_jwt_secret_key_here"),
 		AllowedOrigins:    getEnvOrDefault("CORS_ALLOWED_ORIGINS", "*"),
 		LogLevel:          getEnvOrDefault("LOG_LEVEL", "info"),

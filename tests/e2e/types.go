@@ -48,6 +48,42 @@ type Contest struct {
 	UpdatedAt           time.Time `json:"updated_at"`
 }
 
+// Challenge represents a head-to-head challenge
+type Challenge struct {
+	ID              uint      `json:"id"`
+	ChallengerId    uint      `json:"challenger_id"`
+	OpponentId      uint      `json:"opponent_id"`
+	EventId         uint      `json:"event_id"`
+	Message         string    `json:"message"`
+	Status          string    `json:"status"`
+	ExpiresAt       time.Time `json:"expires_at"`
+	AcceptedAt      string    `json:"accepted_at,omitempty"`
+	CompletedAt     string    `json:"completed_at,omitempty"`
+	WinnerId        uint      `json:"winner_id,omitempty"`
+	ChallengerScore float64   `json:"challenger_score"`
+	OpponentScore   float64   `json:"opponent_score"`
+	CreatedAt       time.Time `json:"created_at"`
+	UpdatedAt       time.Time `json:"updated_at"`
+}
+
+// ChallengeResponse represents a single challenge response
+type ChallengeResponse struct {
+	Response  Response  `json:"response"`
+	Challenge Challenge `json:"challenge"`
+}
+
+// ChallengesResponse represents multiple challenges response
+type ChallengesResponse struct {
+	Response   Response    `json:"response"`
+	Challenges []Challenge `json:"challenges"`
+	Pagination struct {
+		Page       int `json:"page"`
+		Limit      int `json:"limit"`
+		Total      int `json:"total"`
+		TotalPages int `json:"total_pages"`
+	} `json:"pagination"`
+}
+
 // ContestResponse represents a single contest response
 type ContestResponse struct {
 	Response Response `json:"response"`

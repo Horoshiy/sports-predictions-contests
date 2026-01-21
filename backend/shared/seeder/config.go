@@ -32,6 +32,7 @@ type DataCounts struct {
 	Teams       int
 	Matches     int
 	Contests    int
+	Challenges  int
 	Predictions int
 	UserTeams   int
 }
@@ -59,6 +60,7 @@ func (c *Config) GetDataCounts() DataCounts {
 			Teams:       24,
 			Matches:     50,
 			Contests:    8,
+			Challenges:  15,
 			Predictions: 200,
 			UserTeams:   4,
 		}
@@ -70,6 +72,7 @@ func (c *Config) GetDataCounts() DataCounts {
 			Teams:       60,
 			Matches:     200,
 			Contests:    25,
+			Challenges:  60,
 			Predictions: 1000,
 			UserTeams:   15,
 		}
@@ -81,6 +84,7 @@ func (c *Config) GetDataCounts() DataCounts {
 			Teams:       120,
 			Matches:     800,
 			Contests:    50,
+			Challenges:  200,
 			Predictions: 5000,
 			UserTeams:   30,
 		}
@@ -92,6 +96,7 @@ func (c *Config) GetDataCounts() DataCounts {
 			Teams:       24,
 			Matches:     50,
 			Contests:    8,
+			Challenges:  15,
 			Predictions: 200,
 			UserTeams:   4,
 		}

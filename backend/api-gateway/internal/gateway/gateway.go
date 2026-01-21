@@ -8,6 +8,7 @@ import (
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/sports-prediction-contests/api-gateway/internal/config"
 	"github.com/sports-prediction-contests/api-gateway/internal/middleware"
+	challengepb "github.com/sports-prediction-contests/shared/proto/challenge"
 	contestpb "github.com/sports-prediction-contests/shared/proto/contest"
 	notificationpb "github.com/sports-prediction-contests/shared/proto/notification"
 	predictionpb "github.com/sports-prediction-contests/shared/proto/prediction"
@@ -82,6 +83,12 @@ func NewServer(cfg *config.Config) (*Server, error) {
 
 	// Register team service
 	err = teampb.RegisterTeamServiceHandlerFromEndpoint(ctx, mux, cfg.TeamService, opts)
+	if err != nil {
+		return nil, err
+	}
+
+	// Register challenge service
+	err = challengepb.RegisterChallengeServiceHandlerFromEndpoint(ctx, mux, cfg.ChallengeService, opts)
 	if err != nil {
 		return nil, err
 	}

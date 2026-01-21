@@ -1,0 +1,159 @@
+syntax = "proto3";
+
+package challenge;
+
+option go_package = "github.com/sports-prediction-contests/shared/proto/challenge";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+import "google/api/annotations.proto";
+import "common.proto";
+
+// Challenge represents a head-to-head challenge between users
+message Challenge {
+  uint32 id = 1;
+  uint32 challenger_id = 2;
+  uint32 opponent_id = 3;
+  uint32 event_id = 4;
+  string message = 5;
+  string status = 6; // "pending", "accepted", "declined", "expired", "active", "completed"
+  google.protobuf.Timestamp expires_at = 7;
+  google.protobuf.Timestamp accepted_at = 8;
+  google.protobuf.Timestamp completed_at = 9;
+  uint32 winner_id = 10;
+  double challenger_score = 11;
+  double opponent_score = 12;
+  google.protobuf.Timestamp created_at = 13;
+  google.protobuf.Timestamp updated_at = 14;
+}
+
+// ChallengeParticipant represents a participant in a challenge
+message ChallengeParticipant {
+  uint32 id = 1;
+  uint32 challenge_id = 2;
+  uint32 user_id = 3;
+  string role = 4; // "challenger", "opponent"
+  string status = 5; // "active", "inactive"
+  google.protobuf.Timestamp joined_at = 6;
+}
+
+// Request messages
+message CreateChallengeRequest {
+  uint32 opponent_id = 1;
+  uint32 event_id = 2;
+  string message = 3;
+}
+
+message AcceptChallengeRequest {
+  uint32 id = 1;
+}
+
+message DeclineChallengeRequest {
+  uint32 id = 1;
+}
+
+message WithdrawChallengeRequest {
+  uint32 id = 1;
+}
+
+message GetChallengeRequest {
+  uint32 id = 1;
+}
+
+message ListUserChallengesRequest {
+  uint32 user_id = 1;
+  string status = 2; // Filter by status
+  common.PaginationRequest pagination = 3;
+}
+
+message ListOpenChallengesRequest {
+  uint32 event_id = 1;
+  common.PaginationRequest pagination = 2;
+}
+
+// Response messages
+message CreateChallengeResponse {
+  common.Response response = 1;
+  Challenge challenge = 2;
+}
+
+message AcceptChallengeResponse {
+  common.Response response = 1;
+  Challenge challenge = 2;
+}
+
+message DeclineChallengeResponse {
+  common.Response response = 1;
+}
+
+message WithdrawChallengeResponse {
+  common.Response response = 1;
+}
+
+message GetChallengeResponse {
+  common.Response response = 1;
+  Challenge challenge = 2;
+}
+
+message ListUserChallengesResponse {
+  common.Response response = 1;
+  repeated Challenge challenges = 2;
+  common.PaginationResponse pagination = 3;
+}
+
+message ListOpenChallengesResponse {
+  common.Response response = 1;
+  repeated Challenge challenges = 2;
+  common.PaginationResponse pagination = 3;
+}
+
+// Challenge Service
+service ChallengeService {
+  // Challenge management
+  rpc CreateChallenge(CreateChallengeRequest) returns (CreateChallengeResponse) {
+    option (google.api.http) = {
+      post: "/v1/challenges"
+      body: "*"
+    };
+  }
+  rpc AcceptChallenge(AcceptChallengeRequest) returns (AcceptChallengeResponse) {
+    option (google.api.http) = {
+      put: "/v1/challenges/{id}/accept"
+      body: "*"
+    };
+  }
+  rpc DeclineChallenge(DeclineChallengeRequest) returns (DeclineChallengeResponse) {
+    option (google.api.http) = {
+      put: "/v1/challenges/{id}/decline"
+      body: "*"
+    };
+  }
+  rpc WithdrawChallenge(WithdrawChallengeRequest) returns (WithdrawChallengeResponse) {
+    option (google.api.http) = {
+      put: "/v1/challenges/{id}/withdraw"
+      body: "*"
+    };
+  }
+  rpc GetChallenge(GetChallengeRequest) returns (GetChallengeResponse) {
+    option (google.api.http) = {
+      get: "/v1/challenges/{id}"
+    };
+  }
+  rpc ListUserChallenges(ListUserChallengesRequest) returns (ListUserChallengesResponse) {
+    option (google.api.http) = {
+      get: "/v1/users/{user_id}/challenges"
+    };
+  }
+  rpc ListOpenChallenges(ListOpenChallengesRequest) returns (ListOpenChallengesResponse) {
+    option (google.api.http) = {
+      get: "/v1/events/{event_id}/challenges"
+    };
+  }
+  
+  // Health check
+  rpc Check(google.protobuf.Empty) returns (common.Response) {
+    option (google.api.http) = {
+      get: "/v1/challenges/health"
+    };
+  }
+}

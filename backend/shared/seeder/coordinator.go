@@ -124,6 +124,13 @@ func (c *Coordinator) SeedAll() (err error) {
 		return fmt.Errorf("failed to seed contests: %w", err)
 	}
 
+	// 6.5. Challenges (depends on users and matches)
+	challenges, err := c.seedChallenges(tx, counts.Challenges, users, matches)
+	if err != nil {
+		tx.Rollback()
+		return fmt.Errorf("failed to seed challenges: %w", err)
+	}
+
 	// Phase 3: Complex entities
 	log.Println("Phase 3: Seeding complex entities...")
 
@@ -167,6 +174,7 @@ func (c *Coordinator) SeedAll() (err error) {
 	log.Printf("  - %d teams", len(teams))
 	log.Printf("  - %d matches", len(matches))
 	log.Printf("  - %d contests", len(contests))
+	log.Printf("  - %d challenges", len(challenges))
 	log.Printf("  - %d predictions", len(predictions))
 	log.Printf("  - %d user teams", len(userTeams))
 
@@ -634,6 +642,191 @@ func (c *Coordinator) seedNotifications(tx *gorm.DB, users []*User) error {
 		len(preferences), len(notifications))
 
 	return nil
+}
+
+// seedChallenges creates realistic challenge data
+func (c *Coordinator) seedChallenges(tx *gorm.DB, count int, users []*User, matches []*Match) ([]*Challenge, error) {
+	log.Printf("Generating %d challenges...", count)
+
+	if len(users) < 2 {
+		return nil, fmt.Errorf("need at least 2 users to create challenges, got %d", len(users))
+	}
+
+	if len(matches) == 0 {
+		return nil, fmt.Errorf("need at least 1 match to create challenges")
+	}
+
+	challenges := make([]*Challenge, 0, count)
+	participants := make([]*ChallengeParticipant, 0, count*2)
+
+	statuses := []string{"pending", "accepted", "declined", "expired", "active", "completed"}
+	statusWeights := []int{30, 25, 15, 10, 10, 10} // Weighted distribution
+
+	// Validate that statuses and weights arrays match
+	if len(statuses) != len(statusWeights) {
+		return nil, fmt.Errorf("status array length (%d) does not match weights array length (%d)", len(statuses), len(statusWeights))
+	}
+
+	messages := []string{
+		"Let's see who's the better predictor!",
+		"Think you can beat me? Prove it!",
+		"Challenge accepted - may the best predictor win!",
+		"Time to put your prediction skills to the test!",
+		"Ready for a friendly competition?",
+		"Let's make this match more interesting!",
+		"I challenge you to a prediction duel!",
+		"Think you know sports better than me?",
+		"Game on! Let's see what you've got!",
+		"",
+	}
+
+	for i := 0; i < count; i++ {
+		// Select random challenger and opponent (different users)
+		challengerIdx := c.factory.faker.IntRange(0, len(users)-1)
+		var opponentIdx int
+		
+		// Guaranteed different opponent selection
+		if len(users) == 2 {
+			// With only 2 users, opponent is always the other user
+			opponentIdx = 1 - challengerIdx
+		} else {
+			// With 3+ users, select a different random user
+			for attempts := 0; attempts < 100; attempts++ {
+				opponentIdx = c.factory.faker.IntRange(0, len(users)-1)
+				if opponentIdx != challengerIdx {
+					break
+				}
+				if attempts == 99 {
+					// Guaranteed fallback: select next available user
+					opponentIdx = (challengerIdx + 1) % len(users)
+					if opponentIdx == challengerIdx {
+						opponentIdx = (challengerIdx + 2) % len(users)
+					}
+				}
+			}
+		}
+
+		challenger := users[challengerIdx]
+		opponent := users[opponentIdx]
+
+		// Select random match/event
+		match := matches[c.factory.faker.IntRange(0, len(matches)-1)]
+
+		// Select weighted random status
+		totalWeight := 0
+		for _, weight := range statusWeights {
+			totalWeight += weight
+		}
+		
+		randomValue := c.factory.faker.IntRange(1, totalWeight)
+		currentWeight := 0
+		status := statuses[0] // fallback
+		
+		for i, weight := range statusWeights {
+			currentWeight += weight
+			if randomValue <= currentWeight {
+				status = statuses[i]
+				break
+			}
+		}
+
+		// Generate challenge
+		challenge := &Challenge{
+			ChallengerID: challenger.ID,
+			OpponentID:   opponent.ID,
+			EventID:      match.ID,
+			Message:      c.factory.faker.RandomString(messages),
+			Status:       status,
+			ExpiresAt:    time.Now().Add(24 * time.Hour), // Default 24h expiration
+		}
+
+		// Set timestamps based on status
+		now := time.Now()
+		baseTime := now.Add(-time.Duration(c.factory.faker.IntRange(1, 168)) * time.Hour) // Up to 1 week ago
+
+		challenge.CreatedAt = baseTime
+
+		switch status {
+		case "pending":
+			// Still pending, expires in future
+			challenge.ExpiresAt = now.Add(time.Duration(c.factory.faker.IntRange(1, 24)) * time.Hour)
+
+		case "accepted", "active":
+			// Was accepted
+			acceptedTime := baseTime.Add(time.Duration(c.factory.faker.IntRange(1, 12)) * time.Hour)
+			challenge.AcceptedAt = &acceptedTime
+			challenge.ExpiresAt = baseTime.Add(24 * time.Hour)
+
+		case "declined":
+			// Was declined
+			challenge.ExpiresAt = baseTime.Add(24 * time.Hour)
+
+		case "expired":
+			// Expired without response
+			challenge.ExpiresAt = baseTime.Add(time.Duration(c.factory.faker.IntRange(12, 36)) * time.Hour)
+
+		case "completed":
+			// Was completed with scores
+			acceptedTime := baseTime.Add(time.Duration(c.factory.faker.IntRange(1, 12)) * time.Hour)
+			completedTime := acceptedTime.Add(time.Duration(c.factory.faker.IntRange(24, 72)) * time.Hour)
+			challenge.AcceptedAt = &acceptedTime
+			challenge.CompletedAt = &completedTime
+			challenge.ExpiresAt = baseTime.Add(24 * time.Hour)
+
+			// Generate realistic scores
+			challengerScore := float64(c.factory.faker.IntRange(0, 20))
+			opponentScore := float64(c.factory.faker.IntRange(0, 20))
+			challenge.ChallengerScore = challengerScore
+			challenge.OpponentScore = opponentScore
+
+			// Determine winner
+			if challengerScore > opponentScore {
+				challenge.WinnerID = &challenger.ID
+			} else if opponentScore > challengerScore {
+				challenge.WinnerID = &opponent.ID
+			}
+			// Tie if scores are equal (WinnerID remains nil)
+		}
+
+		challenges = append(challenges, challenge)
+
+		// Create challenge participants
+		challengerParticipant := &ChallengeParticipant{
+			UserID:   challenger.ID,
+			Role:     "challenger",
+			Status:   "active",
+			JoinedAt: challenge.CreatedAt,
+		}
+
+		opponentParticipant := &ChallengeParticipant{
+			UserID:   opponent.ID,
+			Role:     "opponent",
+			Status:   "active",
+			JoinedAt: challenge.CreatedAt,
+		}
+
+		participants = append(participants, challengerParticipant, opponentParticipant)
+	}
+
+	// Insert challenges in batches
+	if err := tx.CreateInBatches(challenges, c.config.BatchSize).Error; err != nil {
+		return nil, fmt.Errorf("failed to insert challenges: %w", err)
+	}
+
+	// Update challenge IDs in participants
+	for i, challenge := range challenges {
+		participants[i*2].ChallengeID = challenge.ID
+		participants[i*2+1].ChallengeID = challenge.ID
+	}
+
+	// Insert participants in batches
+	if err := tx.CreateInBatches(participants, c.config.BatchSize).Error; err != nil {
+		return nil, fmt.Errorf("failed to insert challenge participants: %w", err)
+	}
+
+	log.Printf("Successfully generated %d challenges with %d participants", len(challenges), len(participants))
+
+	return challenges, nil
 }
 
 // Helper methods
