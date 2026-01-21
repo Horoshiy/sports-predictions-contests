@@ -2,12 +2,14 @@ FROM golang:1.21-alpine AS builder
 
 WORKDIR /app
 
-COPY go.mod go.sum ./
-COPY ../shared ../shared
+COPY sports-service/go.mod sports-service/go.sum ./sports-service/
+COPY shared ./shared
+
+WORKDIR /app/sports-service
 
 RUN go mod download
 
-COPY . .
+COPY sports-service/ .
 
 RUN CGO_ENABLED=0 GOOS=linux go build -o sports-service ./cmd/main.go
 
@@ -17,7 +19,7 @@ RUN apk --no-cache add ca-certificates
 
 WORKDIR /root/
 
-COPY --from=builder /app/sports-service .
+COPY --from=builder /app/sports-service/sports-service .
 
 EXPOSE 8088
 

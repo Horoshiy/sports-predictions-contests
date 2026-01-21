@@ -29,8 +29,8 @@ services:
   # API Gateway service
   api-gateway:
     build:
-      context: ./backend/api-gateway
-      dockerfile: Dockerfile
+      context: ./backend
+      dockerfile: api-gateway/Dockerfile
     container_name: sports-api-gateway
     ports:
       - "8080:8080"
@@ -57,8 +57,8 @@ services:
   # User service
   user-service:
     build:
-      context: ./backend/user-service
-      dockerfile: Dockerfile
+      context: ./backend
+      dockerfile: user-service/Dockerfile
     container_name: sports-user-service
     ports:
       - "8084:8084"
@@ -79,8 +79,8 @@ services:
   # Contest service
   contest-service:
     build:
-      context: ./backend/contest-service
-      dockerfile: Dockerfile
+      context: ./backend
+      dockerfile: contest-service/Dockerfile
     container_name: sports-contest-service
     ports:
       - "8085:8085"
@@ -100,8 +100,8 @@ services:
   # Prediction service
   prediction-service:
     build:
-      context: ./backend/prediction-service
-      dockerfile: Dockerfile
+      context: ./backend
+      dockerfile: prediction-service/Dockerfile
     container_name: sports-prediction-service
     ports:
       - "8086:8086"
@@ -122,8 +122,8 @@ services:
   # Scoring service
   scoring-service:
     build:
-      context: ./backend/scoring-service
-      dockerfile: Dockerfile
+      context: ./backend
+      dockerfile: scoring-service/Dockerfile
     container_name: sports-scoring-service
     ports:
       - "8087:8087"
@@ -146,8 +146,8 @@ services:
   # Sports service
   sports-service:
     build:
-      context: ./backend/sports-service
-      dockerfile: Dockerfile
+      context: ./backend
+      dockerfile: sports-service/Dockerfile
     container_name: sports-service
     ports:
       - "8088:8088"
@@ -197,8 +197,8 @@ services:
   # Challenge service
   challenge-service:
     build:
-      context: ./backend/challenge-service
-      dockerfile: Dockerfile
+      context: ./backend
+      dockerfile: challenge-service/Dockerfile
     container_name: sports-challenge-service
     ports:
       - "8090:8090"

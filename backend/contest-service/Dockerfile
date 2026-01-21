@@ -3,14 +3,17 @@ FROM golang:1.21-alpine AS builder
 WORKDIR /app
 
 # Copy go mod files
-COPY go.mod go.sum ./
-COPY ../shared ../shared
+COPY contest-service/go.mod contest-service/go.sum ./contest-service/
+COPY shared ./shared
+
+# Set working directory to service
+WORKDIR /app/contest-service
 
 # Download dependencies
 RUN go mod download
 
 # Copy source code
-COPY . .
+COPY contest-service/ .
 
 # Build the application
 RUN CGO_ENABLED=0 GOOS=linux go build -o contest-service ./cmd/main.go
@@ -23,7 +26,7 @@ RUN apk --no-cache add ca-certificates
 WORKDIR /root/
 
 # Copy the binary from builder stage
-COPY --from=builder /app/contest-service .
+COPY --from=builder /app/contest-service/contest-service .
 
 # Expose port
 EXPOSE 8085
