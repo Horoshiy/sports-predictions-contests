@@ -24,6 +24,9 @@ Welcome to the comprehensive English documentation for the Sports Prediction Con
 - [Unit Testing](testing/unit-testing.md) - Unit testing for all services
 - [Performance Testing](testing/performance-testing.md) - Load testing and benchmarks
 
+### 🛠️ Development
+- [Fake Data Seeding](development/fake-data-seeding.md) - Generate realistic test data for development
+
 ### 🔧 Troubleshooting
 - [Common Issues](troubleshooting/common-issues.md) - Frequently encountered problems
 - [Diagnostic Tools](troubleshooting/diagnostic-tools.md) - Debugging and diagnostics

@@ -1,10 +1,14 @@
 module github.com/sports-prediction-contests/shared
 
-go 1.21
+go 1.24.0
+
+toolchain go1.24.12
 
 require (
+	github.com/brianvoe/gofakeit/v6 v6.28.0
 	github.com/golang-jwt/jwt/v5 v5.2.0
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.19.0
+	golang.org/x/crypto v0.47.0
 	google.golang.org/grpc v1.60.1
 	google.golang.org/protobuf v1.32.0
 	gorm.io/driver/postgres v1.5.4
@@ -19,10 +23,9 @@ require (
 	github.com/jinzhu/inflection v1.0.0 // indirect
 	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/stretchr/testify v1.8.4 // indirect
-	golang.org/x/crypto v0.18.0 // indirect
-	golang.org/x/net v0.19.0 // indirect
-	golang.org/x/sys v0.16.0 // indirect
-	golang.org/x/text v0.14.0 // indirect
+	golang.org/x/net v0.48.0 // indirect
+	golang.org/x/sys v0.40.0 // indirect
+	golang.org/x/text v0.33.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240102182953-50ed04b92917 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240102182953-50ed04b92917 // indirect
 )

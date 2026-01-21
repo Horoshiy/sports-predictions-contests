@@ -88,6 +88,23 @@ This will:
 make status
 ```
 
+### 4. Populate with Test Data (Optional)
+```bash
+# Generate realistic test data for development
+make seed-small
+
+# Or use other data sizes
+make seed-medium  # More data for testing
+make seed-large   # Large dataset for performance testing
+```
+
+This will populate your database with:
+- Realistic users, contests, and predictions
+- Sports data with teams, leagues, and matches
+- Complete user profiles and preferences
+- Scoring data and leaderboards
+- Team tournaments and notifications
+
 ## Architecture Overview
 
 ### Microservices Structure

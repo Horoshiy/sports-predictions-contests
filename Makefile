@@ -79,3 +79,23 @@ e2e-test: ## Run end-to-end tests with Docker services
 e2e-test-only: ## Run E2E tests (assumes services are running)
 	@echo "Running E2E tests against running services..."
 	@cd tests/e2e && go test -tags=e2e -v -timeout 5m ./...
+
+seed-small: ## Seed database with small dataset (20 users, 8 contests)
+	@echo "Seeding database with small dataset..."
+	@./scripts/seed-data.sh --size small
+
+seed-medium: ## Seed database with medium dataset (100 users, 25 contests)
+	@echo "Seeding database with medium dataset..."
+	@./scripts/seed-data.sh --size medium
+
+seed-large: ## Seed database with large dataset (500 users, 50 contests)
+	@echo "Seeding database with large dataset..."
+	@./scripts/seed-data.sh --size large
+
+seed-test: ## Test seeding configuration without adding data
+	@echo "Testing seeding configuration..."
+	@./scripts/seed-data.sh --test
+
+seed-custom: ## Seed with custom parameters (use SEED_SIZE and SEED_VALUE env vars)
+	@echo "Seeding with custom parameters..."
+	@./scripts/seed-data.sh --size $(or $(SEED_SIZE),small) --seed $(or $(SEED_VALUE),42)
