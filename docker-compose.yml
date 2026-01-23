@@ -285,7 +285,7 @@ services:
       dockerfile: Dockerfile
     container_name: sports-frontend
     ports:
-      - "3000:3000"
+      - "3000:80"
     environment:
       - REACT_APP_API_URL=http://api-gateway:8080
     depends_on:

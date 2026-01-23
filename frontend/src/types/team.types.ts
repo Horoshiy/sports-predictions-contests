@@ -1,4 +1,6 @@
-// import type { PaginationRequest, PaginationResponse } from './common.types'
+import type { PaginationRequest, PaginationResponse } from './common.types'
+
+export type { PaginationRequest, PaginationResponse }
 
 export interface Team {
   id: number

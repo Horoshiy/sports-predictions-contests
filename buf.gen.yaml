@@ -2,13 +2,13 @@ version: v1
 plugins:
   - plugin: buf.build/protocolbuffers/go
     out: backend/shared
-    opt: paths=source_relative
+    opt: path=imports
   - plugin: buf.build/grpc/go
     out: backend/shared
-    opt: paths=source_relative
+    opt: path=imports
   - plugin: buf.build/grpc-ecosystem/grpc-gateway
     out: backend/shared
-    opt: paths=source_relative
+    opt: path=imports
   - plugin: buf.build/grpc-ecosystem/openapiv2
     out: backend/shared
     opt: logtostderr=false

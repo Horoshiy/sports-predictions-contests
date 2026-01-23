@@ -52,7 +52,7 @@ export const TeamsPage: React.FC = () => {
 
   const handleJoinTeam = async (data: JoinTeamSchemaType) => {
     try {
-      await joinTeamMutation.mutateAsync(data)
+      await joinTeamMutation.mutateAsync({ inviteCode: data.inviteCode })
       reset()
       setTabValue(0) // Switch to My Teams
     } catch (error) {

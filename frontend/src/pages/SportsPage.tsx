@@ -59,9 +59,19 @@ export const SportsPage: React.FC = () => {
     try {
       const slug = data.slug || generateSlug(data.name)
       if (selectedSport) {
-        await updateSport.mutateAsync({ id: selectedSport.id, ...data, slug, isActive: selectedSport.isActive })
+        await updateSport.mutateAsync({ 
+          id: selectedSport.id, 
+          name: data.name, 
+          slug: slug, 
+          description: data.description, 
+          isActive: selectedSport.isActive 
+        })
       } else {
-        await createSport.mutateAsync({ ...data, slug })
+        await createSport.mutateAsync({ 
+          name: data.name, 
+          slug: slug, 
+          description: data.description 
+        })
       }
       closeForm()
     } catch {
@@ -73,9 +83,21 @@ export const SportsPage: React.FC = () => {
     try {
       const slug = data.slug || generateSlug(data.name)
       if (selectedLeague) {
-        await updateLeague.mutateAsync({ id: selectedLeague.id, ...data, slug, isActive: selectedLeague.isActive })
+        await updateLeague.mutateAsync({ 
+          id: selectedLeague.id, 
+          name: data.name, 
+          slug: slug, 
+          sportId: data.sportId, 
+          country: data.country, 
+          isActive: selectedLeague.isActive 
+        })
       } else {
-        await createLeague.mutateAsync({ ...data, slug })
+        await createLeague.mutateAsync({ 
+          name: data.name, 
+          slug: slug, 
+          sportId: data.sportId, 
+          country: data.country 
+        })
       }
       closeForm()
     } catch {
@@ -87,9 +109,23 @@ export const SportsPage: React.FC = () => {
     try {
       const slug = data.slug || generateSlug(data.name)
       if (selectedTeam) {
-        await updateTeam.mutateAsync({ id: selectedTeam.id, ...data, slug, isActive: selectedTeam.isActive })
+        await updateTeam.mutateAsync({ 
+          id: selectedTeam.id, 
+          name: data.name, 
+          slug: slug, 
+          leagueId: data.leagueId, 
+          country: data.country, 
+          logoUrl: data.logoUrl, 
+          isActive: selectedTeam.isActive 
+        })
       } else {
-        await createTeam.mutateAsync({ ...data, slug })
+        await createTeam.mutateAsync({ 
+          name: data.name, 
+          slug: slug, 
+          leagueId: data.leagueId, 
+          country: data.country, 
+          logoUrl: data.logoUrl 
+        })
       }
       closeForm()
     } catch {

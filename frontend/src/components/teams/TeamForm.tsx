@@ -33,9 +33,18 @@ export const TeamForm: React.FC<TeamFormProps> = ({ open, onClose, team }) => {
   const onSubmit = async (data: TeamSchemaType) => {
     try {
       if (isEdit && team) {
-        await updateTeamMutation.mutateAsync({ id: team.id, ...data })
+        await updateTeamMutation.mutateAsync({ 
+          id: team.id, 
+          name: data.name, 
+          description: data.description, 
+          maxMembers: data.maxMembers 
+        })
       } else {
-        await createTeamMutation.mutateAsync(data)
+        await createTeamMutation.mutateAsync({
+          name: data.name,
+          description: data.description,
+          maxMembers: data.maxMembers
+        })
       }
       onClose()
     } catch (error) {
