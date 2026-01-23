@@ -1,5 +1,5 @@
 import React from 'react'
-import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Box, Grid, FormControl, InputLabel, Select, MenuItem, Avatar, FormHelperText } from '@mui/material'
+import { Modal, Form, Input, Select, Button, Avatar } from 'antd'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { teamSchema, type TeamFormData, generateSlug } from '../../utils/sports-validation'
@@ -53,66 +53,52 @@ export const TeamForm: React.FC<TeamFormProps> = ({ open, onClose, onSubmit, tea
   }
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-      <DialogTitle>{isEditing ? 'Edit Team' : 'Create Team'}</DialogTitle>
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <DialogContent>
-          <Box sx={{ mt: 1 }}>
-            <Grid container spacing={2}>
-              <Grid item xs={12}>
-                <Controller
-                  name="sportId"
-                  control={control}
-                  render={({ field }) => (
-                    <FormControl fullWidth required error={!!errors.sportId}>
-                      <InputLabel>Sport</InputLabel>
-                      <Select {...field} label="Sport" disabled={loading}>
-                        {sportsData?.sports?.map(s => <MenuItem key={s.id} value={s.id}>{s.name}</MenuItem>)}
-                      </Select>
-                      {errors.sportId && <FormHelperText>{errors.sportId.message}</FormHelperText>}
-                    </FormControl>
-                  )}
-                />
-              </Grid>
-              <Grid item xs={8}>
-                <Controller name="name" control={control} render={({ field }) => (
-                  <TextField {...field} label="Name" fullWidth required error={!!errors.name} helperText={errors.name?.message} disabled={loading} />
-                )} />
-              </Grid>
-              <Grid item xs={4}>
-                <Controller name="shortName" control={control} render={({ field }) => (
-                  <TextField {...field} label="Short Name" fullWidth error={!!errors.shortName} helperText={errors.shortName?.message} disabled={loading} />
-                )} />
-              </Grid>
-              <Grid item xs={12}>
-                <Controller name="slug" control={control} render={({ field }) => (
-                  <TextField {...field} label="Slug" fullWidth error={!!errors.slug} helperText={errors.slug?.message || 'Auto-generated'} disabled={loading} />
-                )} />
-              </Grid>
-              <Grid item xs={12}>
-                <Controller name="country" control={control} render={({ field }) => (
-                  <TextField {...field} label="Country" fullWidth error={!!errors.country} helperText={errors.country?.message} disabled={loading} />
-                )} />
-              </Grid>
-              <Grid item xs={10}>
-                <Controller name="logoUrl" control={control} render={({ field }) => (
-                  <TextField {...field} label="Logo URL" fullWidth error={!!errors.logoUrl} helperText={errors.logoUrl?.message} disabled={loading} />
-                )} />
-              </Grid>
-              <Grid item xs={2} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                {logoUrl && <Avatar src={logoUrl} sx={{ width: 48, height: 48 }} />}
-              </Grid>
-            </Grid>
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleClose} disabled={loading}>Cancel</Button>
-          <Button type="submit" variant="contained" disabled={loading || !isValid}>
-            {loading ? 'Saving...' : isEditing ? 'Update' : 'Create'}
-          </Button>
-        </DialogActions>
-      </form>
-    </Dialog>
+    <Modal
+      open={open}
+      title={isEditing ? 'Edit Team' : 'Create Team'}
+      onCancel={handleClose}
+      footer={[
+        <Button key="cancel" onClick={handleClose} disabled={loading}>Cancel</Button>,
+        <Button key="submit" type="primary" onClick={handleSubmit(onSubmit)} disabled={loading || !isValid} loading={loading}>
+          {isEditing ? 'Update' : 'Create'}
+        </Button>,
+      ]}
+    >
+      <Form layout="vertical">
+        <Controller name="sportId" control={control} render={({ field }) => (
+          <Form.Item label="Sport" required validateStatus={errors.sportId ? 'error' : ''} help={errors.sportId?.message}>
+            <Select {...field} disabled={loading}>
+              {sportsData?.sports?.map(s => <Select.Option key={s.id} value={s.id}>{s.name}</Select.Option>)}
+            </Select>
+          </Form.Item>
+        )} />
+        <Controller name="name" control={control} render={({ field }) => (
+          <Form.Item label="Name" required validateStatus={errors.name ? 'error' : ''} help={errors.name?.message}>
+            <Input {...field} disabled={loading} />
+          </Form.Item>
+        )} />
+        <Controller name="shortName" control={control} render={({ field }) => (
+          <Form.Item label="Short Name" validateStatus={errors.shortName ? 'error' : ''} help={errors.shortName?.message}>
+            <Input {...field} disabled={loading} />
+          </Form.Item>
+        )} />
+        <Controller name="slug" control={control} render={({ field }) => (
+          <Form.Item label="Slug" validateStatus={errors.slug ? 'error' : ''} help={errors.slug?.message || 'Auto-generated'}>
+            <Input {...field} disabled={loading} />
+          </Form.Item>
+        )} />
+        <Controller name="country" control={control} render={({ field }) => (
+          <Form.Item label="Country" validateStatus={errors.country ? 'error' : ''} help={errors.country?.message}>
+            <Input {...field} disabled={loading} />
+          </Form.Item>
+        )} />
+        <Controller name="logoUrl" control={control} render={({ field }) => (
+          <Form.Item label="Logo URL" validateStatus={errors.logoUrl ? 'error' : ''} help={errors.logoUrl?.message}>
+            <Input {...field} disabled={loading} addonAfter={logoUrl && <Avatar src={logoUrl} size="small" />} />
+          </Form.Item>
+        )} />
+      </Form>
+    </Modal>
   )
 }
 

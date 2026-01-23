@@ -1,7 +1,10 @@
 import React from 'react'
-import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Typography, Box, Chip } from '@mui/material'
-import { EmojiEvents as TrophyIcon, People as PeopleIcon } from '@mui/icons-material'
+import { Table, Typography, Tag, Space } from 'antd'
+import { TrophyOutlined, TeamOutlined } from '@ant-design/icons'
+import type { ColumnsType } from 'antd/es/table'
 import { useTeamLeaderboard } from '../../hooks/use-teams'
+
+const { Text } = Typography
 
 interface TeamLeaderboardProps {
   contestId: number
@@ -10,62 +13,75 @@ interface TeamLeaderboardProps {
 
 const getRankColor = (rank: number) => {
   if (rank === 1) return 'gold'
-  if (rank === 2) return 'silver'
-  if (rank === 3) return '#cd7f32'
+  if (rank === 2) return 'default'
+  if (rank === 3) return 'orange'
   return undefined
+}
+
+interface LeaderboardEntry {
+  rank: number
+  teamId: number
+  teamName: string
+  totalPoints: number
+  memberCount: number
 }
 
 export const TeamLeaderboard: React.FC<TeamLeaderboardProps> = ({ contestId, userTeamId }) => {
   const { data: entries, isLoading, isError } = useTeamLeaderboard(contestId, 20)
 
-  if (isLoading) return <Typography>Loading team leaderboard...</Typography>
-  if (isError) return <Typography color="error">Failed to load team leaderboard</Typography>
-  if (!entries || entries.length === 0) return <Typography color="text.secondary">No teams in this contest yet</Typography>
+  const columns: ColumnsType<LeaderboardEntry> = [
+    {
+      title: 'Rank',
+      dataIndex: 'rank',
+      key: 'rank',
+      width: 80,
+      render: (rank: number) => (
+        <Space>
+          {rank <= 3 && <TrophyOutlined style={{ color: rank === 1 ? '#FFD700' : rank === 2 ? '#C0C0C0' : '#CD7F32' }} />}
+          <Text strong={rank <= 3}>#{rank}</Text>
+        </Space>
+      ),
+    },
+    {
+      title: 'Team',
+      dataIndex: 'teamName',
+      key: 'teamName',
+      render: (name: string, record) => (
+        <Space>
+          <TeamOutlined />
+          <Text strong={record.teamId === userTeamId}>{name}</Text>
+          {record.teamId === userTeamId && <Tag color="blue">Your Team</Tag>}
+        </Space>
+      ),
+    },
+    {
+      title: 'Members',
+      dataIndex: 'memberCount',
+      key: 'memberCount',
+      width: 100,
+    },
+    {
+      title: 'Points',
+      dataIndex: 'totalPoints',
+      key: 'totalPoints',
+      width: 120,
+      render: (points: number) => <Text strong>{points.toFixed(1)}</Text>,
+    },
+  ]
+
+  if (isLoading) return <Text>Loading team leaderboard...</Text>
+  if (isError) return <Text type="danger">Failed to load team leaderboard</Text>
+  if (!entries || entries.length === 0) return <Text type="secondary">No teams in this contest yet</Text>
 
   return (
-    <TableContainer component={Paper}>
-      <Table size="small">
-        <TableHead>
-          <TableRow>
-            <TableCell width={60}>Rank</TableCell>
-            <TableCell>Team</TableCell>
-            <TableCell align="right">Members</TableCell>
-            <TableCell align="right">Points</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {entries.map((entry, index) => {
-            const rank = entry.rank || index + 1
-            const isUserTeam = entry.teamId === userTeamId
-            return (
-              <TableRow key={entry.teamId} sx={{ bgcolor: isUserTeam ? 'action.selected' : undefined }}>
-                <TableCell>
-                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    {rank <= 3 && <TrophyIcon sx={{ color: getRankColor(rank), mr: 0.5, fontSize: 18 }} />}
-                    <Typography fontWeight={rank <= 3 ? 'bold' : 'normal'}>{rank}</Typography>
-                  </Box>
-                </TableCell>
-                <TableCell>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <Typography fontWeight={isUserTeam ? 'bold' : 'normal'}>{entry.teamName}</Typography>
-                    {isUserTeam && <Chip label="Your Team" size="small" color="primary" />}
-                  </Box>
-                </TableCell>
-                <TableCell align="right">
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
-                    <PeopleIcon sx={{ fontSize: 16, mr: 0.5, color: 'text.secondary' }} />
-                    {entry.memberCount}
-                  </Box>
-                </TableCell>
-                <TableCell align="right">
-                  <Typography fontWeight="bold">{entry.totalPoints.toFixed(1)}</Typography>
-                </TableCell>
-              </TableRow>
-            )
-          })}
-        </TableBody>
-      </Table>
-    </TableContainer>
+    <Table
+      columns={columns}
+      dataSource={entries}
+      rowKey="teamId"
+      size="small"
+      pagination={false}
+      rowClassName={(record) => record.teamId === userTeamId ? 'ant-table-row-selected' : ''}
+    />
   )
 }
 

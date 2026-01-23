@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react'
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, Box } from '@mui/material'
+import { Modal, Form, Input, Button, InputNumber } from 'antd'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { teamSchema, type TeamSchemaType } from '../../utils/team-validation'
@@ -30,75 +30,46 @@ export const TeamForm: React.FC<TeamFormProps> = ({ open, onClose, team }) => {
     }
   }, [team, reset])
 
-  const onSubmit = async (data: TeamSchemaType) => {
-    try {
-      if (isEdit && team) {
-        await updateTeamMutation.mutateAsync({ 
-          id: team.id, 
-          name: data.name, 
-          description: data.description, 
-          maxMembers: data.maxMembers 
-        })
-      } else {
-        await createTeamMutation.mutateAsync({
-          name: data.name,
-          description: data.description,
-          maxMembers: data.maxMembers
-        })
-      }
-      onClose()
-    } catch (error) {
-      // Error handled by mutation
+  const onSubmit = (data: TeamSchemaType) => {
+    if (isEdit && team) {
+      updateTeamMutation.mutate({ id: team.id, name: data.name, description: data.description, maxMembers: data.maxMembers }, { onSuccess: onClose })
+    } else {
+      createTeamMutation.mutate({ name: data.name, description: data.description, maxMembers: data.maxMembers }, { onSuccess: onClose })
     }
   }
 
-  const isPending = createTeamMutation.isPending || updateTeamMutation.isPending
+  const loading = createTeamMutation.isPending || updateTeamMutation.isPending
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>{isEdit ? 'Edit Team' : 'Create Team'}</DialogTitle>
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <DialogContent>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <Controller
-              name="name"
-              control={control}
-              render={({ field }) => (
-                <TextField {...field} label="Team Name" required fullWidth error={!!errors.name} helperText={errors.name?.message} />
-              )}
-            />
-            <Controller
-              name="description"
-              control={control}
-              render={({ field }) => (
-                <TextField {...field} label="Description" multiline rows={3} fullWidth error={!!errors.description} helperText={errors.description?.message} />
-              )}
-            />
-            <Controller
-              name="maxMembers"
-              control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  type="number"
-                  label="Max Members"
-                  fullWidth
-                  error={!!errors.maxMembers}
-                  helperText={errors.maxMembers?.message || 'Between 2 and 50'}
-                  onChange={(e) => field.onChange(parseInt(e.target.value) || 10)}
-                />
-              )}
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={onClose}>Cancel</Button>
-          <Button type="submit" variant="contained" disabled={isPending}>
-            {isPending ? 'Saving...' : isEdit ? 'Update' : 'Create'}
-          </Button>
-        </DialogActions>
-      </form>
-    </Dialog>
+    <Modal
+      open={open}
+      title={isEdit ? 'Edit Team' : 'Create Team'}
+      onCancel={onClose}
+      footer={[
+        <Button key="cancel" onClick={onClose} disabled={loading}>Cancel</Button>,
+        <Button key="submit" type="primary" onClick={handleSubmit(onSubmit)} loading={loading}>
+          {isEdit ? 'Update' : 'Create'}
+        </Button>,
+      ]}
+    >
+      <Form layout="vertical">
+        <Controller name="name" control={control} render={({ field }) => (
+          <Form.Item label="Team Name" required validateStatus={errors.name ? 'error' : ''} help={errors.name?.message}>
+            <Input {...field} disabled={loading} />
+          </Form.Item>
+        )} />
+        <Controller name="description" control={control} render={({ field }) => (
+          <Form.Item label="Description" validateStatus={errors.description ? 'error' : ''} help={errors.description?.message}>
+            <Input.TextArea {...field} rows={3} disabled={loading} />
+          </Form.Item>
+        )} />
+        <Controller name="maxMembers" control={control} render={({ field }) => (
+          <Form.Item label="Max Members" validateStatus={errors.maxMembers ? 'error' : ''} help={errors.maxMembers?.message}>
+            <InputNumber {...field} min={1} max={100} disabled={loading} style={{ width: '100%' }} />
+          </Form.Item>
+        )} />
+      </Form>
+    </Modal>
   )
 }
 

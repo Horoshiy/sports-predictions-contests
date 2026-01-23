@@ -1,45 +1,23 @@
 import React from 'react'
-import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  Button,
-  Box,
-  FormControl,
-  FormLabel,
-  RadioGroup,
-  FormControlLabel,
-  Radio,
-  Typography,
-  Divider,
-  Grid,
-  FormHelperText,
-  Alert,
-} from '@mui/material'
+import { Modal, Form, Input, Radio, Button, Alert, Typography, Divider, Space, InputNumber } from 'antd'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { 
   predictionSchema, 
   type PredictionFormData,
-  type PropPredictionFormData,
-  predictionDataToFormData,
   formDataToPredictionData,
-  propsFormDataToPredictionData,
 } from '../../utils/prediction-validation'
 import type { Event, Prediction } from '../../types/prediction.types'
 import { formatDate } from '../../utils/date-utils'
-import { usePropTypes, usePotentialCoefficient } from '../../hooks/use-predictions'
-import { PropTypeSelector } from './PropTypeSelector'
-import { CoefficientIndicator } from './CoefficientIndicator'
+
+const { Text, Title } = Typography
 
 interface PredictionFormProps {
   open: boolean
   onClose: () => void
   onSubmit: (predictionData: string) => void
   event: Event | null
-  prediction?: Prediction | null
+  existingPrediction?: Prediction | null
   loading?: boolean
 }
 
@@ -48,233 +26,124 @@ export const PredictionForm: React.FC<PredictionFormProps> = ({
   onClose,
   onSubmit,
   event,
-  prediction,
+  existingPrediction,
   loading = false,
 }) => {
-  const isEditing = !!prediction
-  const [selectedProps, setSelectedProps] = React.useState<PropPredictionFormData[]>([])
-  const [propsError, setPropsError] = React.useState<string | null>(null)
-  const { data: propTypes = [] } = usePropTypes(event?.sportType || '')
-  const { data: coefficientData } = usePotentialCoefficient(event?.id)
+  const isEdit = !!existingPrediction
 
-  const defaultValues = React.useMemo(() => {
-    if (prediction && event) {
-      return predictionDataToFormData(prediction.predictionData, event.id)
+  const defaultValues: PredictionFormData = React.useMemo(() => {
+    if (existingPrediction) {
+      try {
+        const parsed = JSON.parse(existingPrediction.predictionData)
+        return {
+          eventId: existingPrediction.eventId,
+          predictionType: parsed.predictionType || 'winner',
+          winner: parsed.winner,
+          homeScore: parsed.homeScore,
+          awayScore: parsed.awayScore,
+        }
+      } catch {
+        return {
+          eventId: event?.id || 0,
+          predictionType: 'winner',
+        }
+      }
     }
     return {
       eventId: event?.id || 0,
-      predictionType: 'winner' as const,
-      winner: undefined,
-      homeScore: undefined,
-      awayScore: undefined,
+      predictionType: 'winner',
     }
-  }, [prediction, event])
+  }, [existingPrediction, event])
 
-  const {
-    control,
-    handleSubmit,
-    watch,
-    reset,
-    formState: { errors },
-  } = useForm<PredictionFormData>({
+  const { control, handleSubmit, reset, watch, formState: { errors } } = useForm<PredictionFormData>({
     resolver: zodResolver(predictionSchema),
     defaultValues,
-    mode: 'onBlur',
+    mode: 'onChange',
   })
 
   const predictionType = watch('predictionType')
 
   React.useEffect(() => {
-    if (open) {
-      reset(defaultValues)
-      setSelectedProps([])
-      setPropsError(null)
+    if (event) {
+      reset({ ...defaultValues, eventId: event.id })
     }
-  }, [open, defaultValues, reset])
+  }, [event, defaultValues, reset])
 
   const handleFormSubmit = (data: PredictionFormData) => {
-    let predictionData: string
-    if (data.predictionType === 'props') {
-      if (selectedProps.length === 0) {
-        setPropsError('Please add at least one prop prediction')
-        return
-      }
-      const invalidProps = selectedProps.filter(p => !p.selection)
-      if (invalidProps.length > 0) {
-        setPropsError('Please make a selection for all props')
-        return
-      }
-      setPropsError(null)
-      predictionData = propsFormDataToPredictionData(selectedProps)
-    } else {
-      predictionData = formDataToPredictionData(data)
-    }
+    const predictionData = formDataToPredictionData(data)
     onSubmit(predictionData)
   }
 
   const handleClose = () => {
     reset()
-    setSelectedProps([])
-    setPropsError(null)
     onClose()
   }
 
   if (!event) return null
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-      <DialogTitle>
-        {isEditing ? 'Edit Prediction' : 'Make Prediction'}
-      </DialogTitle>
-      
-      <form onSubmit={handleSubmit(handleFormSubmit)}>
-        <DialogContent>
-          <Box sx={{ mb: 3, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
-            <Typography variant="subtitle2" color="text.secondary">
-              {event.sportType}
-            </Typography>
-            <Typography variant="h6">{event.title}</Typography>
-            <Box sx={{ mt: 1, textAlign: 'center' }}>
-              <Typography variant="body1" fontWeight="medium">
-                {event.homeTeam} vs {event.awayTeam}
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                {formatDate(event.eventDate)}
-              </Typography>
-            </Box>
-          </Box>
+    <Modal
+      open={open}
+      title={isEdit ? 'Edit Prediction' : 'Make Prediction'}
+      onCancel={handleClose}
+      footer={[
+        <Button key="cancel" onClick={handleClose} disabled={loading}>Cancel</Button>,
+        <Button key="submit" type="primary" onClick={handleSubmit(handleFormSubmit)} loading={loading}>
+          {isEdit ? 'Update' : 'Submit'} Prediction
+        </Button>,
+      ]}
+      width={600}
+    >
+      <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+        <div>
+          <Title level={5} style={{ margin: 0 }}>{event.title}</Title>
+          <Text type="secondary">{event.homeTeam} vs {event.awayTeam}</Text>
+          <br />
+          <Text type="secondary">{formatDate(event.eventDate)}</Text>
+        </div>
 
-          <Divider sx={{ mb: 3 }} />
+        <Divider />
 
-          {coefficientData && coefficientData.coefficient > 1 && (
-            <Box sx={{ mb: 2 }}>
-              <CoefficientIndicator
-                coefficient={coefficientData.coefficient}
-                tier={coefficientData.tier}
-                hoursUntilEvent={coefficientData.hoursUntilEvent}
-              />
-            </Box>
-          )}
-
-          <Controller
-            name="predictionType"
-            control={control}
-            render={({ field }) => (
-              <FormControl component="fieldset" sx={{ mb: 3 }}>
-                <FormLabel>Prediction Type</FormLabel>
-                <RadioGroup {...field} row>
-                  <FormControlLabel value="winner" control={<Radio />} label="Winner Only" />
-                  <FormControlLabel value="score" control={<Radio />} label="Exact Score" />
-                  <FormControlLabel value="combined" control={<Radio />} label="Both" />
-                  {propTypes.length > 0 && (
-                    <FormControlLabel value="props" control={<Radio />} label="Props" />
-                  )}
-                </RadioGroup>
-              </FormControl>
-            )}
-          />
-
-          {predictionType === 'props' && propTypes.length > 0 && (
-            <>
-              {propsError && (
-                <Alert severity="error" sx={{ mb: 2 }}>{propsError}</Alert>
-              )}
-              <PropTypeSelector
-                propTypes={propTypes}
-                selectedProps={selectedProps}
-                onPropsChange={(props) => {
-                  setSelectedProps(props)
-                  setPropsError(null)
-                }}
-                homeTeam={event.homeTeam}
-                awayTeam={event.awayTeam}
-                disabled={loading}
-              />
-            </>
-          )}
+        <Form layout="vertical">
+          <Controller name="predictionType" control={control} render={({ field }) => (
+            <Form.Item label="Prediction Type">
+              <Radio.Group {...field}>
+                <Radio value="winner">Winner</Radio>
+                <Radio value="score">Exact Score</Radio>
+                <Radio value="combined">Winner + Score</Radio>
+              </Radio.Group>
+            </Form.Item>
+          )} />
 
           {(predictionType === 'winner' || predictionType === 'combined') && (
-            <Controller
-              name="winner"
-              control={control}
-              render={({ field }) => (
-                <FormControl component="fieldset" sx={{ mb: 3 }} error={!!errors.winner}>
-                  <FormLabel>Select Winner</FormLabel>
-                  <RadioGroup {...field} value={field.value || ''}>
-                    <FormControlLabel value="home" control={<Radio />} label={event.homeTeam} />
-                    <FormControlLabel value="away" control={<Radio />} label={event.awayTeam} />
-                    <FormControlLabel value="draw" control={<Radio />} label="Draw" />
-                  </RadioGroup>
-                  {errors.winner && (
-                    <FormHelperText>{errors.winner.message}</FormHelperText>
-                  )}
-                </FormControl>
-              )}
-            />
+            <Controller name="winner" control={control} render={({ field }) => (
+              <Form.Item label="Winner" required validateStatus={errors.winner ? 'error' : ''} help={errors.winner?.message}>
+                <Radio.Group {...field}>
+                  <Radio value="home">{event.homeTeam}</Radio>
+                  <Radio value="away">{event.awayTeam}</Radio>
+                  <Radio value="draw">Draw</Radio>
+                </Radio.Group>
+              </Form.Item>
+            )} />
           )}
 
           {(predictionType === 'score' || predictionType === 'combined') && (
-            <Grid container spacing={2}>
-              <Grid item xs={6}>
-                <Controller
-                  name="homeScore"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      label={`${event.homeTeam} Score`}
-                      type="number"
-                      fullWidth
-                      error={!!errors.homeScore}
-                      helperText={errors.homeScore?.message}
-                      disabled={loading}
-                      onChange={(e) => {
-                        const val = e.target.value
-                        field.onChange(val === '' ? undefined : parseInt(val))
-                      }}
-                      value={field.value ?? ''}
-                      inputProps={{ min: 0 }}
-                    />
-                  )}
-                />
-              </Grid>
-              <Grid item xs={6}>
-                <Controller
-                  name="awayScore"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField
-                      {...field}
-                      label={`${event.awayTeam} Score`}
-                      type="number"
-                      fullWidth
-                      error={!!errors.awayScore}
-                      helperText={errors.awayScore?.message}
-                      disabled={loading}
-                      onChange={(e) => {
-                        const val = e.target.value
-                        field.onChange(val === '' ? undefined : parseInt(val))
-                      }}
-                      value={field.value ?? ''}
-                      inputProps={{ min: 0 }}
-                    />
-                  )}
-                />
-              </Grid>
-            </Grid>
+            <Space>
+              <Controller name="homeScore" control={control} render={({ field }) => (
+                <Form.Item label={`${event.homeTeam} Score`} validateStatus={errors.homeScore ? 'error' : ''} help={errors.homeScore?.message}>
+                  <InputNumber {...field} min={0} style={{ width: 100 }} />
+                </Form.Item>
+              )} />
+              <Controller name="awayScore" control={control} render={({ field }) => (
+                <Form.Item label={`${event.awayTeam} Score`} validateStatus={errors.awayScore ? 'error' : ''} help={errors.awayScore?.message}>
+                  <InputNumber {...field} min={0} style={{ width: 100 }} />
+                </Form.Item>
+              )} />
+            </Space>
           )}
-        </DialogContent>
-
-        <DialogActions>
-          <Button onClick={handleClose} disabled={loading}>
-            Cancel
-          </Button>
-          <Button type="submit" variant="contained" disabled={loading}>
-            {loading ? 'Saving...' : isEditing ? 'Update Prediction' : 'Submit Prediction'}
-          </Button>
-        </DialogActions>
-      </form>
-    </Dialog>
+        </Form>
+      </Space>
+    </Modal>
   )
 }
 

@@ -1,30 +1,14 @@
-import React, { useMemo, useState, useEffect } from 'react'
-import {
-  MaterialReactTable,
-  useMaterialReactTable,
-  type MRT_ColumnDef,
-} from 'material-react-table'
-import {
-  Box,
-  Typography,
-  Chip,
-  Avatar,
-  IconButton,
-  Tooltip,
-  Card,
-  CardContent,
-  CircularProgress,
-  Alert,
-  Button,
-} from '@mui/material'
-import {
-  Refresh as RefreshIcon,
-  EmojiEvents as TrophyIcon,
-} from '@mui/icons-material'
+import React, { useState, useEffect } from 'react'
+import { Table, Card, Typography, Tag, Avatar, Button, Tooltip, Space, Spin, Alert, Statistic, Row, Col } from 'antd'
+import { ReloadOutlined, TrophyOutlined } from '@ant-design/icons'
+import type { ColumnsType } from 'antd/es/table'
 import { useQuery } from '@tanstack/react-query'
 import scoringService from '../../services/scoring-service'
 import type { LeaderboardEntry } from '../../types/scoring.types'
 import { formatRelativeTime } from '../../utils/date-utils'
+import { DEFAULT_REFRESH_INTERVAL, MAX_PARTICIPANTS_DISPLAY } from '../../utils/constants'
+
+const { Text, Title } = Typography
 
 interface LeaderboardTableProps {
   contestId: number
@@ -37,19 +21,20 @@ interface LeaderboardTableProps {
 const getRankColor = (rank: number) => {
   switch (rank) {
     case 1:
-      return '#FFD700' // Gold
+      return 'gold'
     case 2:
-      return '#C0C0C0' // Silver
+      return 'default'
     case 3:
-      return '#CD7F32' // Bronze
+      return 'orange'
     default:
-      return 'inherit'
+      return 'default'
   }
 }
 
 const getRankIcon = (rank: number) => {
   if (rank <= 3) {
-    return <TrophyIcon sx={{ color: getRankColor(rank), fontSize: 20 }} />
+    const colors = { 1: '#FFD700', 2: '#C0C0C0', 3: '#CD7F32' }
+    return <TrophyOutlined style={{ color: colors[rank as 1 | 2 | 3], fontSize: 20 }} />
   }
   return null
 }
@@ -57,9 +42,9 @@ const getRankIcon = (rank: number) => {
 export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({
   contestId,
   currentUserId,
-  limit = 50,
+  limit = MAX_PARTICIPANTS_DISPLAY,
   autoRefresh = true,
-  refreshInterval = 30000, // 30 seconds
+  refreshInterval = DEFAULT_REFRESH_INTERVAL,
 }) => {
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date())
 
@@ -116,162 +101,81 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({
   }
 
   // Define table columns
-  const columns = useMemo<MRT_ColumnDef<LeaderboardEntry>[]>(
-    () => [
-      {
-        accessorKey: 'rank',
-        header: 'Rank',
-        size: 80,
-        Cell: ({ cell, row }) => {
-          const rank = cell.getValue<number>()
-          const isCurrentUser = currentUserId === row.original.userId
-          
-          return (
-            <Box 
-              display="flex" 
-              alignItems="center" 
-              gap={1}
-              sx={{
-                fontWeight: isCurrentUser ? 'bold' : 'normal',
-                color: isCurrentUser ? 'primary.main' : 'inherit',
-              }}
-            >
-              {getRankIcon(rank)}
-              <Typography 
-                variant="body2" 
-                sx={{ 
-                  fontWeight: rank <= 3 ? 'bold' : 'normal',
-                  color: getRankColor(rank),
-                }}
-              >
-                #{rank}
-              </Typography>
-            </Box>
-          )
-        },
-      },
-      {
-        accessorKey: 'userName',
-        header: 'Player',
-        size: 200,
-        Cell: ({ cell, row }) => {
-          const userName = cell.getValue<string>() || `User ${row.original.userId}`
-          const isCurrentUser = currentUserId === row.original.userId
-          
-          return (
-            <Box display="flex" alignItems="center" gap={2}>
-              <Avatar sx={{ width: 32, height: 32, fontSize: 14 }}>
-                {userName.charAt(0).toUpperCase()}
-              </Avatar>
-              <Box>
-                <Typography 
-                  variant="body2" 
-                  sx={{ 
-                    fontWeight: isCurrentUser ? 'bold' : 'normal',
-                    color: isCurrentUser ? 'primary.main' : 'inherit',
-                  }}
-                >
-                  {userName}
-                  {isCurrentUser && (
-                    <Chip 
-                      label="You" 
-                      size="small" 
-                      color="primary" 
-                      sx={{ ml: 1, height: 20 }}
-                    />
-                  )}
-                </Typography>
-              </Box>
-            </Box>
-          )
-        },
-      },
-      {
-        accessorKey: 'totalPoints',
-        header: 'Points',
-        size: 120,
-        Cell: ({ cell }) => {
-          const points = cell.getValue<number>()
-          return (
-            <Typography 
-              variant="body2" 
-              sx={{ 
-                fontWeight: 'bold',
-                color: points > 0 ? 'success.main' : 'text.secondary',
-              }}
-            >
-              {points.toFixed(1)}
-            </Typography>
-          )
-        },
-      },
-      {
-        accessorKey: 'currentStreak',
-        header: 'Streak',
-        size: 100,
-        Cell: ({ cell, row }) => {
-          const streak = cell.getValue<number>() || 0
-          const multiplier = row.original.multiplier || 1
-          return (
-            <Box display="flex" alignItems="center" gap={1}>
-              <Typography variant="body2">
-                🔥 {streak}
-              </Typography>
-              {multiplier > 1 && (
-                <Chip 
-                  label={`${multiplier}x`} 
-                  size="small" 
-                  color="warning"
-                />
-              )}
-            </Box>
-          )
-        },
-      },
-      {
-        accessorKey: 'updatedAt',
-        header: 'Last Updated',
-        size: 150,
-        Cell: ({ cell }) => {
-          const updatedAt = cell.getValue<string>()
-          return (
-            <Typography variant="body2" color="text.secondary">
-              {formatRelativeTime(updatedAt)}
-            </Typography>
-          )
-        },
-      },
-    ],
-    [currentUserId]
-  )
-
-  const table = useMaterialReactTable({
-    columns,
-    data: leaderboard?.entries || [],
-    enableColumnActions: false,
-    enableColumnFilters: false,
-    enablePagination: false,
-    enableSorting: false,
-    enableBottomToolbar: false,
-    enableTopToolbar: false,
-    muiTableBodyRowProps: ({ row }) => ({
-      sx: {
-        backgroundColor: currentUserId === row.original.userId 
-          ? 'action.selected' 
-          : 'inherit',
-      },
-    }),
-    muiTableProps: {
-      sx: {
-        '& .MuiTableHead-root': {
-          '& .MuiTableCell-root': {
-            backgroundColor: 'grey.50',
-            fontWeight: 'bold',
-          },
-        },
+  const columns: ColumnsType<LeaderboardEntry> = [
+    {
+      title: 'Rank',
+      dataIndex: 'rank',
+      key: 'rank',
+      width: 80,
+      render: (rank: number, record) => {
+        const isCurrentUser = currentUserId === record.userId
+        return (
+          <Space>
+            {getRankIcon(rank)}
+            <Text strong={rank <= 3 || isCurrentUser} style={{ color: isCurrentUser ? '#1890ff' : undefined }}>
+              #{rank}
+            </Text>
+          </Space>
+        )
       },
     },
-  })
+    {
+      title: 'Player',
+      dataIndex: 'userName',
+      key: 'userName',
+      width: 200,
+      render: (userName: string, record) => {
+        const displayName = userName || `User ${record.userId}`
+        const isCurrentUser = currentUserId === record.userId
+        return (
+          <Space>
+            <Avatar size={32}>{displayName.charAt(0).toUpperCase()}</Avatar>
+            <Space direction="vertical" size={0}>
+              <Text strong={isCurrentUser} style={{ color: isCurrentUser ? '#1890ff' : undefined }}>
+                {displayName}
+                {isCurrentUser && <Tag color="blue" style={{ marginLeft: 8 }}>You</Tag>}
+              </Text>
+            </Space>
+          </Space>
+        )
+      },
+    },
+    {
+      title: 'Points',
+      dataIndex: 'totalPoints',
+      key: 'totalPoints',
+      width: 120,
+      render: (points: number) => (
+        <Text strong style={{ color: points > 0 ? '#52c41a' : undefined }}>
+          {points.toFixed(1)}
+        </Text>
+      ),
+    },
+    {
+      title: 'Streak',
+      dataIndex: 'currentStreak',
+      key: 'currentStreak',
+      width: 100,
+      render: (streak: number, record) => {
+        const multiplier = record.multiplier ?? 1
+        return (
+          <Space>
+            <Text>🔥 {streak ?? 0}</Text>
+            {multiplier > 1 && <Tag color="warning">{multiplier}x</Tag>}
+          </Space>
+        )
+      },
+    },
+    {
+      title: 'Last Updated',
+      dataIndex: 'updatedAt',
+      key: 'updatedAt',
+      width: 150,
+      render: (updatedAt: string) => (
+        <Text type="secondary">{formatRelativeTime(updatedAt)}</Text>
+      ),
+    },
+  ]
 
   const handleRefresh = () => {
     refetch()
@@ -280,129 +184,114 @@ export const LeaderboardTable: React.FC<LeaderboardTableProps> = ({
 
   if (error) {
     return (
-      <Alert severity="error" sx={{ mb: 2 }}>
-        Failed to load leaderboard. Please try again.
-        <Button onClick={handleRefresh} sx={{ ml: 2 }}>
-          Retry
-        </Button>
-      </Alert>
+      <Alert
+        message="Failed to load leaderboard"
+        description="Please try again."
+        type="error"
+        showIcon
+        action={
+          <Button size="small" onClick={handleRefresh}>
+            Retry
+          </Button>
+        }
+        style={{ marginBottom: 16 }}
+      />
     )
   }
 
   return (
     <Card>
-      <CardContent>
-        {/* Header */}
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-          <Typography variant="h6" component="h2">
-            Leaderboard
-          </Typography>
-          <Box display="flex" alignItems="center" gap={1}>
-            <Typography variant="caption" color="text.secondary">
+      {/* Header */}
+      <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Title level={4} style={{ margin: 0 }}>Leaderboard</Title>
+          <Space>
+            <Text type="secondary" style={{ fontSize: 12 }}>
               Last updated: {formatRelativeTime(lastUpdated.toISOString())}
-            </Typography>
+            </Text>
             <Tooltip title="Refresh leaderboard">
-              <IconButton 
-                onClick={handleRefresh} 
+              <Button
+                icon={isRefetching ? <Spin size="small" /> : <ReloadOutlined />}
+                onClick={handleRefresh}
                 disabled={isRefetching}
                 size="small"
-              >
-                {isRefetching ? (
-                  <CircularProgress size={20} />
-                ) : (
-                  <RefreshIcon />
-                )}
-              </IconButton>
+              />
             </Tooltip>
-          </Box>
-        </Box>
+          </Space>
+        </div>
 
         {/* Current User Rank Card */}
         {currentUserId && userRank && !isLoadingUserRank && (
-          <Card variant="outlined" sx={{ mb: 2, bgcolor: 'primary.50' }}>
-            <CardContent sx={{ py: 1.5 }}>
-              <Box display="flex" justifyContent="space-between" alignItems="center">
-                <Typography variant="subtitle2" color="primary">
-                  Your Position
-                </Typography>
-                <Box display="flex" alignItems="center" gap={2}>
-                  <Box textAlign="center">
-                    <Typography variant="h6" color="primary">
-                      #{userRank.rank}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      Rank
-                    </Typography>
-                  </Box>
-                  <Box textAlign="center">
-                    <Typography variant="h6" color="primary">
-                      {userRank.totalPoints.toFixed(1)}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      Points
-                    </Typography>
-                  </Box>
-                  {userStreak && (
-                    <Box textAlign="center">
-                      <Typography variant="h6" color="warning.main">
-                        🔥 {userStreak.currentStreak}
-                        {userStreak.multiplier > 1 && (
-                          <Chip 
-                            label={`${userStreak.multiplier}x`} 
-                            size="small" 
-                            color="warning"
-                            sx={{ ml: 0.5, height: 20 }}
-                          />
-                        )}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        Streak
-                      </Typography>
-                    </Box>
-                  )}
-                </Box>
-              </Box>
-            </CardContent>
+          <Card size="small" style={{ backgroundColor: '#e6f7ff', borderColor: '#1890ff' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Text strong style={{ color: '#1890ff' }}>Your Position</Text>
+              <Row gutter={32}>
+                <Col>
+                  <Statistic
+                    title="Rank"
+                    value={userRank.rank}
+                    prefix="#"
+                    valueStyle={{ color: '#1890ff', fontSize: 20 }}
+                  />
+                </Col>
+                <Col>
+                  <Statistic
+                    title="Points"
+                    value={userRank.totalPoints}
+                    precision={1}
+                    valueStyle={{ color: '#1890ff', fontSize: 20 }}
+                  />
+                </Col>
+                {userStreak && (
+                  <Col>
+                    <Statistic
+                      title="Streak"
+                      value={userStreak.currentStreak}
+                      prefix="🔥"
+                      suffix={userStreak.multiplier > 1 ? <Tag color="warning">{userStreak.multiplier}x</Tag> : undefined}
+                      valueStyle={{ color: '#fa8c16', fontSize: 20 }}
+                    />
+                  </Col>
+                )}
+              </Row>
+            </div>
           </Card>
         )}
 
         {/* Loading State */}
         {isLoading && (
-          <Box display="flex" justifyContent="center" py={4}>
-            <CircularProgress />
-          </Box>
+          <div style={{ textAlign: 'center', padding: '32px 0' }}>
+            <Spin size="large" />
+          </div>
         )}
 
         {/* Empty State */}
         {!isLoading && (!leaderboard?.entries || leaderboard.entries.length === 0) && (
-          <Box textAlign="center" py={4}>
-            <TrophyIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
-            <Typography variant="h6" color="text.secondary" gutterBottom>
-              No rankings yet
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Scores will appear here once predictions are evaluated.
-            </Typography>
-          </Box>
+          <div style={{ textAlign: 'center', padding: '32px 0' }}>
+            <TrophyOutlined style={{ fontSize: 48, color: '#bfbfbf', marginBottom: 16 }} />
+            <Title level={5} type="secondary">No rankings yet</Title>
+            <Text type="secondary">Scores will appear here once predictions are evaluated.</Text>
+          </div>
         )}
 
         {/* Leaderboard Table */}
         {!isLoading && leaderboard?.entries && leaderboard.entries.length > 0 && (
-          <MaterialReactTable table={table} />
+          <Table
+            columns={columns}
+            dataSource={leaderboard.entries}
+            rowKey="userId"
+            pagination={false}
+            rowClassName={(record) => currentUserId === record.userId ? 'ant-table-row-selected' : ''}
+          />
         )}
 
         {/* Auto-refresh indicator */}
         {autoRefresh && (
-          <Box display="flex" justifyContent="center" mt={2}>
-            <Chip 
-              label={`Auto-refreshing every ${refreshInterval / 1000}s`}
-              size="small"
-              variant="outlined"
-              color="primary"
-            />
-          </Box>
+          <div style={{ textAlign: 'center' }}>
+            <Tag color="blue">Auto-refreshing every {refreshInterval / 1000}s</Tag>
+          </div>
         )}
-      </CardContent>
+      </Space>
     </Card>
   )
 }

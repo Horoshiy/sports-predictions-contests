@@ -1,24 +1,12 @@
 import React from 'react'
-import {
-  Box,
-  TextField,
-  Button,
-  Typography,
-  Paper,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Grid,
-} from '@mui/material'
-import { Save, Person, LocationOn, Language, Public } from '@mui/icons-material'
+import { Form, Input, Button, Select, Space } from 'antd'
+import { SaveOutlined, UserOutlined, EnvironmentOutlined, GlobalOutlined } from '@ant-design/icons'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import type { ProfileFormData } from '../../types/profile.types'
 import { PROFILE_VISIBILITY_OPTIONS } from '../../types/profile.types'
 
-// Validation schema
 const profileSchema = z.object({
   bio: z.string().max(500, 'Bio must be less than 500 characters').optional(),
   location: z.string().max(100, 'Location must be less than 100 characters').optional(),
@@ -55,200 +43,71 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
       githubUrl: initialData?.githubUrl || '',
       profileVisibility: initialData?.profileVisibility || 'public',
     },
-    mode: 'onBlur',
   })
 
-  const handleFormSubmit = (data: ProfileFormData) => {
-    onSubmit(data)
-  }
-
   return (
-    <Paper elevation={3} sx={{ p: 4, maxWidth: 600, mx: 'auto' }}>
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="h5" component="h2" gutterBottom>
-          <Person sx={{ mr: 1, verticalAlign: 'middle' }} />
-          Profile Information
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          Update your profile information to personalize your account
-        </Typography>
-      </Box>
+    <Form layout="vertical" onFinish={handleSubmit(onSubmit)}>
+      <Controller name="bio" control={control} render={({ field }) => (
+        <Form.Item label="Bio" validateStatus={errors.bio ? 'error' : ''} help={errors.bio?.message}>
+          <Input.TextArea {...field} rows={4} placeholder="Tell us about yourself..." disabled={loading} maxLength={500} showCount />
+        </Form.Item>
+      )} />
 
-      <Box component="form" onSubmit={handleSubmit(handleFormSubmit)} noValidate>
-        <Grid container spacing={3}>
-          {/* Bio */}
-          <Grid item xs={12}>
-            <Controller
-              name="bio"
-              control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  fullWidth
-                  label="Bio"
-                  placeholder="Tell others about yourself..."
-                  multiline
-                  rows={4}
-                  error={!!errors.bio}
-                  helperText={errors.bio?.message || `${field.value?.length || 0}/500 characters`}
-                  disabled={loading}
-                  InputProps={{
-                    startAdornment: (
-                      <Person sx={{ color: 'action.active', mr: 1, my: 0.5 }} />
-                    ),
-                  }}
-                />
-              )}
-            />
-          </Grid>
+      <Controller name="location" control={control} render={({ field }) => (
+        <Form.Item label="Location" validateStatus={errors.location ? 'error' : ''} help={errors.location?.message}>
+          <Input {...field} prefix={<EnvironmentOutlined />} placeholder="City, Country" disabled={loading} />
+        </Form.Item>
+      )} />
 
-          {/* Location */}
-          <Grid item xs={12} sm={6}>
-            <Controller
-              name="location"
-              control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  fullWidth
-                  label="Location"
-                  placeholder="City, Country"
-                  error={!!errors.location}
-                  helperText={errors.location?.message}
-                  disabled={loading}
-                  InputProps={{
-                    startAdornment: (
-                      <LocationOn sx={{ color: 'action.active', mr: 1, my: 0.5 }} />
-                    ),
-                  }}
-                />
-              )}
-            />
-          </Grid>
+      <Controller name="website" control={control} render={({ field }) => (
+        <Form.Item label="Website" validateStatus={errors.website ? 'error' : ''} help={errors.website?.message}>
+          <Input {...field} prefix={<GlobalOutlined />} placeholder="https://example.com" disabled={loading} />
+        </Form.Item>
+      )} />
 
-          {/* Profile Visibility */}
-          <Grid item xs={12} sm={6}>
-            <Controller
-              name="profileVisibility"
-              control={control}
-              render={({ field }) => (
-                <FormControl fullWidth error={!!errors.profileVisibility}>
-                  <InputLabel>Profile Visibility</InputLabel>
-                  <Select
-                    {...field}
-                    label="Profile Visibility"
-                    disabled={loading}
-                    startAdornment={
-                      <Public sx={{ color: 'action.active', mr: 1 }} />
-                    }
-                  >
-                    {PROFILE_VISIBILITY_OPTIONS.map((option) => (
-                      <MenuItem key={option.value} value={option.value}>
-                        {option.label}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              )}
-            />
-          </Grid>
+      <Controller name="twitterUrl" control={control} render={({ field }) => (
+        <Form.Item label="Twitter" validateStatus={errors.twitterUrl ? 'error' : ''} help={errors.twitterUrl?.message}>
+          <Input {...field} placeholder="https://twitter.com/username" disabled={loading} />
+        </Form.Item>
+      )} />
 
-          {/* Website */}
-          <Grid item xs={12} sm={6}>
-            <Controller
-              name="website"
-              control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  fullWidth
-                  label="Website"
-                  placeholder="https://yourwebsite.com"
-                  error={!!errors.website}
-                  helperText={errors.website?.message}
-                  disabled={loading}
-                  InputProps={{
-                    startAdornment: (
-                      <Language sx={{ color: 'action.active', mr: 1, my: 0.5 }} />
-                    ),
-                  }}
-                />
-              )}
-            />
-          </Grid>
+      <Controller name="linkedinUrl" control={control} render={({ field }) => (
+        <Form.Item label="LinkedIn" validateStatus={errors.linkedinUrl ? 'error' : ''} help={errors.linkedinUrl?.message}>
+          <Input {...field} placeholder="https://linkedin.com/in/username" disabled={loading} />
+        </Form.Item>
+      )} />
 
-          {/* Twitter URL */}
-          <Grid item xs={12} sm={6}>
-            <Controller
-              name="twitterUrl"
-              control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  fullWidth
-                  label="Twitter"
-                  placeholder="https://twitter.com/username"
-                  error={!!errors.twitterUrl}
-                  helperText={errors.twitterUrl?.message}
-                  disabled={loading}
-                />
-              )}
-            />
-          </Grid>
+      <Controller name="githubUrl" control={control} render={({ field }) => (
+        <Form.Item label="GitHub" validateStatus={errors.githubUrl ? 'error' : ''} help={errors.githubUrl?.message}>
+          <Input {...field} placeholder="https://github.com/username" disabled={loading} />
+        </Form.Item>
+      )} />
 
-          {/* LinkedIn URL */}
-          <Grid item xs={12} sm={6}>
-            <Controller
-              name="linkedinUrl"
-              control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  fullWidth
-                  label="LinkedIn"
-                  placeholder="https://linkedin.com/in/username"
-                  error={!!errors.linkedinUrl}
-                  helperText={errors.linkedinUrl?.message}
-                  disabled={loading}
-                />
-              )}
-            />
-          </Grid>
+      <Controller name="profileVisibility" control={control} render={({ field }) => (
+        <Form.Item label="Profile Visibility">
+          <Select {...field} disabled={loading}>
+            {PROFILE_VISIBILITY_OPTIONS.map(option => (
+              <Select.Option key={option.value} value={option.value}>
+                {option.label}
+              </Select.Option>
+            ))}
+          </Select>
+        </Form.Item>
+      )} />
 
-          {/* GitHub URL */}
-          <Grid item xs={12} sm={6}>
-            <Controller
-              name="githubUrl"
-              control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  fullWidth
-                  label="GitHub"
-                  placeholder="https://github.com/username"
-                  error={!!errors.githubUrl}
-                  helperText={errors.githubUrl?.message}
-                  disabled={loading}
-                />
-              )}
-            />
-          </Grid>
-        </Grid>
-
-        {/* Submit Button */}
-        <Box sx={{ mt: 4, display: 'flex', justifyContent: 'flex-end' }}>
-          <Button
-            type="submit"
-            variant="contained"
-            size="large"
-            disabled={loading || !isDirty}
-            startIcon={<Save />}
-            sx={{ minWidth: 120 }}
-          >
-            {loading ? 'Saving...' : 'Save Profile'}
-          </Button>
-        </Box>
-      </Box>
-    </Paper>
+      <Form.Item>
+        <Button
+          type="primary"
+          htmlType="submit"
+          icon={<SaveOutlined />}
+          loading={loading}
+          disabled={!isDirty}
+        >
+          Save Changes
+        </Button>
+      </Form.Item>
+    </Form>
   )
 }
+
+export default ProfileForm

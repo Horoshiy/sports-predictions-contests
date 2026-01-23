@@ -1,11 +1,11 @@
 import React, { useMemo, useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { MaterialReactTable, useMaterialReactTable, type MRT_ColumnDef } from 'material-react-table'
-import { Box, Button, IconButton, Tooltip, Chip, Typography } from '@mui/material'
-import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon, People as PeopleIcon } from '@mui/icons-material'
+import { Table, Button, Tag, Tooltip, Space, Alert } from 'antd'
+import { EditOutlined, DeleteOutlined, PlusOutlined, TeamOutlined } from '@ant-design/icons'
+import type { ColumnsType } from 'antd/es/table'
 import { useTeams, useDeleteTeam } from '../../hooks/use-teams'
 import { useAuth } from '../../contexts/AuthContext'
-import type { Team, ListTeamsRequest } from '../../types/team.types'
+import type { Team } from '../../types/team.types'
 import { formatRelativeTime } from '../../utils/date-utils'
 
 interface TeamListProps {
@@ -28,87 +28,89 @@ export const TeamList: React.FC<TeamListProps> = ({ onCreateTeam, onEditTeam, on
     params.set('page', pagination.pageIndex.toString())
     params.set('limit', pagination.pageSize.toString())
     setSearchParams(params, { replace: true })
-  }, [pagination.pageIndex, pagination.pageSize, setSearchParams])
+  }, [pagination, searchParams, setSearchParams])
 
-  const request: ListTeamsRequest = {
+  const { data, isLoading, isError, error } = useTeams({
     pagination: { page: pagination.pageIndex + 1, limit: pagination.pageSize },
-    myTeamsOnly,
-  }
+  })
 
-  const { data, isLoading, isError, error } = useTeams(request)
   const deleteTeamMutation = useDeleteTeam()
 
-  const handleDeleteTeam = (team: Team) => {
-    if (window.confirm(`Are you sure you want to delete "${team.name}"?`)) {
+  const handleDelete = (team: Team) => {
+    if (window.confirm(`Delete team "${team.name}"?`)) {
       deleteTeamMutation.mutate(team.id)
     }
   }
 
-  const columns = useMemo<MRT_ColumnDef<Team>[]>(() => [
-    { accessorKey: 'id', header: 'ID', size: 60 },
+  const columns: ColumnsType<Team> = useMemo(() => [
+    { title: 'ID', dataIndex: 'id', key: 'id', width: 60 },
+    { title: 'Name', dataIndex: 'name', key: 'name', width: 200 },
     {
-      accessorKey: 'name',
-      header: 'Team Name',
-      size: 200,
-      Cell: ({ row }) => (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <Typography variant="body2" fontWeight="medium">{row.original.name}</Typography>
-          {row.original.captainId === user?.id && <Chip label="Captain" size="small" color="primary" />}
-        </Box>
-      ),
+      title: 'Members',
+      key: 'members',
+      width: 100,
+      render: (_, team) => {
+        const count = team.currentMembers ?? 0
+        return `${count}/${team.maxMembers}`
+      },
     },
     {
-      accessorKey: 'currentMembers',
-      header: 'Members',
-      size: 100,
-      Cell: ({ row }) => (
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <PeopleIcon sx={{ mr: 0.5, fontSize: 16, color: 'text.secondary' }} />
-          <Typography variant="body2">{row.original.currentMembers} / {row.original.maxMembers}</Typography>
-        </Box>
+      title: 'Status',
+      dataIndex: 'isActive',
+      key: 'isActive',
+      width: 100,
+      render: (isActive: boolean) => <Tag color={isActive ? 'success' : 'default'}>{isActive ? 'Active' : 'Inactive'}</Tag>,
+    },
+    {
+      title: 'Created',
+      dataIndex: 'createdAt',
+      key: 'createdAt',
+      width: 120,
+      render: (date: string) => formatRelativeTime(date),
+    },
+    {
+      title: 'Actions',
+      key: 'actions',
+      width: 150,
+      render: (_, team) => (
+        <Space>
+          <Tooltip title="View Members">
+            <Button icon={<TeamOutlined />} size="small" onClick={() => onViewMembers(team)} />
+          </Tooltip>
+          <Tooltip title="Edit">
+            <Button type="primary" icon={<EditOutlined />} size="small" onClick={() => onEditTeam(team)} />
+          </Tooltip>
+          <Tooltip title="Delete">
+            <Button danger icon={<DeleteOutlined />} size="small" onClick={() => handleDelete(team)} loading={deleteTeamMutation.isPending} />
+          </Tooltip>
+        </Space>
       ),
     },
-    { accessorKey: 'inviteCode', header: 'Invite Code', size: 100, Cell: ({ cell }) => <code>{cell.getValue<string>()}</code> },
-    { accessorKey: 'createdAt', header: 'Created', size: 120, Cell: ({ cell }) => formatRelativeTime(cell.getValue<string>()) },
-  ], [user?.id])
+  ], [deleteTeamMutation.isPending])
 
-  const table = useMaterialReactTable({
-    columns,
-    data: data?.teams ?? [],
-    enableRowSelection: false,
-    enableColumnOrdering: true,
-    enableGlobalFilter: true,
-    enablePagination: true,
-    manualPagination: true,
-    rowCount: data?.pagination?.total ?? 0,
-    onPaginationChange: setPagination,
-    state: { isLoading, pagination, showAlertBanner: isError },
-    muiToolbarAlertBannerProps: isError ? { color: 'error', children: `Error: ${error?.message}` } : undefined,
-    renderRowActions: ({ row }) => (
-      <Box sx={{ display: 'flex', gap: '0.5rem' }}>
-        <Tooltip title="View Members">
-          <IconButton color="info" onClick={() => onViewMembers(row.original)}><PeopleIcon /></IconButton>
-        </Tooltip>
-        {row.original.captainId === user?.id && (
-          <>
-            <Tooltip title="Edit Team">
-              <IconButton color="primary" onClick={() => onEditTeam(row.original)}><EditIcon /></IconButton>
-            </Tooltip>
-            <Tooltip title="Delete Team">
-              <IconButton color="error" onClick={() => handleDeleteTeam(row.original)} disabled={deleteTeamMutation.isPending}><DeleteIcon /></IconButton>
-            </Tooltip>
-          </>
-        )}
-      </Box>
-    ),
-    renderTopToolbarCustomActions: () => (
-      <Button variant="contained" startIcon={<AddIcon />} onClick={onCreateTeam}>Create Team</Button>
-    ),
-    enableRowActions: true,
-    positionActionsColumn: 'last',
-  })
+  if (isError) {
+    return <Alert message="Error" description={error?.message} type="error" showIcon />
+  }
 
-  return <MaterialReactTable table={table} />
+  return (
+    <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+      <Button type="primary" icon={<PlusOutlined />} onClick={onCreateTeam}>
+        Create Team
+      </Button>
+      <Table
+        columns={columns}
+        dataSource={data?.teams ?? []}
+        rowKey="id"
+        loading={isLoading || deleteTeamMutation.isPending}
+        pagination={{
+          current: pagination.pageIndex + 1,
+          pageSize: pagination.pageSize,
+          total: data?.pagination?.total ?? 0,
+          onChange: (page, pageSize) => setPagination({ pageIndex: page - 1, pageSize }),
+        }}
+      />
+    </Space>
+  )
 }
 
 export default TeamList

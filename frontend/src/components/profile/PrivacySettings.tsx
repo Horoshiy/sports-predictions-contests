@@ -1,17 +1,11 @@
 import React from 'react'
-import {
-  Box,
-  Typography,
-  Paper,
-  FormControlLabel,
-  Switch,
-  Divider,
-  Alert,
-  Grid,
-} from '@mui/material'
-import { Security, Notifications } from '@mui/icons-material'
+import { Card, Switch, Space, Typography, Divider } from 'antd'
+import { SecurityScanOutlined, BellOutlined } from '@ant-design/icons'
 import { useForm, Controller } from 'react-hook-form'
+import { debounce } from '../../utils/debounce'
 import type { PreferencesFormData } from '../../types/profile.types'
+
+const { Title, Text } = Typography
 
 interface PrivacySettingsProps {
   initialData?: Partial<PreferencesFormData>
@@ -33,224 +27,97 @@ export const PrivacySettings: React.FC<PrivacySettingsProps> = ({
       weeklyDigest: initialData?.weeklyDigest ?? true,
       theme: initialData?.theme || 'light',
       language: initialData?.language || 'en',
-      timezone: initialData?.timezone || 'UTC',
     },
-    mode: 'onChange',
   })
 
-  // Watch all form values to trigger updates immediately
-  const formValues = watch()
-
-  // Handle immediate updates when switches are toggled
-  const handleSwitchChange = (field: keyof PreferencesFormData) => (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const updatedData = {
-      ...formValues,
-      [field]: event.target.checked,
+  React.useEffect(() => {
+    let isMounted = true
+    
+    const debouncedUpdate = debounce(async (value: Partial<PreferencesFormData>) => {
+      if (isMounted) {
+        await onUpdate(value)
+      }
+    }, 500) // Wait 500ms after last change
+    
+    const subscription = watch((value) => {
+      debouncedUpdate(value as Partial<PreferencesFormData>)
+    })
+    
+    return () => {
+      isMounted = false
+      debouncedUpdate.cancel()
+      subscription.unsubscribe()
     }
-    onUpdate(updatedData)
-  }
+  }, [watch, onUpdate])
 
   return (
-    <Paper elevation={3} sx={{ p: 4, maxWidth: 600, mx: 'auto' }}>
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="h5" component="h2" gutterBottom>
-          <Security sx={{ mr: 1, verticalAlign: 'middle' }} />
-          Privacy & Notifications
-        </Typography>
-        <Typography variant="body2" color="text.secondary">
-          Control your privacy settings and notification preferences
-        </Typography>
-      </Box>
-
-      <Alert severity="info" sx={{ mb: 3 }}>
-        Changes are saved automatically when you toggle settings
-      </Alert>
-
-      <Grid container spacing={3}>
-        {/* Notification Settings */}
-        <Grid item xs={12}>
-          <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
-            <Notifications sx={{ mr: 1 }} />
-            Notification Preferences
-          </Typography>
+    <Space direction="vertical" size="large" style={{ width: '100%' }}>
+      <Card>
+        <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+          <Space>
+            <BellOutlined style={{ fontSize: 20 }} />
+            <Title level={5} style={{ margin: 0 }}>Notifications</Title>
+          </Space>
+          <Divider style={{ margin: '8px 0' }} />
           
-          <Box sx={{ ml: 4 }}>
-            <Controller
-              name="emailNotifications"
-              control={control}
-              render={({ field }) => (
-                <FormControlLabel
-                  control={
-                    <Switch
-                      {...field}
-                      checked={field.value}
-                      onChange={(e) => {
-                        field.onChange(e)
-                        handleSwitchChange('emailNotifications')(e)
-                      }}
-                      disabled={loading}
-                    />
-                  }
-                  label={
-                    <Box>
-                      <Typography variant="body1">Email Notifications</Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        Receive important updates via email
-                      </Typography>
-                    </Box>
-                  }
-                />
-              )}
-            />
+          <Controller name="emailNotifications" control={control} render={({ field }) => (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <Text strong>Email Notifications</Text>
+                <br />
+                <Text type="secondary" style={{ fontSize: 12 }}>Receive notifications via email</Text>
+              </div>
+              <Switch {...field} checked={field.value} disabled={loading} />
+            </div>
+          )} />
 
-            <Controller
-              name="pushNotifications"
-              control={control}
-              render={({ field }) => (
-                <FormControlLabel
-                  control={
-                    <Switch
-                      {...field}
-                      checked={field.value}
-                      onChange={(e) => {
-                        field.onChange(e)
-                        handleSwitchChange('pushNotifications')(e)
-                      }}
-                      disabled={loading}
-                    />
-                  }
-                  label={
-                    <Box>
-                      <Typography variant="body1">Push Notifications</Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        Receive real-time notifications in your browser
-                      </Typography>
-                    </Box>
-                  }
-                />
-              )}
-            />
+          <Controller name="pushNotifications" control={control} render={({ field }) => (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <Text strong>Push Notifications</Text>
+                <br />
+                <Text type="secondary" style={{ fontSize: 12 }}>Receive push notifications</Text>
+              </div>
+              <Switch {...field} checked={field.value} disabled={loading} />
+            </div>
+          )} />
 
-            <Controller
-              name="contestNotifications"
-              control={control}
-              render={({ field }) => (
-                <FormControlLabel
-                  control={
-                    <Switch
-                      {...field}
-                      checked={field.value}
-                      onChange={(e) => {
-                        field.onChange(e)
-                        handleSwitchChange('contestNotifications')(e)
-                      }}
-                      disabled={loading}
-                    />
-                  }
-                  label={
-                    <Box>
-                      <Typography variant="body1">Contest Updates</Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        Get notified about contest results and new contests
-                      </Typography>
-                    </Box>
-                  }
-                />
-              )}
-            />
+          <Controller name="contestNotifications" control={control} render={({ field }) => (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <Text strong>Contest Updates</Text>
+                <br />
+                <Text type="secondary" style={{ fontSize: 12 }}>Get notified about contest updates</Text>
+              </div>
+              <Switch {...field} checked={field.value} disabled={loading} />
+            </div>
+          )} />
 
-            <Controller
-              name="predictionReminders"
-              control={control}
-              render={({ field }) => (
-                <FormControlLabel
-                  control={
-                    <Switch
-                      {...field}
-                      checked={field.value}
-                      onChange={(e) => {
-                        field.onChange(e)
-                        handleSwitchChange('predictionReminders')(e)
-                      }}
-                      disabled={loading}
-                    />
-                  }
-                  label={
-                    <Box>
-                      <Typography variant="body1">Prediction Reminders</Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        Remind me to make predictions before deadlines
-                      </Typography>
-                    </Box>
-                  }
-                />
-              )}
-            />
+          <Controller name="predictionReminders" control={control} render={({ field }) => (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <Text strong>Prediction Reminders</Text>
+                <br />
+                <Text type="secondary" style={{ fontSize: 12 }}>Remind me to make predictions</Text>
+              </div>
+              <Switch {...field} checked={field.value} disabled={loading} />
+            </div>
+          )} />
 
-            <Controller
-              name="weeklyDigest"
-              control={control}
-              render={({ field }) => (
-                <FormControlLabel
-                  control={
-                    <Switch
-                      {...field}
-                      checked={field.value}
-                      onChange={(e) => {
-                        field.onChange(e)
-                        handleSwitchChange('weeklyDigest')(e)
-                      }}
-                      disabled={loading}
-                    />
-                  }
-                  label={
-                    <Box>
-                      <Typography variant="body1">Weekly Digest</Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        Receive a weekly summary of your predictions and results
-                      </Typography>
-                    </Box>
-                  }
-                />
-              )}
-            />
-          </Box>
-        </Grid>
-
-        <Grid item xs={12}>
-          <Divider sx={{ my: 2 }} />
-        </Grid>
-
-        {/* Privacy Information */}
-        <Grid item xs={12}>
-          <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
-            <Security sx={{ mr: 1 }} />
-            Privacy Information
-          </Typography>
-          
-          <Alert severity="info" sx={{ mb: 2 }}>
-            Your profile visibility is controlled in the Profile tab. 
-            These settings only affect notifications and communications.
-          </Alert>
-
-          <Box sx={{ ml: 2 }}>
-            <Typography variant="body2" color="text.secondary" paragraph>
-              • We never share your personal information with third parties
-            </Typography>
-            <Typography variant="body2" color="text.secondary" paragraph>
-              • You can export or delete your data at any time
-            </Typography>
-            <Typography variant="body2" color="text.secondary" paragraph>
-              • All communications are encrypted and secure
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              • You can unsubscribe from any notifications at any time
-            </Typography>
-          </Box>
-        </Grid>
-      </Grid>
-    </Paper>
+          <Controller name="weeklyDigest" control={control} render={({ field }) => (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <Text strong>Weekly Digest</Text>
+                <br />
+                <Text type="secondary" style={{ fontSize: 12 }}>Receive weekly summary emails</Text>
+              </div>
+              <Switch {...field} checked={field.value} disabled={loading} />
+            </div>
+          )} />
+        </Space>
+      </Card>
+    </Space>
   )
 }
+
+export default PrivacySettings

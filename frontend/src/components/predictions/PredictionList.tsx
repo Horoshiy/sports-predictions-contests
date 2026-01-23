@@ -1,17 +1,7 @@
 import React, { useMemo, useState } from 'react'
-import {
-  MaterialReactTable,
-  useMaterialReactTable,
-  type MRT_ColumnDef,
-} from 'material-react-table'
-import {
-  Box,
-  IconButton,
-  Tooltip,
-  Chip,
-  Typography,
-} from '@mui/material'
-import { Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material'
+import { Table, Button, Tag, Tooltip, Space } from 'antd'
+import { EditOutlined, DeleteOutlined } from '@ant-design/icons'
+import type { ColumnsType } from 'antd/es/table'
 import { useUserPredictions, useDeletePrediction } from '../../hooks/use-predictions'
 import type { Prediction } from '../../types/prediction.types'
 import { formatDate, formatRelativeTime } from '../../utils/date-utils'
@@ -22,27 +12,26 @@ interface PredictionListProps {
 }
 
 const getStatusColor = (status: string) => {
-  switch (status) {
-    case 'pending': return 'warning'
-    case 'scored': return 'success'
-    case 'cancelled': return 'error'
-    default: return 'default'
+  const colors: Record<string, string> = {
+    pending: 'warning',
+    scored: 'success',
+    cancelled: 'error',
   }
+  return colors[status] || 'default'
 }
 
 const formatPredictionData = (data: string): string => {
   try {
     const parsed = JSON.parse(data)
     const parts: string[] = []
-    if (parsed.winner) {
-      parts.push(`Winner: ${parsed.winner}`)
-    }
+    if (parsed.winner) parts.push(`Winner: ${parsed.winner}`)
     if (parsed.homeScore !== undefined && parsed.awayScore !== undefined) {
       parts.push(`Score: ${parsed.homeScore}-${parsed.awayScore}`)
     }
-    return parts.join(', ') || data
+    if (parsed.overUnder) parts.push(`O/U: ${parsed.overUnder > 0 ? 'Over' : 'Under'} ${parsed.overUnderValue}`)
+    return parts.join(', ') || 'N/A'
   } catch {
-    return data
+    return 'Invalid data'
   }
 }
 
@@ -50,128 +39,86 @@ export const PredictionList: React.FC<PredictionListProps> = ({
   contestId,
   onEdit,
 }) => {
-  const [pagination, setPagination] = useState({
-    pageIndex: 0,
-    pageSize: 10,
-  })
+  const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 })
 
-  const { data, isLoading, isError, error } = useUserPredictions({
+  const { data, isLoading } = useUserPredictions({
     contestId,
-    pagination: {
-      page: pagination.pageIndex + 1,
-      limit: pagination.pageSize,
-    },
+    pagination: { page: pagination.pageIndex + 1, limit: pagination.pageSize },
   })
 
-  const deletePredictionMutation = useDeletePrediction()
+  const deleteMutation = useDeletePrediction()
 
   const handleDelete = (prediction: Prediction) => {
-    if (window.confirm('Are you sure you want to delete this prediction?')) {
-      deletePredictionMutation.mutate(prediction.id)
+    if (window.confirm('Delete this prediction?')) {
+      deleteMutation.mutate(prediction.id)
     }
   }
 
-  const columns = useMemo<MRT_ColumnDef<Prediction>[]>(
-    () => [
-      {
-        accessorKey: 'eventId',
-        header: 'Event ID',
-        size: 80,
-      },
-      {
-        accessorKey: 'predictionData',
-        header: 'Prediction',
-        size: 200,
-        Cell: ({ cell }) => (
-          <Typography variant="body2">
-            {formatPredictionData(cell.getValue<string>())}
-          </Typography>
-        ),
-      },
-      {
-        accessorKey: 'status',
-        header: 'Status',
-        size: 100,
-        Cell: ({ cell }) => (
-          <Chip
-            label={cell.getValue<string>()}
-            color={getStatusColor(cell.getValue<string>())}
-            size="small"
-          />
-        ),
-      },
-      {
-        accessorKey: 'submittedAt',
-        header: 'Submitted',
-        size: 150,
-        Cell: ({ cell }) => formatRelativeTime(cell.getValue<string>()),
-      },
-      {
-        accessorKey: 'createdAt',
-        header: 'Created',
-        size: 150,
-        Cell: ({ cell }) => formatDate(cell.getValue<string>()),
-      },
-    ],
-    []
+  const columns: ColumnsType<Prediction> = useMemo(() => [
+    { title: 'Event', dataIndex: 'eventTitle', key: 'eventTitle', width: 200 },
+    {
+      title: 'Prediction',
+      dataIndex: 'predictionData',
+      key: 'predictionData',
+      width: 200,
+      render: (data: string) => formatPredictionData(data),
+    },
+    {
+      title: 'Status',
+      dataIndex: 'status',
+      key: 'status',
+      width: 100,
+      render: (status: string) => <Tag color={getStatusColor(status)}>{status}</Tag>,
+    },
+    {
+      title: 'Points',
+      dataIndex: 'pointsEarned',
+      key: 'pointsEarned',
+      width: 100,
+      render: (points: number | null) => points !== null ? points.toFixed(1) : '-',
+    },
+    {
+      title: 'Submitted',
+      dataIndex: 'createdAt',
+      key: 'createdAt',
+      width: 120,
+      render: (date: string) => formatRelativeTime(date),
+    },
+    {
+      title: 'Actions',
+      key: 'actions',
+      width: 120,
+      render: (_, prediction) => (
+        <Space>
+          {prediction.status === 'pending' && (
+            <>
+              <Tooltip title="Edit">
+                <Button type="primary" icon={<EditOutlined />} size="small" onClick={() => onEdit(prediction)} />
+              </Tooltip>
+              <Tooltip title="Delete">
+                <Button danger icon={<DeleteOutlined />} size="small" onClick={() => handleDelete(prediction)} loading={deleteMutation.isPending} />
+              </Tooltip>
+            </>
+          )}
+        </Space>
+      ),
+    },
+  ], [deleteMutation.isPending])
+
+  return (
+    <Table
+      columns={columns}
+      dataSource={data?.predictions ?? []}
+      rowKey="id"
+      loading={isLoading}
+      pagination={{
+        current: pagination.pageIndex + 1,
+        pageSize: pagination.pageSize,
+        total: data?.pagination?.total ?? 0,
+        onChange: (page, pageSize) => setPagination({ pageIndex: page - 1, pageSize }),
+      }}
+    />
   )
-
-  const table = useMaterialReactTable({
-    columns,
-    data: data?.predictions ?? [],
-    enableRowSelection: false,
-    enableColumnOrdering: true,
-    enableGlobalFilter: true,
-    enableSorting: true,
-    enablePagination: true,
-    manualPagination: true,
-    rowCount: data?.pagination?.total ?? 0,
-    onPaginationChange: setPagination,
-    state: {
-      isLoading,
-      pagination,
-      showAlertBanner: isError,
-      showProgressBars: isLoading,
-    },
-    muiToolbarAlertBannerProps: isError
-      ? {
-          color: 'error',
-          children: `Error loading predictions: ${error?.message}`,
-        }
-      : undefined,
-    renderRowActions: ({ row }) => (
-      <Box sx={{ display: 'flex', gap: '0.5rem' }}>
-        {row.original.status === 'pending' && (
-          <>
-            <Tooltip title="Edit Prediction">
-              <IconButton
-                color="primary"
-                onClick={() => onEdit(row.original)}
-              >
-                <EditIcon />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title="Delete Prediction">
-              <IconButton
-                color="error"
-                onClick={() => handleDelete(row.original)}
-                disabled={deletePredictionMutation.isPending}
-              >
-                <DeleteIcon />
-              </IconButton>
-            </Tooltip>
-          </>
-        )}
-      </Box>
-    ),
-    enableRowActions: true,
-    positionActionsColumn: 'last',
-    muiTableContainerProps: {
-      sx: { minHeight: '400px' },
-    },
-  })
-
-  return <MaterialReactTable table={table} />
 }
 
 export default PredictionList

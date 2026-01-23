@@ -1,20 +1,12 @@
 import React, { useState } from 'react'
-import {
-  Box,
-  Grid,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Typography,
-  CircularProgress,
-  Pagination,
-  Alert,
-} from '@mui/material'
+import { Row, Col, Select, Space, Spin, Pagination, Alert, Typography } from 'antd'
 import { useEvents } from '../../hooks/use-predictions'
 import { useSports } from '../../hooks/use-sports'
 import EventCard from './EventCard'
-import type { Event, Prediction, ListEventsRequest } from '../../types/prediction.types'
+import type { Event, Prediction } from '../../types/prediction.types'
+import { DEFAULT_EVENT_PAGE_SIZE, MAX_PARTICIPANTS_DISPLAY } from '../../utils/constants'
+
+const { Title } = Typography
 
 interface EventListProps {
   contestId: number
@@ -32,107 +24,75 @@ export const EventList: React.FC<EventListProps> = ({
   const [sportType, setSportType] = useState('')
   const [status, setStatus] = useState('scheduled')
   const [page, setPage] = useState(1)
-  const pageSize = 12
+  const pageSize = DEFAULT_EVENT_PAGE_SIZE
 
-  // Fetch sports dynamically from backend
-  const { data: sportsData } = useSports({ pagination: { page: 1, limit: 50 } })
+  const { data: sportsData } = useSports({ pagination: { page: 1, limit: MAX_PARTICIPANTS_DISPLAY } })
   const sports = sportsData?.sports || []
 
-  const request: ListEventsRequest = {
+  const { data, isLoading, isError, error } = useEvents({
     sportType: sportType || undefined,
     status: status || undefined,
     pagination: { page, limit: pageSize },
-  }
+  })
 
-  const { data, isLoading, isError, error } = useEvents(request)
-
-  const getPredictionForEvent = (eventId: number): Prediction | undefined => {
-    return userPredictions.find(p => p.eventId === eventId)
-  }
-
-  if (isLoading) {
-    return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-        <CircularProgress />
-      </Box>
-    )
-  }
+  const predictionMap = new Map(userPredictions.map(p => [p.eventId, p]))
 
   if (isError) {
-    return (
-      <Alert severity="error">
-        Failed to load events: {error?.message || 'Unknown error'}
-      </Alert>
-    )
+    return <Alert message="Error" description={error?.message} type="error" showIcon />
   }
 
-  const events = data?.events || []
-  const totalPages = data?.pagination?.totalPages || 1
-
   return (
-    <Box>
-      <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
-        <FormControl size="small" sx={{ minWidth: 150 }}>
-          <InputLabel>Sport Type</InputLabel>
-          <Select
-            value={sportType}
-            label="Sport Type"
-            onChange={(e) => { setSportType(e.target.value); setPage(1) }}
-          >
-            <MenuItem value="">All Sports</MenuItem>
-            {sports.map((sport) => (
-              <MenuItem key={sport.id} value={sport.name}>{sport.name}</MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+    <Space direction="vertical" size="large" style={{ width: '100%' }}>
+      <Space wrap>
+        <Select
+          style={{ width: 150 }}
+          placeholder="Sport Type"
+          value={sportType}
+          onChange={setSportType}
+          allowClear
+        >
+          <Select.Option value="">All Sports</Select.Option>
+          {sports.map(s => <Select.Option key={s.id} value={s.slug}>{s.name}</Select.Option>)}
+        </Select>
+        <Select
+          style={{ width: 150 }}
+          placeholder="Status"
+          value={status}
+          onChange={setStatus}
+        >
+          {statusOptions.map(s => <Select.Option key={s} value={s}>{s || 'All'}</Select.Option>)}
+        </Select>
+      </Space>
 
-        <FormControl size="small" sx={{ minWidth: 150 }}>
-          <InputLabel>Status</InputLabel>
-          <Select
-            value={status}
-            label="Status"
-            onChange={(e) => { setStatus(e.target.value); setPage(1) }}
-          >
-            <MenuItem value="">All Status</MenuItem>
-            {statusOptions.filter(s => s).map((s) => (
-              <MenuItem key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-      </Box>
-
-      {events.length === 0 ? (
-        <Typography color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
-          No events found matching your filters
-        </Typography>
+      {isLoading ? (
+        <div style={{ textAlign: 'center', padding: '32px 0' }}>
+          <Spin size="large" />
+        </div>
       ) : (
         <>
-          <Grid container spacing={2}>
-            {events.map((event) => (
-              <Grid item xs={12} sm={6} md={4} lg={3} key={event.id}>
+          <Row gutter={[16, 16]}>
+            {data?.events?.map(event => (
+              <Col key={event.id} xs={24} sm={12} md={8} lg={6}>
                 <EventCard
                   event={event}
                   onPredict={onPredict}
-                  existingPrediction={getPredictionForEvent(event.id)}
-                  disabled={!contestId}
+                  existingPrediction={predictionMap.get(event.id)}
                 />
-              </Grid>
+              </Col>
             ))}
-          </Grid>
-
-          {totalPages > 1 && (
-            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
-              <Pagination
-                count={totalPages}
-                page={page}
-                onChange={(_, value) => setPage(value)}
-                color="primary"
-              />
-            </Box>
+          </Row>
+          {data?.pagination && (
+            <Pagination
+              current={page}
+              pageSize={pageSize}
+              total={data.pagination.total}
+              onChange={setPage}
+              showSizeChanger={false}
+            />
           )}
         </>
       )}
-    </Box>
+    </Space>
   )
 }
 

@@ -19,7 +19,6 @@ const RegisterPage: React.FC = () => {
       navigate(defaultPath, { replace: true })
     } catch (error) {
       // Error is handled by the auth context (toast notification)
-      console.error('Registration failed:', error)
     }
   }
 

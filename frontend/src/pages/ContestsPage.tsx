@@ -9,6 +9,7 @@ import {
   useUpdateContest,
 } from '../hooks/use-contests'
 import { useAuth } from '../contexts/AuthContext'
+import { showError, showSuccess } from '../utils/notification'
 import type { Contest, ContestFormData } from '../types/contest.types'
 import { toISOString } from '../utils/date-utils'
 
@@ -57,14 +58,16 @@ const ContestsPage: React.FC = () => {
           ...contestData,
           status: selectedContest.status,
         })
+        showSuccess('Contest updated successfully')
       } else {
         await createContestMutation.mutateAsync(contestData)
+        showSuccess('Contest created successfully')
       }
 
       setIsFormOpen(false)
       setSelectedContest(null)
-    } catch (error) {
-      console.error('Failed to save contest:', error)
+    } catch (error: any) {
+      showError(error?.message || 'Failed to save contest')
     }
   }
 

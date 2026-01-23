@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react'
-import { MaterialReactTable, useMaterialReactTable, type MRT_ColumnDef } from 'material-react-table'
-import { Box, Button, IconButton, Tooltip, Chip, FormControl, InputLabel, Select, MenuItem, Avatar } from '@mui/material'
-import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon } from '@mui/icons-material'
+import { Table, Button, Tag, Tooltip, Space, Select, Avatar, Alert } from 'antd'
+import { EditOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons'
+import type { ColumnsType } from 'antd/es/table'
 import { useTeams, useDeleteTeam, useSports } from '../../hooks/use-sports'
 import type { Team } from '../../types/sports.types'
 import { formatRelativeTime } from '../../utils/date-utils'
@@ -31,69 +31,89 @@ export const TeamList: React.FC<TeamListProps> = ({ onCreateTeam, onEditTeam }) 
     }
   }
 
-  const columns = useMemo<MRT_ColumnDef<Team>[]>(() => [
-    { accessorKey: 'id', header: 'ID', size: 60 },
+  const columns: ColumnsType<Team> = useMemo(() => [
+    { title: 'ID', dataIndex: 'id', key: 'id', width: 60 },
     {
-      accessorKey: 'logoUrl',
-      header: '',
-      size: 50,
-      Cell: ({ row }) => <Avatar src={row.original.logoUrl} sx={{ width: 32, height: 32 }}>{row.original.name[0]}</Avatar>,
+      title: '',
+      dataIndex: 'logoUrl',
+      key: 'logo',
+      width: 50,
+      render: (logoUrl: string, team) => <Avatar src={logoUrl}>{team.name[0]}</Avatar>,
     },
-    { accessorKey: 'name', header: 'Name', size: 150 },
-    { accessorKey: 'shortName', header: 'Short', size: 80 },
+    { title: 'Name', dataIndex: 'name', key: 'name', width: 150 },
+    { title: 'Short', dataIndex: 'shortName', key: 'shortName', width: 80 },
     {
-      accessorKey: 'sportId',
-      header: 'Sport',
-      size: 100,
-      Cell: ({ cell }) => sportsMap.get(cell.getValue<number>()) || '-',
+      title: 'Sport',
+      dataIndex: 'sportId',
+      key: 'sportId',
+      width: 100,
+      render: (sportId: number) => sportsMap.get(sportId) || '-',
     },
-    { accessorKey: 'country', header: 'Country', size: 100 },
+    { title: 'Country', dataIndex: 'country', key: 'country', width: 100 },
     {
-      accessorKey: 'isActive',
-      header: 'Status',
-      size: 90,
-      Cell: ({ cell }) => <Chip label={cell.getValue<boolean>() ? 'Active' : 'Inactive'} color={cell.getValue<boolean>() ? 'success' : 'default'} size="small" />,
+      title: 'Status',
+      dataIndex: 'isActive',
+      key: 'isActive',
+      width: 90,
+      render: (isActive: boolean) => <Tag color={isActive ? 'success' : 'default'}>{isActive ? 'Active' : 'Inactive'}</Tag>,
     },
     {
-      accessorKey: 'createdAt',
-      header: 'Created',
-      size: 110,
-      Cell: ({ cell }) => formatRelativeTime(cell.getValue<string>()),
+      title: 'Created',
+      dataIndex: 'createdAt',
+      key: 'createdAt',
+      width: 110,
+      render: (createdAt: string) => formatRelativeTime(createdAt),
     },
-  ], [sportsMap])
+    {
+      title: 'Actions',
+      key: 'actions',
+      width: 120,
+      render: (_, team) => (
+        <Space>
+          <Tooltip title="Edit">
+            <Button type="primary" icon={<EditOutlined />} size="small" onClick={() => onEditTeam(team)} />
+          </Tooltip>
+          <Tooltip title="Delete">
+            <Button danger icon={<DeleteOutlined />} size="small" onClick={() => handleDelete(team)} loading={deleteMutation.isPending} />
+          </Tooltip>
+        </Space>
+      ),
+    },
+  ], [sportsMap, deleteMutation.isPending])
 
-  const table = useMaterialReactTable({
-    columns,
-    data: data?.teams ?? [],
-    enableRowSelection: false,
-    manualPagination: true,
-    rowCount: data?.pagination?.total ?? 0,
-    onPaginationChange: setPagination,
-    state: { isLoading, pagination, showAlertBanner: isError },
-    muiToolbarAlertBannerProps: isError ? { color: 'error', children: `Error: ${error?.message}` } : undefined,
-    renderRowActions: ({ row }) => (
-      <Box sx={{ display: 'flex', gap: '0.5rem' }}>
-        <Tooltip title="Edit"><IconButton color="primary" onClick={() => onEditTeam(row.original)}><EditIcon /></IconButton></Tooltip>
-        <Tooltip title="Delete"><IconButton color="error" onClick={() => handleDelete(row.original)} disabled={deleteMutation.isPending}><DeleteIcon /></IconButton></Tooltip>
-      </Box>
-    ),
-    renderTopToolbarCustomActions: () => (
-      <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={onCreateTeam}>Add Team</Button>
-        <FormControl size="small" sx={{ minWidth: 150 }}>
-          <InputLabel>Filter by Sport</InputLabel>
-          <Select value={sportFilter} label="Filter by Sport" onChange={(e) => setSportFilter(e.target.value as number | '')}>
-            <MenuItem value="">All Sports</MenuItem>
-            {sportsData?.sports?.map(s => <MenuItem key={s.id} value={s.id}>{s.name}</MenuItem>)}
-          </Select>
-        </FormControl>
-      </Box>
-    ),
-    enableRowActions: true,
-    positionActionsColumn: 'last',
-  })
+  if (isError) {
+    return <Alert message="Error" description={error?.message} type="error" showIcon />
+  }
 
-  return <MaterialReactTable table={table} />
+  return (
+    <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+      <Space>
+        <Button type="primary" icon={<PlusOutlined />} onClick={onCreateTeam}>Add Team</Button>
+        <Select
+          style={{ minWidth: 150 }}
+          placeholder="Filter by Sport"
+          value={sportFilter}
+          onChange={setSportFilter}
+          allowClear
+        >
+          <Select.Option value="">All Sports</Select.Option>
+          {sportsData?.sports?.map(s => <Select.Option key={s.id} value={s.id}>{s.name}</Select.Option>)}
+        </Select>
+      </Space>
+      <Table
+        columns={columns}
+        dataSource={data?.teams ?? []}
+        rowKey="id"
+        loading={isLoading}
+        pagination={{
+          current: pagination.pageIndex + 1,
+          pageSize: pagination.pageSize,
+          total: data?.pagination?.total ?? 0,
+          onChange: (page, pageSize) => setPagination({ pageIndex: page - 1, pageSize }),
+        }}
+      />
+    </Space>
+  )
 }
 
 export default TeamList

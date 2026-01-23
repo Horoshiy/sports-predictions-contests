@@ -1,28 +1,19 @@
 import React from 'react'
+import { Card, Typography, Button, Tag, Space, Avatar, Tooltip } from 'antd'
 import {
-  Card,
-  CardContent,
-  CardActions,
-  Typography,
-  Button,
-  Chip,
-  Box,
-  IconButton,
-  Tooltip,
-  Avatar,
-} from '@mui/material'
-import {
-  Check as AcceptIcon,
-  Close as DeclineIcon,
-  Delete as WithdrawIcon,
-  Visibility as ViewIcon,
-  Person as PersonIcon,
-  Event as EventIcon,
-  Timer as TimerIcon,
-} from '@mui/icons-material'
+  CheckOutlined,
+  CloseOutlined,
+  DeleteOutlined,
+  EyeOutlined,
+  UserOutlined,
+  CalendarOutlined,
+  ClockCircleOutlined,
+} from '@ant-design/icons'
 import type { Challenge, ChallengeWithUserInfo } from '../../types/challenge.types'
 import { CHALLENGE_STATUSES } from '../../types/challenge.types'
 import { formatRelativeTime } from '../../utils/date-utils'
+
+const { Text, Paragraph } = Typography
 
 interface ChallengeCardProps {
   challenge: ChallengeWithUserInfo
@@ -80,7 +71,7 @@ export const ChallengeCard: React.FC<ChallengeCardProps> = ({
     const opponentScore = isCurrentUserChallenger ? challenge.opponentScore : challenge.challengerScore
     
     let result = 'Tie'
-    let resultColor = 'info'
+    let resultColor: 'default' | 'success' | 'error' = 'default'
     
     if (challenge.winnerId === currentUserId) {
       result = 'Won'
@@ -91,157 +82,138 @@ export const ChallengeCard: React.FC<ChallengeCardProps> = ({
     }
 
     return (
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1 }}>
-        <Typography variant="body2" fontWeight="bold">
-          Score: {userScore} - {opponentScore}
-        </Typography>
-        <Chip
-          label={result}
-          color={resultColor as any}
-          size="small"
+      <Space style={{ marginTop: 8 }}>
+        <Text strong>Score: {userScore} - {opponentScore}</Text>
+        <Tag color={resultColor}>{result}</Tag>
+      </Space>
+    )
+  }
+
+  const actions = []
+  
+  // Accept button
+  if (canAccept && onAccept) {
+    actions.push(
+      <Button
+        key="accept"
+        type="primary"
+        icon={<CheckOutlined />}
+        onClick={() => onAccept(challenge)}
+        loading={loading}
+        style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
+      >
+        Accept
+      </Button>
+    )
+  }
+
+  // Decline button
+  if (canDecline && onDecline) {
+    actions.push(
+      <Button
+        key="decline"
+        danger
+        icon={<CloseOutlined />}
+        onClick={() => onDecline(challenge)}
+        loading={loading}
+      >
+        Decline
+      </Button>
+    )
+  }
+
+  // Withdraw button
+  if (canWithdraw && onWithdraw) {
+    actions.push(
+      <Button
+        key="withdraw"
+        icon={<DeleteOutlined />}
+        onClick={() => onWithdraw(challenge)}
+        loading={loading}
+      >
+        Withdraw
+      </Button>
+    )
+  }
+
+  // View details button
+  if (onView) {
+    actions.push(
+      <Tooltip key="view" title="View Details">
+        <Button
+          icon={<EyeOutlined />}
+          onClick={() => onView(challenge)}
+          disabled={loading}
         />
-      </Box>
+      </Tooltip>
     )
   }
 
   return (
-    <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <CardContent sx={{ flexGrow: 1 }}>
-        {/* Header with status */}
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-          <Typography variant="h6" component="h3">
-            Challenge #{challenge.id}
-          </Typography>
-          <Chip
-            label={isExpired ? 'Expired' : statusInfo.label}
-            color={isExpired ? 'default' : getStatusColor(challenge.status)}
-            size="small"
-          />
-        </Box>
-
+    <Card
+      title={
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Text strong>Challenge #{challenge.id}</Text>
+          <Tag color={isExpired ? 'default' : getStatusColor(challenge.status)}>
+            {isExpired ? 'Expired' : statusInfo.label}
+          </Tag>
+        </div>
+      }
+      actions={actions}
+      style={{ height: '100%' }}
+    >
+      <Space direction="vertical" size="middle" style={{ width: '100%' }}>
         {/* Opponent info */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-          <Avatar sx={{ width: 32, height: 32 }}>
-            <PersonIcon />
-          </Avatar>
-          <Box>
-            <Typography variant="body2" fontWeight="medium">
-              {getOpponentName()}
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              {getOpponentRole()}
-            </Typography>
-          </Box>
-        </Box>
+        <Space>
+          <Avatar icon={<UserOutlined />} size={32} />
+          <div>
+            <Text strong>{getOpponentName()}</Text>
+            <br />
+            <Text type="secondary" style={{ fontSize: 12 }}>{getOpponentRole()}</Text>
+          </div>
+        </Space>
 
         {/* Event info */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-          <EventIcon color="action" />
-          <Typography variant="body2">
-            {challenge.eventTitle || `Event #${challenge.eventId}`}
-          </Typography>
-        </Box>
+        <Space>
+          <CalendarOutlined />
+          <Text>{challenge.eventTitle || `Event #${challenge.eventId}`}</Text>
+        </Space>
 
         {/* Message */}
         {challenge.message && (
-          <Box sx={{ mb: 2 }}>
-            <Typography variant="body2" color="text.secondary" fontStyle="italic">
-              "{challenge.message}"
-            </Typography>
-          </Box>
+          <Paragraph italic type="secondary" style={{ marginBottom: 0 }}>
+            "{challenge.message}"
+          </Paragraph>
         )}
 
         {/* Timing info */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-          <TimerIcon color="action" />
-          <Typography variant="caption" color="text.secondary">
+        <Space>
+          <ClockCircleOutlined />
+          <Text type="secondary" style={{ fontSize: 12 }}>
             Created {formatRelativeTime(new Date(challenge.createdAt))}
-          </Typography>
-        </Box>
+          </Text>
+        </Space>
 
         {/* Expiration for pending challenges */}
         {challenge.status === 'pending' && (
-          <Box sx={{ mb: 1 }}>
-            <Typography variant="caption" color={isExpired ? 'error' : 'warning.main'}>
-              {isExpired 
-                ? 'Expired' 
-                : `Expires ${formatRelativeTime(new Date(challenge.expiresAt))}`
-              }
-            </Typography>
-          </Box>
+          <Text type={isExpired ? 'danger' : 'warning'} style={{ fontSize: 12 }}>
+            {isExpired 
+              ? 'Expired' 
+              : `Expires ${formatRelativeTime(new Date(challenge.expiresAt))}`
+            }
+          </Text>
         )}
 
         {/* Acceptance date */}
         {challenge.acceptedAt && (
-          <Box sx={{ mb: 1 }}>
-            <Typography variant="caption" color="text.secondary">
-              Accepted {formatRelativeTime(new Date(challenge.acceptedAt))}
-            </Typography>
-          </Box>
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            Accepted {formatRelativeTime(new Date(challenge.acceptedAt))}
+          </Text>
         )}
 
         {/* Score display for completed challenges */}
         {getScoreDisplay()}
-      </CardContent>
-
-      <CardActions sx={{ justifyContent: 'space-between', px: 2, pb: 2 }}>
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          {/* Accept button */}
-          {canAccept && onAccept && (
-            <Button
-              size="small"
-              variant="contained"
-              color="success"
-              startIcon={<AcceptIcon />}
-              onClick={() => onAccept(challenge)}
-              disabled={loading}
-            >
-              Accept
-            </Button>
-          )}
-
-          {/* Decline button */}
-          {canDecline && onDecline && (
-            <Button
-              size="small"
-              variant="outlined"
-              color="error"
-              startIcon={<DeclineIcon />}
-              onClick={() => onDecline(challenge)}
-              disabled={loading}
-            >
-              Decline
-            </Button>
-          )}
-
-          {/* Withdraw button */}
-          {canWithdraw && onWithdraw && (
-            <Button
-              size="small"
-              variant="outlined"
-              color="warning"
-              startIcon={<WithdrawIcon />}
-              onClick={() => onWithdraw(challenge)}
-              disabled={loading}
-            >
-              Withdraw
-            </Button>
-          )}
-        </Box>
-
-        {/* View details button */}
-        {onView && (
-          <Tooltip title="View Details">
-            <IconButton
-              size="small"
-              onClick={() => onView(challenge)}
-              disabled={loading}
-            >
-              <ViewIcon />
-            </IconButton>
-          </Tooltip>
-        )}
-      </CardActions>
+      </Space>
     </Card>
   )
 }

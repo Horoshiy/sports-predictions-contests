@@ -1,46 +1,34 @@
 import React, { useState, useEffect } from 'react'
-import {
-  Box,
-  Typography,
-  Paper,
-  Tabs,
-  Tab,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Alert,
-} from '@mui/material'
+import { Space, Typography, Tabs, Select, Alert } from 'antd'
 import { useContests } from '../hooks/use-contests'
 import { useUserPredictions, useSubmitPrediction, useUpdatePrediction, useEvent } from '../hooks/use-predictions'
+import { showError, showSuccess } from '../utils/notification'
 import EventList from '../components/predictions/EventList'
 import PredictionList from '../components/predictions/PredictionList'
 import PredictionForm from '../components/predictions/PredictionForm'
 import type { Event, Prediction } from '../types/prediction.types'
 
+const { Title } = Typography
+
 export const PredictionsPage: React.FC = () => {
-  const [tabValue, setTabValue] = useState(0)
+  const [activeTab, setActiveTab] = useState('events')
   const [selectedContestId, setSelectedContestId] = useState<number>(0)
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
   const [selectedPrediction, setSelectedPrediction] = useState<Prediction | null>(null)
   const [editingEventId, setEditingEventId] = useState<number>(0)
 
-  // Fetch active contests for dropdown
   const { data: contestsData } = useContests({ status: 'active' })
   const contests = contestsData?.contests || []
 
-  // Fetch user predictions for selected contest (reduced limit for performance)
   const { data: predictionsData } = useUserPredictions({
     contestId: selectedContestId,
     pagination: { page: 1, limit: 20 },
   })
   const userPredictions = predictionsData?.predictions || []
 
-  // Fetch event data when editing a prediction
   const { data: fetchedEvent } = useEvent(editingEventId)
   
-  // Update selectedEvent when fetchedEvent loads
   useEffect(() => {
     if (fetchedEvent && editingEventId) {
       setSelectedEvent(fetchedEvent)
@@ -49,14 +37,6 @@ export const PredictionsPage: React.FC = () => {
 
   const submitPredictionMutation = useSubmitPrediction()
   const updatePredictionMutation = useUpdatePrediction()
-
-  const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
-    setTabValue(newValue)
-  }
-
-  const handleContestChange = (contestId: number) => {
-    setSelectedContestId(contestId)
-  }
 
   const handlePredict = (event: Event) => {
     const existingPrediction = userPredictions.find(p => p.eventId === event.id)
@@ -80,18 +60,20 @@ export const PredictionsPage: React.FC = () => {
           id: selectedPrediction.id,
           predictionData,
         })
+        showSuccess('Prediction updated successfully')
       } else {
         await submitPredictionMutation.mutateAsync({
           contestId: selectedContestId,
           eventId: selectedEvent.id,
           predictionData,
         })
+        showSuccess('Prediction submitted successfully')
       }
       setIsFormOpen(false)
       setSelectedEvent(null)
       setSelectedPrediction(null)
-    } catch (error) {
-      // Error handled by mutation
+    } catch (error: any) {
+      showError(error?.message || 'Failed to submit prediction')
     }
   }
 
@@ -103,58 +85,53 @@ export const PredictionsPage: React.FC = () => {
   }
 
   return (
-    <Box>
-      <Typography variant="h4" component="h1" gutterBottom>
-        Predictions
-      </Typography>
+    <Space direction="vertical" size="large" style={{ width: '100%', padding: '24px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Title level={2}>Predictions</Title>
+        <Select
+          style={{ width: 250 }}
+          placeholder="Select Contest"
+          value={selectedContestId || undefined}
+          onChange={setSelectedContestId}
+        >
+          {contests.map(c => (
+            <Select.Option key={c.id} value={c.id}>{c.title}</Select.Option>
+          ))}
+        </Select>
+      </div>
 
-      <Paper sx={{ p: 2, mb: 3 }}>
-        <FormControl fullWidth size="small">
-          <InputLabel>Select Contest</InputLabel>
-          <Select
-            value={selectedContestId || ''}
-            label="Select Contest"
-            onChange={(e) => handleContestChange(Number(e.target.value))}
-          >
-            <MenuItem value="">
-              <em>Select a contest</em>
-            </MenuItem>
-            {contests.map((contest) => (
-              <MenuItem key={contest.id} value={contest.id}>
-                {contest.title} ({contest.sportType})
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-      </Paper>
+      {!selectedContestId && (
+        <Alert message="Please select a contest to view events and make predictions" type="info" showIcon />
+      )}
 
-      {!selectedContestId ? (
-        <Alert severity="info">
-          Please select a contest to view events and make predictions.
-        </Alert>
-      ) : (
-        <Paper sx={{ width: '100%' }}>
-          <Tabs value={tabValue} onChange={handleTabChange}>
-            <Tab label="Available Events" />
-            <Tab label="My Predictions" />
-          </Tabs>
-
-          <Box sx={{ p: 3 }}>
-            {tabValue === 0 && (
-              <EventList
-                contestId={selectedContestId}
-                onPredict={handlePredict}
-                userPredictions={userPredictions}
-              />
-            )}
-            {tabValue === 1 && (
-              <PredictionList
-                contestId={selectedContestId}
-                onEdit={handleEditPrediction}
-              />
-            )}
-          </Box>
-        </Paper>
+      {selectedContestId && (
+        <Tabs
+          activeKey={activeTab}
+          onChange={setActiveTab}
+          items={[
+            {
+              key: 'events',
+              label: 'Available Events',
+              children: (
+                <EventList
+                  contestId={selectedContestId}
+                  onPredict={handlePredict}
+                  userPredictions={userPredictions}
+                />
+              ),
+            },
+            {
+              key: 'predictions',
+              label: 'My Predictions',
+              children: (
+                <PredictionList
+                  contestId={selectedContestId}
+                  onEdit={handleEditPrediction}
+                />
+              ),
+            },
+          ]}
+        />
       )}
 
       <PredictionForm
@@ -162,10 +139,10 @@ export const PredictionsPage: React.FC = () => {
         onClose={handleFormClose}
         onSubmit={handleFormSubmit}
         event={selectedEvent}
-        prediction={selectedPrediction}
+        existingPrediction={selectedPrediction}
         loading={submitPredictionMutation.isPending || updatePredictionMutation.isPending}
       />
-    </Box>
+    </Space>
   )
 }
 

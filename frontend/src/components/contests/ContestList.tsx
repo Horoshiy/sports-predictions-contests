@@ -1,24 +1,8 @@
 import React, { useMemo, useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import {
-  MaterialReactTable,
-  useMaterialReactTable,
-  type MRT_ColumnDef,
-} from 'material-react-table'
-import {
-  Box,
-  Button,
-  IconButton,
-  Tooltip,
-  Chip,
-  Typography,
-} from '@mui/material'
-import {
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  Add as AddIcon,
-  People as PeopleIcon,
-} from '@mui/icons-material'
+import { Table, Button, Tag, Tooltip, Space, Alert } from 'antd'
+import { EditOutlined, DeleteOutlined, PlusOutlined, TeamOutlined } from '@ant-design/icons'
+import type { ColumnsType } from 'antd/es/table'
 import { useContests, useDeleteContest } from '../../hooks/use-contests'
 import type { Contest } from '../../types/contest.types'
 import { formatDate, formatRelativeTime } from '../../utils/date-utils'
@@ -36,7 +20,7 @@ const getStatusColor = (status: string) => {
     case 'active':
       return 'success'
     case 'completed':
-      return 'info'
+      return 'processing'
     case 'cancelled':
       return 'error'
     default:
@@ -56,7 +40,6 @@ export const ContestList: React.FC<ContestListProps> = ({
     pageSize: parseInt(searchParams.get('limit') || '10'),
   })
 
-  // Sync pagination with URL
   useEffect(() => {
     const params = new URLSearchParams(searchParams)
     params.set('page', pagination.pageIndex.toString())
@@ -79,160 +62,88 @@ export const ContestList: React.FC<ContestListProps> = ({
     }
   }
 
-  const columns = useMemo<MRT_ColumnDef<Contest>[]>(
-    () => [
-      {
-        accessorKey: 'id',
-        header: 'ID',
-        size: 80,
-      },
-      {
-        accessorKey: 'title',
-        header: 'Title',
-        size: 200,
-        Cell: ({ cell }) => (
-          <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
-            {cell.getValue<string>()}
-          </Typography>
-        ),
-      },
-      {
-        accessorKey: 'sportType',
-        header: 'Sport',
-        size: 120,
-      },
-      {
-        accessorKey: 'status',
-        header: 'Status',
-        size: 100,
-        Cell: ({ cell }) => (
-          <Chip
-            label={cell.getValue<string>()}
-            color={getStatusColor(cell.getValue<string>())}
-            size="small"
-          />
-        ),
-      },
-      {
-        accessorKey: 'currentParticipants',
-        header: 'Participants',
-        size: 120,
-        Cell: ({ row }) => (
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <PeopleIcon sx={{ mr: 0.5, fontSize: 16, color: 'text.secondary' }} />
-            <Typography variant="body2">
-              {row.original.currentParticipants}
-              {row.original.maxParticipants > 0 && ` / ${row.original.maxParticipants}`}
-            </Typography>
-          </Box>
-        ),
-      },
-      {
-        accessorKey: 'startDate',
-        header: 'Start Date',
-        size: 120,
-        Cell: ({ cell }) => formatDate(cell.getValue<string>()),
-      },
-      {
-        accessorKey: 'endDate',
-        header: 'End Date',
-        size: 120,
-        Cell: ({ cell }) => formatDate(cell.getValue<string>()),
-      },
-      {
-        accessorKey: 'createdAt',
-        header: 'Created',
-        size: 120,
-        Cell: ({ cell }) => formatRelativeTime(cell.getValue<string>()),
-      },
-    ],
-    []
-  )
-
-  const table = useMaterialReactTable({
-    columns,
-    data: data?.contests ?? [],
-    enableRowSelection: false,
-    enableColumnOrdering: true,
-    enableGlobalFilter: true,
-    enableSorting: true,
-    enablePagination: true,
-    manualPagination: true,
-    rowCount: data?.pagination?.total ?? 0,
-    onPaginationChange: setPagination,
-    state: {
-      isLoading,
-      pagination,
-      showAlertBanner: isError,
-      showProgressBars: isLoading,
+  const columns: ColumnsType<Contest> = useMemo(() => [
+    { title: 'ID', dataIndex: 'id', key: 'id', width: 60 },
+    { title: 'Title', dataIndex: 'title', key: 'title', width: 200 },
+    { title: 'Sport', dataIndex: 'sportType', key: 'sportType', width: 100 },
+    {
+      title: 'Status',
+      dataIndex: 'status',
+      key: 'status',
+      width: 100,
+      render: (status: string) => <Tag color={getStatusColor(status)}>{status}</Tag>,
     },
-    muiToolbarAlertBannerProps: isError
-      ? {
-          color: 'error',
-          children: `Error loading contests: ${error?.message}`,
-        }
-      : undefined,
-    renderRowActions: ({ row }) => (
-      <Box sx={{ display: 'flex', gap: '1rem' }}>
-        <Tooltip title="View Participants">
-          <IconButton
-            color="info"
-            onClick={() => onViewParticipants(row.original)}
-          >
-            <PeopleIcon />
-          </IconButton>
-        </Tooltip>
-        <Tooltip title="Edit Contest">
-          <IconButton
-            color="primary"
-            onClick={() => onEditContest(row.original)}
-          >
-            <EditIcon />
-          </IconButton>
-        </Tooltip>
-        <Tooltip title="Delete Contest">
-          <IconButton
-            color="error"
-            onClick={() => handleDeleteContest(row.original)}
-            disabled={deleteContestMutation.isPending}
-          >
-            <DeleteIcon />
-          </IconButton>
-        </Tooltip>
-      </Box>
-    ),
-    renderTopToolbarCustomActions: () => (
-      <Button
-        variant="contained"
-        startIcon={<AddIcon />}
-        onClick={onCreateContest}
-      >
-        Create Contest
-      </Button>
-    ),
-    enableRowActions: true,
-    positionActionsColumn: 'last',
-    muiTableContainerProps: {
-      sx: {
-        minHeight: '500px',
-      },
+    {
+      title: 'Start Date',
+      dataIndex: 'startDate',
+      key: 'startDate',
+      width: 120,
+      render: (date: string) => formatDate(date),
     },
-  })
+    {
+      title: 'End Date',
+      dataIndex: 'endDate',
+      key: 'endDate',
+      width: 120,
+      render: (date: string) => formatDate(date),
+    },
+    {
+      title: 'Participants',
+      dataIndex: 'participantCount',
+      key: 'participantCount',
+      width: 100,
+      render: (count: number, contest) => `${count}${contest.maxParticipants ? `/${contest.maxParticipants}` : ''}`,
+    },
+    {
+      title: 'Created',
+      dataIndex: 'createdAt',
+      key: 'createdAt',
+      width: 120,
+      render: (date: string) => formatRelativeTime(date),
+    },
+    {
+      title: 'Actions',
+      key: 'actions',
+      width: 150,
+      render: (_, contest) => (
+        <Space>
+          <Tooltip title="View Participants">
+            <Button icon={<TeamOutlined />} size="small" onClick={() => onViewParticipants(contest)} />
+          </Tooltip>
+          <Tooltip title="Edit">
+            <Button type="primary" icon={<EditOutlined />} size="small" onClick={() => onEditContest(contest)} />
+          </Tooltip>
+          <Tooltip title="Delete">
+            <Button danger icon={<DeleteOutlined />} size="small" onClick={() => handleDeleteContest(contest)} loading={deleteContestMutation.isPending} />
+          </Tooltip>
+        </Space>
+      ),
+    },
+  ], [deleteContestMutation.isPending])
 
   if (isError) {
-    return (
-      <Box sx={{ p: 3, textAlign: 'center' }}>
-        <Typography color="error" variant="h6">
-          Failed to load contests
-        </Typography>
-        <Typography color="text.secondary">
-          {error?.message || 'An unknown error occurred'}
-        </Typography>
-      </Box>
-    )
+    return <Alert message="Error" description={error?.message} type="error" showIcon />
   }
 
-  return <MaterialReactTable table={table} />
+  return (
+    <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+      <Button type="primary" icon={<PlusOutlined />} onClick={onCreateContest}>
+        Create Contest
+      </Button>
+      <Table
+        columns={columns}
+        dataSource={data?.contests ?? []}
+        rowKey="id"
+        loading={isLoading}
+        pagination={{
+          current: pagination.pageIndex + 1,
+          pageSize: pagination.pageSize,
+          total: data?.pagination?.total ?? 0,
+          onChange: (page, pageSize) => setPagination({ pageIndex: page - 1, pageSize }),
+        }}
+      />
+    </Space>
+  )
 }
 
 export default ContestList

@@ -1,5 +1,5 @@
 import React from 'react'
-import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Box, Grid, FormControl, InputLabel, Select, MenuItem, FormHelperText } from '@mui/material'
+import { Modal, Form, Input, Select, Button } from 'antd'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { leagueSchema, type LeagueFormData, generateSlug } from '../../utils/sports-validation'
@@ -51,58 +51,47 @@ export const LeagueForm: React.FC<LeagueFormProps> = ({ open, onClose, onSubmit,
   }
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-      <DialogTitle>{isEditing ? 'Edit League' : 'Create League'}</DialogTitle>
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <DialogContent>
-          <Box sx={{ mt: 1 }}>
-            <Grid container spacing={2}>
-              <Grid item xs={12}>
-                <Controller
-                  name="sportId"
-                  control={control}
-                  render={({ field }) => (
-                    <FormControl fullWidth required error={!!errors.sportId}>
-                      <InputLabel>Sport</InputLabel>
-                      <Select {...field} label="Sport" disabled={loading}>
-                        {sportsData?.sports?.map(s => <MenuItem key={s.id} value={s.id}>{s.name}</MenuItem>)}
-                      </Select>
-                      {errors.sportId && <FormHelperText>{errors.sportId.message}</FormHelperText>}
-                    </FormControl>
-                  )}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <Controller name="name" control={control} render={({ field }) => (
-                  <TextField {...field} label="Name" fullWidth required error={!!errors.name} helperText={errors.name?.message} disabled={loading} />
-                )} />
-              </Grid>
-              <Grid item xs={12}>
-                <Controller name="slug" control={control} render={({ field }) => (
-                  <TextField {...field} label="Slug" fullWidth error={!!errors.slug} helperText={errors.slug?.message || 'Auto-generated'} disabled={loading} />
-                )} />
-              </Grid>
-              <Grid item xs={6}>
-                <Controller name="country" control={control} render={({ field }) => (
-                  <TextField {...field} label="Country" fullWidth error={!!errors.country} helperText={errors.country?.message} disabled={loading} />
-                )} />
-              </Grid>
-              <Grid item xs={6}>
-                <Controller name="season" control={control} render={({ field }) => (
-                  <TextField {...field} label="Season" fullWidth error={!!errors.season} helperText={errors.season?.message} disabled={loading} />
-                )} />
-              </Grid>
-            </Grid>
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleClose} disabled={loading}>Cancel</Button>
-          <Button type="submit" variant="contained" disabled={loading || !isValid}>
-            {loading ? 'Saving...' : isEditing ? 'Update' : 'Create'}
-          </Button>
-        </DialogActions>
-      </form>
-    </Dialog>
+    <Modal
+      open={open}
+      title={isEditing ? 'Edit League' : 'Create League'}
+      onCancel={handleClose}
+      footer={[
+        <Button key="cancel" onClick={handleClose} disabled={loading}>Cancel</Button>,
+        <Button key="submit" type="primary" onClick={handleSubmit(onSubmit)} disabled={loading || !isValid} loading={loading}>
+          {isEditing ? 'Update' : 'Create'}
+        </Button>,
+      ]}
+    >
+      <Form layout="vertical">
+        <Controller name="sportId" control={control} render={({ field }) => (
+          <Form.Item label="Sport" required validateStatus={errors.sportId ? 'error' : ''} help={errors.sportId?.message}>
+            <Select {...field} disabled={loading}>
+              {sportsData?.sports?.map(s => <Select.Option key={s.id} value={s.id}>{s.name}</Select.Option>)}
+            </Select>
+          </Form.Item>
+        )} />
+        <Controller name="name" control={control} render={({ field }) => (
+          <Form.Item label="Name" required validateStatus={errors.name ? 'error' : ''} help={errors.name?.message}>
+            <Input {...field} disabled={loading} />
+          </Form.Item>
+        )} />
+        <Controller name="slug" control={control} render={({ field }) => (
+          <Form.Item label="Slug" validateStatus={errors.slug ? 'error' : ''} help={errors.slug?.message || 'Auto-generated'}>
+            <Input {...field} disabled={loading} />
+          </Form.Item>
+        )} />
+        <Controller name="country" control={control} render={({ field }) => (
+          <Form.Item label="Country" validateStatus={errors.country ? 'error' : ''} help={errors.country?.message}>
+            <Input {...field} disabled={loading} />
+          </Form.Item>
+        )} />
+        <Controller name="season" control={control} render={({ field }) => (
+          <Form.Item label="Season" validateStatus={errors.season ? 'error' : ''} help={errors.season?.message}>
+            <Input {...field} disabled={loading} />
+          </Form.Item>
+        )} />
+      </Form>
+    </Modal>
   )
 }
 

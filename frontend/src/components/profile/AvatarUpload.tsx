@@ -1,17 +1,12 @@
-import React, { useState, useRef } from 'react'
-import {
-  Box,
-  Button,
-  Avatar,
-  Typography,
-  Paper,
-  LinearProgress,
-  Alert,
-  IconButton,
-} from '@mui/material'
-import { CloudUpload, PhotoCamera, Delete } from '@mui/icons-material'
+import React, { useState } from 'react'
+import { Upload, Avatar, Button, Progress, Alert, Space, Typography } from 'antd'
+import { CloudUploadOutlined, CameraOutlined, DeleteOutlined } from '@ant-design/icons'
 import { profileService } from '../../services/profile-service'
+import { showSuccess, showError } from '../../utils/notification'
+import { MAX_AVATAR_SIZE_MB, ALLOWED_IMAGE_FORMATS } from '../../utils/constants'
 import type { AvatarUploadState } from '../../types/profile.types'
+
+const { Text } = Typography
 
 interface AvatarUploadProps {
   currentAvatarUrl?: string
@@ -30,169 +25,81 @@ export const AvatarUpload: React.FC<AvatarUploadProps> = ({
     error: null,
   })
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
-
-    // Validate file
-    const validation = profileService.validateAvatarFile(file)
-    if (!validation.isValid) {
-      setUploadState({
-        isUploading: false,
-        progress: 0,
-        error: validation.error || 'Invalid file',
-      })
-      return
-    }
-
-    // Clear any previous errors
-    setUploadState({
-      isUploading: false,
-      progress: 0,
-      error: null,
-    })
-
-    // Generate preview
-    profileService.generateAvatarPreview(file)
-      .then(setPreviewUrl)
-      .catch(() => {
-        setUploadState(prev => ({
-          ...prev,
-          error: 'Failed to generate preview',
-        }))
-      })
-
-    // Upload file
-    handleUpload(file)
-  }
 
   const handleUpload = async (file: File) => {
-    setUploadState({
-      isUploading: true,
-      progress: 0,
-      error: null,
-    })
-
+    // Validate file size
+    const maxSizeBytes = MAX_AVATAR_SIZE_MB * 1024 * 1024
+    if (file.size > maxSizeBytes) {
+      showError(`File size must be less than ${MAX_AVATAR_SIZE_MB}MB`)
+      return false
+    }
+    
+    // Validate file type
+    if (!ALLOWED_IMAGE_FORMATS.includes(file.type)) {
+      const allowedFormats = ALLOWED_IMAGE_FORMATS.map(f => f.split('/')[1].toUpperCase()).join(', ')
+      showError(`Only ${allowedFormats} formats are allowed`)
+      return false
+    }
+    
+    setUploadState({ isUploading: true, progress: 0, error: null })
+    
     try {
+      const reader = new FileReader()
+      reader.onloadend = () => setPreviewUrl(reader.result as string)
+      reader.readAsDataURL(file)
+
       const avatarUrl = await profileService.uploadAvatar(file)
-      
-      setUploadState({
-        isUploading: false,
-        progress: 0,
-        error: null,
-      })
 
-      setPreviewUrl(null)
       onAvatarUpdate(avatarUrl)
+      setUploadState({ isUploading: false, progress: 100, error: null })
+      showSuccess('Avatar uploaded successfully')
+    } catch (error: any) {
+      const errorMessage = error?.message || 'Failed to upload avatar'
+      setUploadState({ isUploading: false, progress: 0, error: errorMessage })
+      showError(errorMessage)
+    }
+    
+    return false
+  }
 
-    } catch (error) {
-      setUploadState({
-        isUploading: false,
-        progress: 0,
-        error: error instanceof Error ? error.message : 'Upload failed',
-      })
+  const handleDelete = async () => {
+    try {
+      onAvatarUpdate('')
       setPreviewUrl(null)
+      showSuccess('Avatar removed successfully')
+    } catch (error: any) {
+      showError(error?.message || 'Failed to remove avatar')
     }
   }
 
-  const handleRemoveAvatar = () => {
-    setPreviewUrl(null)
-    onAvatarUpdate('')
-    setUploadState({
-      isUploading: false,
-      progress: 0,
-      error: null,
-    })
-  }
-
-  const handleButtonClick = () => {
-    fileInputRef.current?.click()
-  }
-
-  const displayUrl = previewUrl || currentAvatarUrl
-  const hasAvatar = Boolean(displayUrl)
-
   return (
-    <Paper elevation={2} sx={{ p: 3, textAlign: 'center' }}>
-      <Typography variant="h6" gutterBottom>
-        Profile Picture
-      </Typography>
+    <Space direction="vertical" align="center" size="middle">
+      <Avatar size={size} src={previewUrl || currentAvatarUrl} icon={<CameraOutlined />} />
+      
+      {uploadState.isUploading && <Progress percent={uploadState.progress} />}
+      {uploadState.error && <Alert message={uploadState.error} type="error" showIcon closable />}
 
-      <Box sx={{ mb: 3, position: 'relative', display: 'inline-block' }}>
-        <Avatar
-          src={displayUrl}
-          sx={{
-            width: size,
-            height: size,
-            mx: 'auto',
-            fontSize: size / 3,
-            border: '4px solid',
-            borderColor: 'divider',
-          }}
+      <Space>
+        <Upload
+          beforeUpload={handleUpload}
+          showUploadList={false}
+          accept="image/*"
         >
-          {!hasAvatar && <PhotoCamera sx={{ fontSize: size / 3 }} />}
-        </Avatar>
-
-        {hasAvatar && (
-          <IconButton
-            size="small"
-            sx={{
-              position: 'absolute',
-              top: -8,
-              right: -8,
-              bgcolor: 'error.main',
-              color: 'white',
-              '&:hover': {
-                bgcolor: 'error.dark',
-              },
-            }}
-            onClick={handleRemoveAvatar}
-            disabled={uploadState.isUploading}
-          >
-            <Delete fontSize="small" />
-          </IconButton>
+          <Button icon={<CloudUploadOutlined />} loading={uploadState.isUploading}>
+            Upload Avatar
+          </Button>
+        </Upload>
+        {(currentAvatarUrl || previewUrl) && (
+          <Button danger icon={<DeleteOutlined />} onClick={handleDelete}>
+            Remove
+          </Button>
         )}
-      </Box>
-
-      {uploadState.isUploading && (
-        <Box sx={{ mb: 2 }}>
-          <LinearProgress sx={{ mb: 1 }} />
-          <Typography variant="body2" color="text.secondary">
-            Uploading...
-          </Typography>
-        </Box>
-      )}
-
-      {uploadState.error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {uploadState.error}
-        </Alert>
-      )}
-
-      <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center' }}>
-        <Button
-          variant="contained"
-          startIcon={<CloudUpload />}
-          onClick={handleButtonClick}
-          disabled={uploadState.isUploading}
-        >
-          {hasAvatar ? 'Change Photo' : 'Upload Photo'}
-        </Button>
-      </Box>
-
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/jpeg,image/png,image/gif"
-        onChange={handleFileSelect}
-        style={{ display: 'none' }}
-      />
-
-      <Typography variant="caption" display="block" sx={{ mt: 2, color: 'text.secondary' }}>
-        Supported formats: JPEG, PNG, GIF (max 5MB)
-      </Typography>
-    </Paper>
+      </Space>
+      <Text type="secondary" style={{ fontSize: 12 }}>
+        Max size: {MAX_AVATAR_SIZE_MB}MB. Formats: {ALLOWED_IMAGE_FORMATS.map(f => f.split('/')[1].toUpperCase()).join(', ')}
+      </Text>
+    </Space>
   )
 }
+
+export default AvatarUpload

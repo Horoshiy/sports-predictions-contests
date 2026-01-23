@@ -1,29 +1,11 @@
 import React, { useState } from 'react'
-import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemSecondaryAction,
-  IconButton,
-  Typography,
-  Box,
-  Chip,
-  Divider,
-  CircularProgress,
-} from '@mui/material'
-import {
-  PersonRemove as RemoveIcon,
-  AdminPanelSettings as AdminIcon,
-  Person as PersonIcon,
-} from '@mui/icons-material'
+import { Modal, Button, List, Tag, Space, Spin, Alert, Typography, Avatar } from 'antd'
+import { UserDeleteOutlined, CrownOutlined, UserOutlined } from '@ant-design/icons'
 import { useContestParticipants, useLeaveContest } from '../../hooks/use-contests'
 import type { Contest, Participant } from '../../types/contest.types'
 import { formatRelativeTime } from '../../utils/date-utils'
+
+const { Text } = Typography
 
 interface ParticipantListProps {
   open: boolean
@@ -34,11 +16,11 @@ interface ParticipantListProps {
 const getRoleIcon = (role: string) => {
   switch (role) {
     case 'admin':
-      return <AdminIcon color="primary" />
+      return <CrownOutlined style={{ color: '#1890ff' }} />
     case 'participant':
-      return <PersonIcon color="action" />
+      return <UserOutlined />
     default:
-      return <PersonIcon color="action" />
+      return <UserOutlined />
   }
 }
 
@@ -80,116 +62,78 @@ export const ParticipantList: React.FC<ParticipantListProps> = ({
     }
   }
 
-  if (!contest) {
-    return null
-  }
-
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-      <DialogTitle>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="h6">
-            Participants - {contest.title}
-          </Typography>
-          <Chip
-            label={`${contest.currentParticipants} participants`}
-            color="primary"
-            variant="outlined"
+    <Modal
+      open={open}
+      title={`Participants - ${contest?.title || 'Contest'}`}
+      onCancel={onClose}
+      footer={[
+        <Button key="close" onClick={onClose}>Close</Button>,
+      ]}
+      width={600}
+    >
+      {isLoading && (
+        <div style={{ textAlign: 'center', padding: '32px 0' }}>
+          <Spin size="large" />
+        </div>
+      )}
+
+      {isError && (
+        <Alert
+          message="Error loading participants"
+          description={error?.message}
+          type="error"
+          showIcon
+        />
+      )}
+
+      {!isLoading && !isError && (
+        <>
+          <div style={{ marginBottom: 16 }}>
+            <Text type="secondary">
+              {data?.participants?.length || 0} participant(s)
+              {contest?.maxParticipants && ` / ${contest.maxParticipants} max`}
+            </Text>
+          </div>
+
+          <List
+            dataSource={data?.participants || []}
+            renderItem={(participant) => (
+              <List.Item
+                actions={[
+                  <Button
+                    key="remove"
+                    danger
+                    size="small"
+                    icon={<UserDeleteOutlined />}
+                    onClick={() => handleRemoveParticipant(participant)}
+                    loading={leaveContestMutation.isPending}
+                  >
+                    Remove
+                  </Button>,
+                ]}
+              >
+                <List.Item.Meta
+                  avatar={<Avatar icon={getRoleIcon(participant.role)} />}
+                  title={
+                    <Space>
+                      <Text>User {participant.userId}</Text>
+                      <Tag color={getStatusColor(participant.status)}>{participant.status}</Tag>
+                      {participant.role === 'admin' && <Tag color="blue">Admin</Tag>}
+                    </Space>
+                  }
+                  description={
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      Joined {formatRelativeTime(participant.joinedAt)}
+                    </Text>
+                  }
+                />
+              </List.Item>
+            )}
           />
-        </Box>
-      </DialogTitle>
-
-      <DialogContent>
-        {isLoading && (
-          <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
-            <CircularProgress />
-          </Box>
-        )}
-
-        {isError && (
-          <Box sx={{ p: 3, textAlign: 'center' }}>
-            <Typography color="error" variant="h6">
-              Failed to load participants
-            </Typography>
-            <Typography color="text.secondary">
-              {error?.message || 'An unknown error occurred'}
-            </Typography>
-          </Box>
-        )}
-
-        {data && data.participants.length === 0 && (
-          <Box sx={{ p: 3, textAlign: 'center' }}>
-            <Typography color="text.secondary">
-              No participants yet
-            </Typography>
-          </Box>
-        )}
-
-        {data && data.participants.length > 0 && (
-          <List>
-            {data.participants.map((participant, index) => (
-              <React.Fragment key={participant.id}>
-                <ListItem>
-                  <Box sx={{ mr: 2 }}>
-                    {getRoleIcon(participant.role)}
-                  </Box>
-                  <ListItemText
-                    primary={
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Typography variant="body1">
-                          User #{participant.userId}
-                        </Typography>
-                        <Chip
-                          label={participant.role}
-                          size="small"
-                          color={participant.role === 'admin' ? 'primary' : 'default'}
-                        />
-                        <Chip
-                          label={participant.status}
-                          size="small"
-                          color={getStatusColor(participant.status)}
-                        />
-                      </Box>
-                    }
-                    secondary={
-                      <Typography variant="body2" color="text.secondary">
-                        Joined {formatRelativeTime(participant.joinedAt)}
-                      </Typography>
-                    }
-                  />
-                  <ListItemSecondaryAction>
-                    {participant.role !== 'admin' && (
-                      <IconButton
-                        edge="end"
-                        color="error"
-                        onClick={() => handleRemoveParticipant(participant)}
-                        disabled={leaveContestMutation.isPending}
-                        title="Remove participant"
-                      >
-                        <RemoveIcon />
-                      </IconButton>
-                    )}
-                  </ListItemSecondaryAction>
-                </ListItem>
-                {index < data.participants.length - 1 && <Divider />}
-              </React.Fragment>
-            ))}
-          </List>
-        )}
-
-        {data && data.pagination && data.pagination.totalPages > 1 && (
-          <Box sx={{ mt: 2, textAlign: 'center' }}>
-            <Typography variant="body2" color="text.secondary">
-              Showing {data.participants.length} of {data.pagination.total} participants
-            </Typography>
-          </Box>
-        )}
-      </DialogContent>
-
-      <DialogActions>
-        <Button onClick={onClose}>Close</Button>
-      </DialogActions>
-    </Dialog>
+        </>
+      )}
+    </Modal>
   )
 }
 

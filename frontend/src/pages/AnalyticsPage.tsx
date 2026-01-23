@@ -1,21 +1,6 @@
 import React, { useState } from 'react'
-import {
-  Box,
-  Typography,
-  Paper,
-  Grid,
-  Card,
-  CardContent,
-  ToggleButton,
-  ToggleButtonGroup,
-  CircularProgress,
-  Alert,
-} from '@mui/material'
-import {
-  Analytics as AnalyticsIcon,
-  TrendingUp as TrendingUpIcon,
-  EmojiEvents as TrophyIcon,
-} from '@mui/icons-material'
+import { Space, Typography, Card, Row, Col, Segmented, Spin, Alert, Statistic } from 'antd'
+import { LineChartOutlined, TrophyOutlined, RiseOutlined } from '@ant-design/icons'
 import { useAuth } from '../contexts/AuthContext'
 import { useUserAnalytics } from '../hooks/use-analytics'
 import { AccuracyChart } from '../components/analytics/AccuracyChart'
@@ -24,43 +9,7 @@ import { PlatformComparison } from '../components/analytics/PlatformComparison'
 import { ExportButton } from '../components/analytics/ExportButton'
 import type { TimeRange } from '../types/analytics.types'
 
-const StatCard: React.FC<{
-  title: string
-  value: string | number
-  subtitle?: string
-  icon: React.ReactNode
-  color?: string
-}> = ({ title, value, subtitle, icon, color = 'primary.main' }) => (
-  <Card>
-    <CardContent>
-      <Box display="flex" alignItems="center" gap={2}>
-        <Box
-          sx={{
-            p: 1.5,
-            borderRadius: 2,
-            bgcolor: `${color}15`,
-            color: color,
-          }}
-        >
-          {icon}
-        </Box>
-        <Box>
-          <Typography variant="h4" component="div">
-            {value}
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            {title}
-          </Typography>
-          {subtitle && (
-            <Typography variant="caption" color="text.secondary">
-              {subtitle}
-            </Typography>
-          )}
-        </Box>
-      </Box>
-    </CardContent>
-  </Card>
-)
+const { Title } = Typography
 
 export const AnalyticsPage: React.FC = () => {
   const { user } = useAuth()
@@ -72,168 +21,108 @@ export const AnalyticsPage: React.FC = () => {
     error,
   } = useUserAnalytics(user?.id || 0, timeRange)
 
-  const handleTimeRangeChange = (
-    _: React.MouseEvent<HTMLElement>,
-    newRange: TimeRange | null
-  ) => {
-    if (newRange) {
-      setTimeRange(newRange)
-    }
-  }
-
-  if (!user) {
+  if (isLoading) {
     return (
-      <Alert severity="warning">
-        Please log in to view your analytics.
-      </Alert>
+      <div style={{ textAlign: 'center', padding: '64px 0' }}>
+        <Spin size="large" />
+      </div>
     )
   }
 
   if (error) {
-    return (
-      <Alert severity="error">
-        Failed to load analytics. Please try again later.
-      </Alert>
-    )
+    return <Alert message="Error" description="Failed to load analytics data" type="error" showIcon />
+  }
+
+  if (!analytics) {
+    return <Alert message="No data available" type="info" showIcon />
   }
 
   return (
-    <Box>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-        <Box>
-          <Typography variant="h4" component="h1" gutterBottom>
-            Your Analytics
-          </Typography>
-          <Typography variant="body1" color="text.secondary">
-            Track your prediction performance and identify areas for improvement
-          </Typography>
-        </Box>
-        <Box display="flex" gap={2} alignItems="center">
-          <ToggleButtonGroup
+    <Space direction="vertical" size="large" style={{ width: '100%', padding: '24px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Title level={2}>Analytics Dashboard</Title>
+        <Space>
+          <Segmented
+            options={[
+              { label: '7 Days', value: '7d' },
+              { label: '30 Days', value: '30d' },
+              { label: '90 Days', value: '90d' },
+              { label: 'All Time', value: 'all' },
+            ]}
             value={timeRange}
-            exclusive
-            onChange={handleTimeRangeChange}
-            size="small"
-          >
-            <ToggleButton value="7d">7 Days</ToggleButton>
-            <ToggleButton value="30d">30 Days</ToggleButton>
-            <ToggleButton value="90d">90 Days</ToggleButton>
-            <ToggleButton value="all">All Time</ToggleButton>
-          </ToggleButtonGroup>
-          <ExportButton userId={user.id} timeRange={timeRange} />
-        </Box>
-      </Box>
+            onChange={(value) => setTimeRange(value as TimeRange)}
+          />
+          <ExportButton userId={user?.id || 0} timeRange={timeRange} />
+        </Space>
+      </div>
 
-      {isLoading ? (
-        <Box display="flex" justifyContent="center" py={8}>
-          <CircularProgress />
-        </Box>
-      ) : analytics ? (
-        <>
-          <Grid container spacing={3} mb={3}>
-            <Grid item xs={12} sm={6} md={3}>
-              <StatCard
-                title="Total Predictions"
-                value={analytics.totalPredictions}
-                icon={<AnalyticsIcon />}
-                color="primary.main"
-              />
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <StatCard
-                title="Correct Predictions"
-                value={analytics.correctPredictions}
-                subtitle={`${analytics.overallAccuracy.toFixed(1)}% accuracy`}
-                icon={<TrendingUpIcon />}
-                color="success.main"
-              />
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <StatCard
-                title="Total Points"
-                value={analytics.totalPoints.toFixed(1)}
-                icon={<TrophyIcon />}
-                color="warning.main"
-              />
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <StatCard
-                title="Avg Points/Prediction"
-                value={
-                  analytics.totalPredictions > 0
-                    ? (analytics.totalPoints / analytics.totalPredictions).toFixed(2)
-                    : '0'
-                }
-                icon={<AnalyticsIcon />}
-                color="info.main"
-              />
-            </Grid>
-          </Grid>
+      <Row gutter={[16, 16]}>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="Accuracy"
+              value={analytics.overallAccuracy}
+              precision={1}
+              suffix="%"
+              prefix={<LineChartOutlined />}
+              valueStyle={{ color: '#3f8600' }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="Total Points"
+              value={analytics.totalPoints}
+              precision={1}
+              prefix={<TrophyOutlined />}
+              valueStyle={{ color: '#1890ff' }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="Total Predictions"
+              value={analytics.totalPredictions}
+              prefix={<RiseOutlined />}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="Correct"
+              value={analytics.correctPredictions}
+              suffix={`/ ${analytics.totalPredictions}`}
+              valueStyle={{ color: '#3f8600' }}
+            />
+          </Card>
+        </Col>
+      </Row>
 
-          <Grid container spacing={3} mb={3}>
-            <Grid item xs={12} lg={8}>
-              <AccuracyChart trends={analytics.trends} />
-            </Grid>
-            <Grid item xs={12} lg={4}>
-              <PlatformComparison
-                userStats={{
-                  accuracy: analytics.overallAccuracy,
-                  avgPoints: analytics.totalPoints,
-                  totalPredictions: analytics.totalPredictions,
-                }}
-                platformStats={analytics.platformComparison}
-              />
-            </Grid>
-          </Grid>
+      <Row gutter={[16, 16]}>
+        <Col xs={24} lg={12}>
+          <AccuracyChart trends={analytics.trends} />
+        </Col>
+        <Col xs={24} lg={12}>
+          <SportBreakdown bySport={analytics.bySport} />
+        </Col>
+      </Row>
 
-          <Grid container spacing={3}>
-            <Grid item xs={12}>
-              <SportBreakdown bySport={analytics.bySport} />
-            </Grid>
-          </Grid>
-
-          {analytics.byType && analytics.byType.length > 0 && (
-            <Paper sx={{ mt: 3, p: 3 }}>
-              <Typography variant="h6" gutterBottom>
-                Performance by Prediction Type
-              </Typography>
-              <Grid container spacing={2}>
-                {analytics.byType.map((t) => (
-                  <Grid item xs={12} sm={6} md={4} key={t.predictionType}>
-                    <Card variant="outlined">
-                      <CardContent>
-                        <Typography variant="subtitle1" gutterBottom>
-                          {t.predictionType.replace('_', ' ').toUpperCase()}
-                        </Typography>
-                        <Typography variant="h5" color="primary">
-                          {t.accuracyPercentage.toFixed(1)}%
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          {t.correctPredictions} / {t.totalPredictions} correct
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          Avg: {t.averagePoints.toFixed(2)} pts
-                        </Typography>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                ))}
-              </Grid>
-            </Paper>
-          )}
-        </>
-      ) : (
-        <Paper sx={{ p: 4, textAlign: 'center' }}>
-          <AnalyticsIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-          <Typography variant="h6" color="text.secondary" gutterBottom>
-            No Analytics Data Yet
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Start making predictions to see your performance analytics here.
-          </Typography>
-        </Paper>
+      {analytics.platformComparison && (
+        <Row gutter={[16, 16]}>
+          <Col xs={24}>
+            <PlatformComparison
+              comparison={{
+                userAccuracy: analytics.overallAccuracy,
+                platformAverage: analytics.platformComparison.averageAccuracy,
+              }}
+            />
+          </Col>
+        </Row>
       )}
-    </Box>
+    </Space>
   )
 }
 

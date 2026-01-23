@@ -23,7 +23,6 @@ const LoginPage: React.FC = () => {
       navigate(from, { replace: true })
     } catch (error) {
       // Error is handled by the auth context (toast notification)
-      console.error('Login failed:', error)
     }
   }
 

@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react'
-import { MaterialReactTable, useMaterialReactTable, type MRT_ColumnDef } from 'material-react-table'
-import { Box, Button, IconButton, Tooltip, Chip, FormControl, InputLabel, Select, MenuItem } from '@mui/material'
-import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon } from '@mui/icons-material'
+import { Table, Button, Tag, Tooltip, Space, Select, Alert } from 'antd'
+import { EditOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons'
+import type { ColumnsType } from 'antd/es/table'
 import { useLeagues, useDeleteLeague, useSports } from '../../hooks/use-sports'
 import type { League } from '../../types/sports.types'
 import { formatRelativeTime } from '../../utils/date-utils'
@@ -31,69 +31,95 @@ export const LeagueList: React.FC<LeagueListProps> = ({ onCreateLeague, onEditLe
     }
   }
 
-  const columns = useMemo<MRT_ColumnDef<League>[]>(() => [
-    { accessorKey: 'id', header: 'ID', size: 60 },
-    { accessorKey: 'name', header: 'Name', size: 180 },
+  const columns: ColumnsType<League> = useMemo(() => [
+    { title: 'ID', dataIndex: 'id', key: 'id', width: 60 },
+    { title: 'Name', dataIndex: 'name', key: 'name', width: 180 },
     {
-      accessorKey: 'sportId',
-      header: 'Sport',
-      size: 120,
-      Cell: ({ cell }) => sportsMap.get(cell.getValue<number>()) || '-',
+      title: 'Sport',
+      dataIndex: 'sportId',
+      key: 'sportId',
+      width: 120,
+      render: (sportId: number) => sportsMap.get(sportId) || '-',
     },
-    { accessorKey: 'country', header: 'Country', size: 100 },
-    { accessorKey: 'season', header: 'Season', size: 100 },
+    { title: 'Country', dataIndex: 'country', key: 'country', width: 100 },
+    { title: 'Season', dataIndex: 'season', key: 'season', width: 100 },
     {
-      accessorKey: 'isActive',
-      header: 'Status',
-      size: 100,
-      Cell: ({ cell }) => (
-        <Chip label={cell.getValue<boolean>() ? 'Active' : 'Inactive'} color={cell.getValue<boolean>() ? 'success' : 'default'} size="small" />
+      title: 'Status',
+      dataIndex: 'isActive',
+      key: 'isActive',
+      width: 100,
+      render: (isActive: boolean) => <Tag color={isActive ? 'success' : 'default'}>{isActive ? 'Active' : 'Inactive'}</Tag>,
+    },
+    {
+      title: 'Created',
+      dataIndex: 'createdAt',
+      key: 'createdAt',
+      width: 120,
+      render: (createdAt: string) => formatRelativeTime(createdAt),
+    },
+    {
+      title: 'Actions',
+      key: 'actions',
+      width: 120,
+      render: (_, league) => (
+        <Space>
+          <Tooltip title="Edit">
+            <Button 
+              type="primary" 
+              icon={<EditOutlined />} 
+              size="small" 
+              onClick={() => onEditLeague(league)}
+              aria-label={`Edit ${league.name}`}
+            />
+          </Tooltip>
+          <Tooltip title="Delete">
+            <Button 
+              danger 
+              icon={<DeleteOutlined />} 
+              size="small" 
+              onClick={() => handleDelete(league)} 
+              loading={deleteMutation.isPending}
+              aria-label={`Delete ${league.name}`}
+            />
+          </Tooltip>
+        </Space>
       ),
     },
-    {
-      accessorKey: 'createdAt',
-      header: 'Created',
-      size: 120,
-      Cell: ({ cell }) => formatRelativeTime(cell.getValue<string>()),
-    },
-  ], [sportsMap])
+  ], [sportsMap, deleteMutation.isPending])
 
-  const table = useMaterialReactTable({
-    columns,
-    data: data?.leagues ?? [],
-    enableRowSelection: false,
-    manualPagination: true,
-    rowCount: data?.pagination?.total ?? 0,
-    onPaginationChange: setPagination,
-    state: { isLoading, pagination, showAlertBanner: isError },
-    muiToolbarAlertBannerProps: isError ? { color: 'error', children: `Error: ${error?.message}` } : undefined,
-    renderRowActions: ({ row }) => (
-      <Box sx={{ display: 'flex', gap: '0.5rem' }}>
-        <Tooltip title="Edit">
-          <IconButton color="primary" onClick={() => onEditLeague(row.original)}><EditIcon /></IconButton>
-        </Tooltip>
-        <Tooltip title="Delete">
-          <IconButton color="error" onClick={() => handleDelete(row.original)} disabled={deleteMutation.isPending}><DeleteIcon /></IconButton>
-        </Tooltip>
-      </Box>
-    ),
-    renderTopToolbarCustomActions: () => (
-      <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={onCreateLeague}>Add League</Button>
-        <FormControl size="small" sx={{ minWidth: 150 }}>
-          <InputLabel>Filter by Sport</InputLabel>
-          <Select value={sportFilter} label="Filter by Sport" onChange={(e) => setSportFilter(e.target.value as number | '')}>
-            <MenuItem value="">All Sports</MenuItem>
-            {sportsData?.sports?.map(s => <MenuItem key={s.id} value={s.id}>{s.name}</MenuItem>)}
-          </Select>
-        </FormControl>
-      </Box>
-    ),
-    enableRowActions: true,
-    positionActionsColumn: 'last',
-  })
+  if (isError) {
+    return <Alert message="Error" description={error?.message} type="error" showIcon />
+  }
 
-  return <MaterialReactTable table={table} />
+  return (
+    <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+      <Space>
+        <Button type="primary" icon={<PlusOutlined />} onClick={onCreateLeague}>Add League</Button>
+        <Select
+          style={{ minWidth: 150 }}
+          placeholder="Filter by Sport"
+          value={sportFilter}
+          onChange={setSportFilter}
+          allowClear
+        >
+          <Select.Option value="">All Sports</Select.Option>
+          {sportsData?.sports?.map(s => <Select.Option key={s.id} value={s.id}>{s.name}</Select.Option>)}
+        </Select>
+      </Space>
+      <Table
+        columns={columns}
+        dataSource={data?.leagues ?? []}
+        rowKey="id"
+        loading={isLoading || deleteMutation.isPending}
+        pagination={{
+          current: pagination.pageIndex + 1,
+          pageSize: pagination.pageSize,
+          total: data?.pagination?.total ?? 0,
+          onChange: (page, pageSize) => setPagination({ pageIndex: page - 1, pageSize }),
+        }}
+      />
+    </Space>
+  )
 }
 
 export default LeagueList

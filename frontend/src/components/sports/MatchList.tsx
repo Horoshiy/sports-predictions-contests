@@ -1,22 +1,24 @@
 import React, { useMemo, useState } from 'react'
-import { MaterialReactTable, useMaterialReactTable, type MRT_ColumnDef } from 'material-react-table'
-import { Box, Button, IconButton, Tooltip, Chip, FormControl, InputLabel, Select, MenuItem, Typography } from '@mui/material'
-import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon } from '@mui/icons-material'
+import { Table, Button, Tag, Tooltip, Space, Select, Alert, Typography } from 'antd'
+import { EditOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons'
+import type { ColumnsType } from 'antd/es/table'
 import { useMatches, useDeleteMatch, useLeagues, useTeams } from '../../hooks/use-sports'
 import type { Match, MatchStatus } from '../../types/sports.types'
 import { formatDateTime } from '../../utils/date-utils'
+
+const { Text } = Typography
 
 interface MatchListProps {
   onCreateMatch: () => void
   onEditMatch: (match: Match) => void
 }
 
-const statusColors: Record<MatchStatus, 'default' | 'warning' | 'success' | 'error' | 'info'> = {
+const statusColors: Record<MatchStatus, string> = {
   scheduled: 'default',
   live: 'warning',
   finished: 'success',
   cancelled: 'error',
-  postponed: 'info',
+  postponed: 'processing',
 }
 
 export const MatchList: React.FC<MatchListProps> = ({ onCreateMatch, onEditMatch }) => {
@@ -44,92 +46,109 @@ export const MatchList: React.FC<MatchListProps> = ({ onCreateMatch, onEditMatch
     }
   }
 
-  const columns = useMemo<MRT_ColumnDef<Match>[]>(() => [
-    { accessorKey: 'id', header: 'ID', size: 60 },
+  const columns: ColumnsType<Match> = useMemo(() => [
+    { title: 'ID', dataIndex: 'id', key: 'id', width: 60 },
     {
-      id: 'matchup',
-      header: 'Match',
-      size: 250,
-      Cell: ({ row }) => (
-        <Typography variant="body2">
-          {teamsMap.get(row.original.homeTeamId) || 'TBD'} vs {teamsMap.get(row.original.awayTeamId) || 'TBD'}
-        </Typography>
+      title: 'Match',
+      key: 'matchup',
+      width: 250,
+      render: (_, match) => (
+        <Text>{teamsMap.get(match.homeTeamId) || 'TBD'} vs {teamsMap.get(match.awayTeamId) || 'TBD'}</Text>
       ),
     },
     {
-      accessorKey: 'leagueId',
-      header: 'League',
-      size: 150,
-      Cell: ({ cell }) => leaguesMap.get(cell.getValue<number>()) || '-',
+      title: 'League',
+      dataIndex: 'leagueId',
+      key: 'leagueId',
+      width: 150,
+      render: (leagueId: number) => leaguesMap.get(leagueId) || '-',
     },
     {
-      accessorKey: 'scheduledAt',
-      header: 'Scheduled',
-      size: 150,
-      Cell: ({ cell }) => formatDateTime(cell.getValue<string>()),
+      title: 'Scheduled',
+      dataIndex: 'scheduledAt',
+      key: 'scheduledAt',
+      width: 150,
+      render: (scheduledAt: string) => formatDateTime(scheduledAt),
     },
     {
-      accessorKey: 'status',
-      header: 'Status',
-      size: 100,
-      Cell: ({ cell }) => {
-        const status = cell.getValue<MatchStatus>()
-        return <Chip label={status} color={statusColors[status]} size="small" />
-      },
+      title: 'Status',
+      dataIndex: 'status',
+      key: 'status',
+      width: 100,
+      render: (status: MatchStatus) => <Tag color={statusColors[status]}>{status}</Tag>,
     },
     {
-      id: 'score',
-      header: 'Score',
-      size: 80,
-      Cell: ({ row }) => row.original.status === 'finished' || row.original.status === 'live'
-        ? `${row.original.homeScore} - ${row.original.awayScore}`
+      title: 'Score',
+      key: 'score',
+      width: 80,
+      render: (_, match) => match.status === 'finished' || match.status === 'live'
+        ? `${match.homeScore} - ${match.awayScore}`
         : '-',
     },
-  ], [leaguesMap, teamsMap])
+    {
+      title: 'Actions',
+      key: 'actions',
+      width: 120,
+      render: (_, match) => (
+        <Space>
+          <Tooltip title="Edit">
+            <Button type="primary" icon={<EditOutlined />} size="small" onClick={() => onEditMatch(match)} />
+          </Tooltip>
+          <Tooltip title="Delete">
+            <Button danger icon={<DeleteOutlined />} size="small" onClick={() => handleDelete(match)} loading={deleteMutation.isPending} />
+          </Tooltip>
+        </Space>
+      ),
+    },
+  ], [leaguesMap, teamsMap, deleteMutation.isPending])
 
-  const table = useMaterialReactTable({
-    columns,
-    data: data?.matches ?? [],
-    enableRowSelection: false,
-    manualPagination: true,
-    rowCount: data?.pagination?.total ?? 0,
-    onPaginationChange: setPagination,
-    state: { isLoading, pagination, showAlertBanner: isError },
-    muiToolbarAlertBannerProps: isError ? { color: 'error', children: `Error: ${error?.message}` } : undefined,
-    renderRowActions: ({ row }) => (
-      <Box sx={{ display: 'flex', gap: '0.5rem' }}>
-        <Tooltip title="Edit"><IconButton color="primary" onClick={() => onEditMatch(row.original)}><EditIcon /></IconButton></Tooltip>
-        <Tooltip title="Delete"><IconButton color="error" onClick={() => handleDelete(row.original)} disabled={deleteMutation.isPending}><DeleteIcon /></IconButton></Tooltip>
-      </Box>
-    ),
-    renderTopToolbarCustomActions: () => (
-      <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={onCreateMatch}>Add Match</Button>
-        <FormControl size="small" sx={{ minWidth: 150 }}>
-          <InputLabel>League</InputLabel>
-          <Select value={leagueFilter} label="League" onChange={(e) => setLeagueFilter(e.target.value as number | '')}>
-            <MenuItem value="">All Leagues</MenuItem>
-            {leaguesData?.leagues?.map(l => <MenuItem key={l.id} value={l.id}>{l.name}</MenuItem>)}
-          </Select>
-        </FormControl>
-        <FormControl size="small" sx={{ minWidth: 120 }}>
-          <InputLabel>Status</InputLabel>
-          <Select value={statusFilter} label="Status" onChange={(e) => setStatusFilter(e.target.value as MatchStatus | '')}>
-            <MenuItem value="">All</MenuItem>
-            <MenuItem value="scheduled">Scheduled</MenuItem>
-            <MenuItem value="live">Live</MenuItem>
-            <MenuItem value="finished">Finished</MenuItem>
-            <MenuItem value="cancelled">Cancelled</MenuItem>
-            <MenuItem value="postponed">Postponed</MenuItem>
-          </Select>
-        </FormControl>
-      </Box>
-    ),
-    enableRowActions: true,
-    positionActionsColumn: 'last',
-  })
+  if (isError) {
+    return <Alert message="Error" description={error?.message} type="error" showIcon />
+  }
 
-  return <MaterialReactTable table={table} />
+  return (
+    <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+      <Space wrap>
+        <Button type="primary" icon={<PlusOutlined />} onClick={onCreateMatch}>Add Match</Button>
+        <Select
+          style={{ minWidth: 150 }}
+          placeholder="League"
+          value={leagueFilter}
+          onChange={setLeagueFilter}
+          allowClear
+        >
+          <Select.Option value="">All Leagues</Select.Option>
+          {leaguesData?.leagues?.map(l => <Select.Option key={l.id} value={l.id}>{l.name}</Select.Option>)}
+        </Select>
+        <Select
+          style={{ minWidth: 120 }}
+          placeholder="Status"
+          value={statusFilter}
+          onChange={setStatusFilter}
+          allowClear
+        >
+          <Select.Option value="">All</Select.Option>
+          <Select.Option value="scheduled">Scheduled</Select.Option>
+          <Select.Option value="live">Live</Select.Option>
+          <Select.Option value="finished">Finished</Select.Option>
+          <Select.Option value="cancelled">Cancelled</Select.Option>
+          <Select.Option value="postponed">Postponed</Select.Option>
+        </Select>
+      </Space>
+      <Table
+        columns={columns}
+        dataSource={data?.matches ?? []}
+        rowKey="id"
+        loading={isLoading}
+        pagination={{
+          current: pagination.pageIndex + 1,
+          pageSize: pagination.pageSize,
+          total: data?.pagination?.total ?? 0,
+          onChange: (page, pageSize) => setPagination({ pageIndex: page - 1, pageSize }),
+        }}
+      />
+    </Space>
+  )
 }
 
 export default MatchList

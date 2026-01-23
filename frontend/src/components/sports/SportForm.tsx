@@ -1,5 +1,5 @@
 import React from 'react'
-import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Box, Grid } from '@mui/material'
+import { Modal, Form, Input, Button } from 'antd'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { sportSchema, type SportFormData, generateSlug } from '../../utils/sports-validation'
@@ -49,59 +49,58 @@ export const SportForm: React.FC<SportFormProps> = ({ open, onClose, onSubmit, s
   }
 
   return (
-    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-      <DialogTitle>{isEditing ? 'Edit Sport' : 'Create Sport'}</DialogTitle>
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <DialogContent>
-          <Box sx={{ mt: 1 }}>
-            <Grid container spacing={2}>
-              <Grid item xs={12}>
-                <Controller
-                  name="name"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField {...field} label="Name" fullWidth required error={!!errors.name} helperText={errors.name?.message} disabled={loading} />
-                  )}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <Controller
-                  name="slug"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField {...field} label="Slug" fullWidth error={!!errors.slug} helperText={errors.slug?.message || 'Auto-generated from name'} disabled={loading} onChange={(e) => { slugTouched.current = true; field.onChange(e) }} />
-                  )}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <Controller
-                  name="description"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField {...field} label="Description" fullWidth multiline rows={3} error={!!errors.description} helperText={errors.description?.message} disabled={loading} />
-                  )}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <Controller
-                  name="iconUrl"
-                  control={control}
-                  render={({ field }) => (
-                    <TextField {...field} label="Icon URL" fullWidth error={!!errors.iconUrl} helperText={errors.iconUrl?.message} disabled={loading} />
-                  )}
-                />
-              </Grid>
-            </Grid>
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleClose} disabled={loading}>Cancel</Button>
-          <Button type="submit" variant="contained" disabled={loading || !isValid}>
-            {loading ? 'Saving...' : isEditing ? 'Update' : 'Create'}
-          </Button>
-        </DialogActions>
-      </form>
-    </Dialog>
+    <Modal
+      open={open}
+      title={isEditing ? 'Edit Sport' : 'Create Sport'}
+      onCancel={handleClose}
+      footer={[
+        <Button key="cancel" onClick={handleClose} disabled={loading}>
+          Cancel
+        </Button>,
+        <Button key="submit" type="primary" onClick={handleSubmit(onSubmit)} disabled={loading || !isValid} loading={loading}>
+          {isEditing ? 'Update' : 'Create'}
+        </Button>,
+      ]}
+    >
+      <Form layout="vertical">
+        <Controller
+          name="name"
+          control={control}
+          render={({ field }) => (
+            <Form.Item label="Name" required validateStatus={errors.name ? 'error' : ''} help={errors.name?.message}>
+              <Input {...field} disabled={loading} />
+            </Form.Item>
+          )}
+        />
+        <Controller
+          name="slug"
+          control={control}
+          render={({ field }) => (
+            <Form.Item label="Slug" validateStatus={errors.slug ? 'error' : ''} help={errors.slug?.message || 'Auto-generated from name'}>
+              <Input {...field} disabled={loading} onChange={(e) => { slugTouched.current = true; field.onChange(e) }} />
+            </Form.Item>
+          )}
+        />
+        <Controller
+          name="description"
+          control={control}
+          render={({ field }) => (
+            <Form.Item label="Description" validateStatus={errors.description ? 'error' : ''} help={errors.description?.message}>
+              <Input.TextArea {...field} rows={3} disabled={loading} />
+            </Form.Item>
+          )}
+        />
+        <Controller
+          name="iconUrl"
+          control={control}
+          render={({ field }) => (
+            <Form.Item label="Icon URL" validateStatus={errors.iconUrl ? 'error' : ''} help={errors.iconUrl?.message}>
+              <Input {...field} disabled={loading} />
+            </Form.Item>
+          )}
+        />
+      </Form>
+    </Modal>
   )
 }
 

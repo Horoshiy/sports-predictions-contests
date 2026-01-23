@@ -1,18 +1,6 @@
 import React, { useState, useEffect } from 'react'
-import {
-  Box,
-  Typography,
-  Container,
-  Tabs,
-  Tab,
-  CircularProgress,
-  Alert,
-} from '@mui/material'
-import {
-  Person as PersonIcon,
-  Security as SecurityIcon,
-  TrendingUp as ProgressIcon,
-} from '@mui/icons-material'
+import { Space, Typography, Tabs, Spin, Alert } from 'antd'
+import { UserOutlined, SafetyOutlined, RiseOutlined } from '@ant-design/icons'
 import { useAuth } from '../contexts/AuthContext'
 import { useToast } from '../contexts/ToastContext'
 import { ProfileForm } from '../components/profile/ProfileForm'
@@ -25,37 +13,23 @@ import type {
   UserPreferences,
   ProfileFormData,
   PreferencesFormData,
+  UpdateProfileRequest,
+  UpdatePreferencesRequest,
 } from '../types/profile.types'
 
-// Use the renamed interface
+const { Title } = Typography
+
 interface ProfileCompletionData {
   percentage: number
   missingFields: string[]
   suggestions: string[]
 }
 
-interface TabPanelProps {
-  children?: React.ReactNode
-  index: number
-  value: number
-}
-
-const TabPanel: React.FC<TabPanelProps> = ({ children, value, index }) => (
-  <div
-    role="tabpanel"
-    hidden={value !== index}
-    id={`profile-tabpanel-${index}`}
-    aria-labelledby={`profile-tab-${index}`}
-  >
-    {value === index && <Box sx={{ py: 3 }}>{children}</Box>}
-  </div>
-)
-
 const ProfilePage: React.FC = () => {
   const { user } = useAuth()
   const { showToast } = useToast()
   
-  const [activeTab, setActiveTab] = useState(0)
+  const [activeTab, setActiveTab] = useState('profile')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   
@@ -65,7 +39,6 @@ const ProfilePage: React.FC = () => {
   
   const [error, setError] = useState<string | null>(null)
 
-  // Load profile data on component mount
   useEffect(() => {
     loadProfileData()
   }, [])
@@ -78,221 +51,130 @@ const ProfilePage: React.FC = () => {
       setError(null)
 
       const [profileData, preferencesData, completionData] = await Promise.all([
-        profileService.getProfile().catch(() => profileService.getDefaultProfile()),
-        profileService.getPreferences().catch(() => profileService.getDefaultPreferences()),
-        profileService.getProfileCompletion().catch(() => ({ percentage: 0, missingFields: [], suggestions: [] })),
+        profileService.getProfile(),
+        profileService.getPreferences(),
+        profileService.getProfileCompletion(),
       ])
 
-      setProfile(profileData as Profile)
-      setPreferences(preferencesData as UserPreferences)
+      setProfile(profileData)
+      setPreferences(preferencesData)
       setCompletion(completionData)
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to load profile data'
-      setError(errorMessage)
-      showToast(errorMessage, 'error')
+    } catch (err: any) {
+      setError(err.message || 'Failed to load profile data')
     } finally {
       setLoading(false)
     }
   }
 
-  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
-    setActiveTab(newValue)
-  }
+  const handleProfileUpdate = async (data: ProfileFormData) => {
+    if (!user) return
 
-  const handleProfileUpdate = async (profileData: ProfileFormData) => {
     try {
       setSaving(true)
-      const updatedProfile = await profileService.updateProfile(profileData)
-      setProfile(updatedProfile)
-      
-      // Refresh completion data
-      const completionData = await profileService.getProfileCompletion()
-      setCompletion(completionData)
-      
+      await profileService.updateProfile(data)
       showToast('Profile updated successfully', 'success')
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to update profile'
-      showToast(errorMessage, 'error')
+      await loadProfileData()
+    } catch (err: any) {
+      showToast(err.message || 'Failed to update profile', 'error')
     } finally {
       setSaving(false)
     }
   }
 
   const handleAvatarUpdate = async (avatarUrl: string) => {
+    if (!user) return
+
     try {
-      // Update profile with new avatar URL
-      if (profile) {
-        const updatedProfileData: ProfileFormData = {
-          bio: profile.bio,
-          location: profile.location,
-          website: profile.website,
-          twitterUrl: profile.twitterUrl,
-          linkedinUrl: profile.linkedinUrl,
-          githubUrl: profile.githubUrl,
-          profileVisibility: profile.profileVisibility,
-        }
-        
-        const updatedProfile = await profileService.updateProfile(updatedProfileData)
-        setProfile({ ...updatedProfile, avatarUrl })
-        
-        // Refresh completion data
-        const completionData = await profileService.getProfileCompletion()
-        setCompletion(completionData)
-        
-        showToast('Avatar updated successfully', 'success')
-      }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to update avatar'
-      showToast(errorMessage, 'error')
+      // Avatar is already uploaded via uploadAvatar service call
+      // Just reload profile data to get the updated avatar
+      await loadProfileData()
+      showToast('Avatar updated successfully', 'success')
+    } catch (err: any) {
+      showToast(err.message || 'Failed to update avatar', 'error')
     }
   }
 
-  const handlePreferencesUpdate = async (preferencesData: Partial<PreferencesFormData>) => {
-    try {
-      const fullPreferencesData: PreferencesFormData = {
-        emailNotifications: preferencesData.emailNotifications ?? true,
-        pushNotifications: preferencesData.pushNotifications ?? true,
-        contestNotifications: preferencesData.contestNotifications ?? true,
-        predictionReminders: preferencesData.predictionReminders ?? true,
-        weeklyDigest: preferencesData.weeklyDigest ?? true,
-        theme: preferencesData.theme ?? 'light',
-        language: preferencesData.language ?? 'en',
-        timezone: preferencesData.timezone ?? 'UTC',
-      }
-      
-      const updatedPreferences = await profileService.updatePreferences(fullPreferencesData)
-      setPreferences(updatedPreferences)
-      
-      showToast('Preferences updated successfully', 'success')
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to update preferences'
-      showToast(errorMessage, 'error')
-    }
-  }
+  const handlePreferencesUpdate = async (data: Partial<PreferencesFormData>) => {
+    if (!user) return
 
-  const handleFieldClick = (field: string) => {
-    // Switch to appropriate tab based on field
-    switch (field) {
-      case 'avatar':
-        setActiveTab(0) // Profile tab
-        break
-      case 'bio':
-      case 'location':
-      case 'website':
-      case 'twitter':
-      case 'linkedin':
-      case 'github':
-        setActiveTab(0) // Profile tab
-        break
-      default:
-        setActiveTab(0) // Default to profile tab
+    try {
+      // Merge with existing preferences to ensure all required fields are present
+      const fullData: PreferencesFormData = {
+        ...preferences,
+        ...data,
+      } as PreferencesFormData
+
+      await profileService.updatePreferences(fullData)
+      setPreferences(prev => ({ ...prev, ...data } as UserPreferences))
+    } catch (err: any) {
+      showToast(err.message || 'Failed to update preferences', 'error')
     }
   }
 
   if (loading) {
     return (
-      <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-          <CircularProgress size={60} />
-        </Box>
-      </Container>
+      <div style={{ textAlign: 'center', padding: '64px 0' }}>
+        <Spin size="large" />
+      </div>
     )
   }
 
   if (error) {
-    return (
-      <Container maxWidth="lg" sx={{ py: 4 }}>
-        <Alert severity="error" sx={{ mb: 3 }}>
-          {error}
-        </Alert>
-      </Container>
-    )
+    return <Alert message="Error" description={error} type="error" showIcon />
   }
 
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Typography variant="h4" component="h1" gutterBottom>
-        Profile Management
-      </Typography>
-      
-      <Typography variant="body1" color="text.secondary" paragraph>
-        Manage your profile information, privacy settings, and preferences
-      </Typography>
+    <Space direction="vertical" size="large" style={{ width: '100%', padding: '24px' }}>
+      <Title level={2}>Profile Settings</Title>
 
-      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-        <Tabs value={activeTab} onChange={handleTabChange} aria-label="profile tabs">
-          <Tab
-            icon={<PersonIcon />}
-            label="Profile"
-            id="profile-tab-0"
-            aria-controls="profile-tabpanel-0"
-          />
-          <Tab
-            icon={<SecurityIcon />}
-            label="Privacy & Notifications"
-            id="profile-tab-1"
-            aria-controls="profile-tabpanel-1"
-          />
-          <Tab
-            icon={<ProgressIcon />}
-            label="Completion"
-            id="profile-tab-2"
-            aria-controls="profile-tabpanel-2"
-          />
-        </Tabs>
-      </Box>
-
-      <TabPanel value={activeTab} index={0}>
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          {/* Avatar Upload */}
-          <AvatarUpload
-            currentAvatarUrl={profile?.avatarUrl}
-            onAvatarUpdate={handleAvatarUpdate}
-          />
-          
-          {/* Profile Form */}
-          <ProfileForm
-            initialData={profile ? {
-              bio: profile.bio,
-              location: profile.location,
-              website: profile.website,
-              twitterUrl: profile.twitterUrl,
-              linkedinUrl: profile.linkedinUrl,
-              githubUrl: profile.githubUrl,
-              profileVisibility: profile.profileVisibility,
-            } : undefined}
-            onSubmit={handleProfileUpdate}
-            loading={saving}
-          />
-        </Box>
-      </TabPanel>
-
-      <TabPanel value={activeTab} index={1}>
-        <PrivacySettings
-          initialData={preferences ? {
-            emailNotifications: preferences.emailNotifications,
-            pushNotifications: preferences.pushNotifications,
-            contestNotifications: preferences.contestNotifications,
-            predictionReminders: preferences.predictionReminders,
-            weeklyDigest: preferences.weeklyDigest,
-            theme: preferences.theme,
-            language: preferences.language,
-            timezone: preferences.timezone,
-          } : undefined}
-          onUpdate={handlePreferencesUpdate}
-          loading={saving}
-        />
-      </TabPanel>
-
-      <TabPanel value={activeTab} index={2}>
-        {completion && (
-          <ProfileCompletion
-            completion={completion}
-            onFieldClick={handleFieldClick}
-          />
-        )}
-      </TabPanel>
-    </Container>
+      <Tabs
+        activeKey={activeTab}
+        onChange={setActiveTab}
+        items={[
+          {
+            key: 'profile',
+            label: <span><UserOutlined /> Profile</span>,
+            children: (
+              <Space direction="vertical" size="large" style={{ width: '100%' }}>
+                <AvatarUpload
+                  currentAvatarUrl={profile?.avatarUrl}
+                  onAvatarUpdate={handleAvatarUpdate}
+                />
+                <ProfileForm
+                  initialData={profile || undefined}
+                  onSubmit={handleProfileUpdate}
+                  loading={saving}
+                />
+              </Space>
+            ),
+          },
+          {
+            key: 'privacy',
+            label: <span><SafetyOutlined /> Privacy & Notifications</span>,
+            children: (
+              <PrivacySettings
+                initialData={preferences || undefined}
+                onUpdate={handlePreferencesUpdate}
+                loading={saving}
+              />
+            ),
+          },
+          {
+            key: 'completion',
+            label: <span><RiseOutlined /> Profile Completion</span>,
+            children: completion && (
+              <ProfileCompletion
+                completion={completion}
+                onFieldClick={(field) => {
+                  setActiveTab('profile')
+                  showToast(`Please complete the ${field} field`, 'info')
+                }}
+              />
+            ),
+          },
+        ]}
+      />
+    </Space>
   )
 }
 

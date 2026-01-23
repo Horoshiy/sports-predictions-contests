@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Box, Typography, Paper, Tabs, Tab } from '@mui/material'
+import { Space, Typography, Tabs } from 'antd'
 import SportList from '../components/sports/SportList'
 import SportForm from '../components/sports/SportForm'
 import LeagueList from '../components/sports/LeagueList'
@@ -15,13 +15,16 @@ import {
   useCreateMatch, useUpdateMatch,
 } from '../hooks/use-sports'
 import { generateSlug } from '../utils/sports-validation'
-import type { Sport, League, Team, Match } from '../types/sports.types'
+import { showSuccess, showError } from '../utils/notification'
+import type { Sport, League, Team, Match, CreateSportRequest, UpdateSportRequest, CreateLeagueRequest, UpdateLeagueRequest, CreateTeamRequest, UpdateTeamRequest, CreateMatchRequest, UpdateMatchRequest } from '../types/sports.types'
 import type { SportFormData, LeagueFormData, TeamFormData, MatchFormData } from '../utils/sports-validation'
+
+const { Title } = Typography
 
 type EntityType = 'sport' | 'league' | 'team' | 'match'
 
 export const SportsPage: React.FC = () => {
-  const [tabValue, setTabValue] = useState(0)
+  const [activeTab, setActiveTab] = useState('sports')
   const [formOpen, setFormOpen] = useState(false)
   const [entityType, setEntityType] = useState<EntityType>('sport')
   const [selectedSport, setSelectedSport] = useState<Sport | null>(null)
@@ -40,11 +43,30 @@ export const SportsPage: React.FC = () => {
 
   const openForm = (type: EntityType, entity?: Sport | League | Team | Match) => {
     setEntityType(type)
-    if (type === 'sport') setSelectedSport(entity as Sport || null)
-    else if (type === 'league') setSelectedLeague(entity as League || null)
-    else if (type === 'team') setSelectedTeam(entity as Team || null)
-    else if (type === 'match') setSelectedMatch(entity as Match || null)
     setFormOpen(true)
+    
+    if (!entity) {
+      setSelectedSport(null)
+      setSelectedLeague(null)
+      setSelectedTeam(null)
+      setSelectedMatch(null)
+      return
+    }
+    
+    switch (type) {
+      case 'sport':
+        setSelectedSport(entity as Sport)
+        break
+      case 'league':
+        setSelectedLeague(entity as League)
+        break
+      case 'team':
+        setSelectedTeam(entity as Team)
+        break
+      case 'match':
+        setSelectedMatch(entity as Match)
+        break
+    }
   }
 
   const closeForm = () => {
@@ -59,23 +81,29 @@ export const SportsPage: React.FC = () => {
     try {
       const slug = data.slug || generateSlug(data.name)
       if (selectedSport) {
-        await updateSport.mutateAsync({ 
-          id: selectedSport.id, 
-          name: data.name, 
-          slug: slug, 
-          description: data.description, 
-          isActive: selectedSport.isActive 
-        })
+        const request: UpdateSportRequest = {
+          id: selectedSport.id,
+          name: data.name,
+          slug,
+          description: data.description,
+          iconUrl: data.iconUrl,
+          isActive: true,
+        }
+        await updateSport.mutateAsync(request)
+        showSuccess('Sport updated successfully')
       } else {
-        await createSport.mutateAsync({ 
-          name: data.name, 
-          slug: slug, 
-          description: data.description 
-        })
+        const request: CreateSportRequest = {
+          name: data.name,
+          slug,
+          description: data.description,
+          iconUrl: data.iconUrl,
+        }
+        await createSport.mutateAsync(request)
+        showSuccess('Sport created successfully')
       }
       closeForm()
-    } catch {
-      // Error already shown via toast in hook
+    } catch (error: any) {
+      showError(error?.message || 'Failed to save sport')
     }
   }
 
@@ -83,25 +111,31 @@ export const SportsPage: React.FC = () => {
     try {
       const slug = data.slug || generateSlug(data.name)
       if (selectedLeague) {
-        await updateLeague.mutateAsync({ 
-          id: selectedLeague.id, 
-          name: data.name, 
-          slug: slug, 
-          sportId: data.sportId, 
-          country: data.country, 
-          isActive: selectedLeague.isActive 
-        })
+        const request: UpdateLeagueRequest = {
+          id: selectedLeague.id,
+          name: data.name,
+          slug,
+          sportId: data.sportId,
+          country: data.country,
+          season: data.season,
+          isActive: true,
+        }
+        await updateLeague.mutateAsync(request)
+        showSuccess('League updated successfully')
       } else {
-        await createLeague.mutateAsync({ 
-          name: data.name, 
-          slug: slug, 
-          sportId: data.sportId, 
-          country: data.country 
-        })
+        const request: CreateLeagueRequest = {
+          name: data.name,
+          slug,
+          sportId: data.sportId,
+          country: data.country,
+          season: data.season,
+        }
+        await createLeague.mutateAsync(request)
+        showSuccess('League created successfully')
       }
       closeForm()
-    } catch {
-      // Error already shown via toast in hook
+    } catch (error: any) {
+      showError(error?.message || 'Failed to save league')
     }
   }
 
@@ -109,85 +143,163 @@ export const SportsPage: React.FC = () => {
     try {
       const slug = data.slug || generateSlug(data.name)
       if (selectedTeam) {
-        await updateTeam.mutateAsync({ 
-          id: selectedTeam.id, 
-          name: data.name, 
-          slug: slug, 
-          leagueId: data.leagueId, 
-          country: data.country, 
-          logoUrl: data.logoUrl, 
-          isActive: selectedTeam.isActive 
-        })
+        const request: UpdateTeamRequest = {
+          id: selectedTeam.id,
+          name: data.name,
+          slug,
+          sportId: data.sportId,
+          country: data.country,
+          shortName: data.shortName,
+          logoUrl: data.logoUrl,
+          isActive: true,
+        }
+        await updateTeam.mutateAsync(request)
+        showSuccess('Team updated successfully')
       } else {
-        await createTeam.mutateAsync({ 
-          name: data.name, 
-          slug: slug, 
-          leagueId: data.leagueId, 
-          country: data.country, 
-          logoUrl: data.logoUrl 
-        })
+        const request: CreateTeamRequest = {
+          name: data.name,
+          slug,
+          sportId: data.sportId,
+          country: data.country,
+          shortName: data.shortName,
+          logoUrl: data.logoUrl,
+        }
+        await createTeam.mutateAsync(request)
+        showSuccess('Team created successfully')
       }
       closeForm()
-    } catch {
-      // Error already shown via toast in hook
+    } catch (error: any) {
+      showError(error?.message || 'Failed to save team')
     }
   }
 
   const handleMatchSubmit = async (data: MatchFormData) => {
     try {
-      const scheduledAt = data.scheduledAt.toISOString()
+      const scheduledAt = data.scheduledAt instanceof Date 
+        ? data.scheduledAt.toISOString() 
+        : data.scheduledAt
+
       if (selectedMatch) {
-        await updateMatch.mutateAsync({
+        const request: UpdateMatchRequest = {
           id: selectedMatch.id,
           leagueId: data.leagueId,
           homeTeamId: data.homeTeamId,
           awayTeamId: data.awayTeamId,
           scheduledAt,
-          status: data.status || selectedMatch.status,
+          status: data.status,
           homeScore: data.homeScore,
           awayScore: data.awayScore,
           resultData: data.resultData,
-        })
+        }
+        await updateMatch.mutateAsync(request)
+        showSuccess('Match updated successfully')
       } else {
-        await createMatch.mutateAsync({ leagueId: data.leagueId, homeTeamId: data.homeTeamId, awayTeamId: data.awayTeamId, scheduledAt })
+        const request: CreateMatchRequest = {
+          leagueId: data.leagueId,
+          homeTeamId: data.homeTeamId,
+          awayTeamId: data.awayTeamId,
+          scheduledAt,
+        }
+        await createMatch.mutateAsync(request)
+        showSuccess('Match created successfully')
       }
       closeForm()
-    } catch {
-      // Error already shown via toast in hook
+    } catch (error: any) {
+      showError(error?.message || 'Failed to save match')
     }
   }
 
-  const isLoading = createSport.isPending || updateSport.isPending || createLeague.isPending || updateLeague.isPending ||
-    createTeam.isPending || updateTeam.isPending || createMatch.isPending || updateMatch.isPending
-
   return (
-    <Box>
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" component="h1" gutterBottom>Sports Management</Typography>
-        <Typography variant="body1" color="text.secondary">Manage sports, leagues, teams, and matches</Typography>
-      </Box>
+    <Space direction="vertical" size="large" style={{ width: '100%', padding: '24px' }}>
+      <Title level={2}>Sports Management</Title>
 
-      <Paper sx={{ mb: 2 }}>
-        <Tabs value={tabValue} onChange={(_, v) => setTabValue(v)}>
-          <Tab label="Sports" />
-          <Tab label="Leagues" />
-          <Tab label="Teams" />
-          <Tab label="Matches" />
-        </Tabs>
-      </Paper>
+      <Tabs
+        activeKey={activeTab}
+        onChange={setActiveTab}
+        items={[
+          {
+            key: 'sports',
+            label: 'Sports',
+            children: (
+              <SportList
+                onCreateSport={() => openForm('sport')}
+                onEditSport={(sport) => openForm('sport', sport)}
+              />
+            ),
+          },
+          {
+            key: 'leagues',
+            label: 'Leagues',
+            children: (
+              <LeagueList
+                onCreateLeague={() => openForm('league')}
+                onEditLeague={(league) => openForm('league', league)}
+              />
+            ),
+          },
+          {
+            key: 'teams',
+            label: 'Teams',
+            children: (
+              <TeamList
+                onCreateTeam={() => openForm('team')}
+                onEditTeam={(team) => openForm('team', team)}
+              />
+            ),
+          },
+          {
+            key: 'matches',
+            label: 'Matches',
+            children: (
+              <MatchList
+                onCreateMatch={() => openForm('match')}
+                onEditMatch={(match) => openForm('match', match)}
+              />
+            ),
+          },
+        ]}
+      />
 
-      <Paper sx={{ p: 0, overflow: 'hidden' }}>
-        {tabValue === 0 && <SportList onCreateSport={() => openForm('sport')} onEditSport={(s) => openForm('sport', s)} />}
-        {tabValue === 1 && <LeagueList onCreateLeague={() => openForm('league')} onEditLeague={(l) => openForm('league', l)} />}
-        {tabValue === 2 && <TeamList onCreateTeam={() => openForm('team')} onEditTeam={(t) => openForm('team', t)} />}
-        {tabValue === 3 && <MatchList onCreateMatch={() => openForm('match')} onEditMatch={(m) => openForm('match', m)} />}
-      </Paper>
+      {entityType === 'sport' && (
+        <SportForm
+          open={formOpen}
+          onClose={closeForm}
+          onSubmit={handleSportSubmit}
+          sport={selectedSport}
+          loading={createSport.isPending || updateSport.isPending}
+        />
+      )}
 
-      <SportForm open={formOpen && entityType === 'sport'} onClose={closeForm} onSubmit={handleSportSubmit} sport={selectedSport} loading={isLoading} />
-      <LeagueForm open={formOpen && entityType === 'league'} onClose={closeForm} onSubmit={handleLeagueSubmit} league={selectedLeague} loading={isLoading} />
-      <TeamForm open={formOpen && entityType === 'team'} onClose={closeForm} onSubmit={handleTeamSubmit} team={selectedTeam} loading={isLoading} />
-      <MatchForm open={formOpen && entityType === 'match'} onClose={closeForm} onSubmit={handleMatchSubmit} match={selectedMatch} loading={isLoading} />
-    </Box>
+      {entityType === 'league' && (
+        <LeagueForm
+          open={formOpen}
+          onClose={closeForm}
+          onSubmit={handleLeagueSubmit}
+          league={selectedLeague}
+          loading={createLeague.isPending || updateLeague.isPending}
+        />
+      )}
+
+      {entityType === 'team' && (
+        <TeamForm
+          open={formOpen}
+          onClose={closeForm}
+          onSubmit={handleTeamSubmit}
+          team={selectedTeam}
+          loading={createTeam.isPending || updateTeam.isPending}
+        />
+      )}
+
+      {entityType === 'match' && (
+        <MatchForm
+          open={formOpen}
+          onClose={closeForm}
+          onSubmit={handleMatchSubmit}
+          match={selectedMatch}
+          loading={createMatch.isPending || updateMatch.isPending}
+        />
+      )}
+    </Space>
   )
 }
 
