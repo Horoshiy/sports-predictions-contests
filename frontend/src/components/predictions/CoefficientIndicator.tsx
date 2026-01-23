@@ -1,6 +1,8 @@
 import React from 'react'
-import { Box, Chip, Tooltip, Typography } from '@mui/material'
-import { TrendingUp, AccessTime } from '@mui/icons-material'
+import { Tag, Tooltip, Space, Typography } from 'antd'
+import { RiseOutlined, ClockCircleOutlined } from '@ant-design/icons'
+
+const { Text } = Typography
 
 interface CoefficientIndicatorProps {
   coefficient: number
@@ -9,18 +11,11 @@ interface CoefficientIndicatorProps {
   compact?: boolean
 }
 
-const getChipColor = (coefficient: number): 'success' | 'info' | 'warning' | 'default' => {
+const getTagColor = (coefficient: number): string => {
   if (coefficient >= 2.0) return 'success'
-  if (coefficient >= 1.5) return 'info'
+  if (coefficient >= 1.5) return 'blue'
   if (coefficient >= 1.25) return 'warning'
   return 'default'
-}
-
-const getIconColor = (coefficient: number): 'success' | 'info' | 'warning' | 'inherit' => {
-  if (coefficient >= 2.0) return 'success'
-  if (coefficient >= 1.5) return 'info'
-  if (coefficient >= 1.25) return 'warning'
-  return 'inherit'
 }
 
 export const CoefficientIndicator: React.FC<CoefficientIndicatorProps> = ({
@@ -38,33 +33,29 @@ export const CoefficientIndicator: React.FC<CoefficientIndicatorProps> = ({
   if (compact) {
     return (
       <Tooltip title={`${tier} - ${coefficient}x points (${formatTimeRemaining(hoursUntilEvent)} left)`}>
-        <Chip
-          icon={<TrendingUp />}
-          label={`${coefficient}x`}
-          size="small"
-          color={getChipColor(coefficient)}
-          variant="outlined"
-        />
+        <Tag icon={<RiseOutlined />} color={getTagColor(coefficient)}>
+          {coefficient}x
+        </Tag>
       </Tooltip>
     )
   }
 
   return (
-    <Box sx={{ p: 1.5, bgcolor: 'action.hover', borderRadius: 1 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-        <TrendingUp color={getIconColor(coefficient)} fontSize="small" />
-        <Typography variant="subtitle2" fontWeight="bold">
-          {coefficient}x Points
-        </Typography>
-        <Chip label={tier} size="small" color={getChipColor(coefficient)} />
-      </Box>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-        <AccessTime fontSize="small" color="action" />
-        <Typography variant="caption" color="text.secondary">
-          {formatTimeRemaining(hoursUntilEvent)} until coefficient drops
-        </Typography>
-      </Box>
-    </Box>
+    <div style={{ padding: 12, backgroundColor: '#f5f5f5', borderRadius: 4 }}>
+      <Space direction="vertical" size={4} style={{ width: '100%' }}>
+        <Space>
+          <RiseOutlined style={{ color: getTagColor(coefficient) === 'success' ? '#52c41a' : undefined }} />
+          <Text strong>{coefficient}x Points</Text>
+          <Tag color={getTagColor(coefficient)}>{tier}</Tag>
+        </Space>
+        <Space size={4}>
+          <ClockCircleOutlined style={{ fontSize: 12 }} />
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            {formatTimeRemaining(hoursUntilEvent)} until coefficient drops
+          </Text>
+        </Space>
+      </Space>
+    </div>
   )
 }
 

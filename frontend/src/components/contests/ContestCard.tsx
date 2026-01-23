@@ -1,23 +1,10 @@
 import React from 'react'
-import {
-  Card,
-  CardContent,
-  CardActions,
-  Typography,
-  Button,
-  Chip,
-  Box,
-  IconButton,
-  Tooltip,
-} from '@mui/material'
-import {
-  Edit as EditIcon,
-  Delete as DeleteIcon,
-  People as PeopleIcon,
-  Sports as SportsIcon,
-} from '@mui/icons-material'
+import { Card, Button, Tag, Space, Typography, Tooltip } from 'antd'
+import { EditOutlined, DeleteOutlined, TeamOutlined, TrophyOutlined } from '@ant-design/icons'
 import type { Contest } from '../../types/contest.types'
 import { formatDate, formatRelativeTime, getContestStatusByDate } from '../../utils/date-utils'
+
+const { Text, Title } = Typography
 
 interface ContestCardProps {
   contest: Contest
@@ -37,7 +24,7 @@ const getStatusColor = (status: string) => {
     case 'active':
       return 'success'
     case 'completed':
-      return 'info'
+      return 'blue'
     case 'cancelled':
       return 'error'
     default:
@@ -52,7 +39,7 @@ const getStatusByDateColor = (status: 'upcoming' | 'active' | 'completed') => {
     case 'active':
       return 'success'
     case 'completed':
-      return 'info'
+      return 'blue'
     default:
       return 'default'
   }
@@ -69,129 +56,98 @@ export const ContestCard: React.FC<ContestCardProps> = ({
   canEdit = false,
 }) => {
   const dateStatus = getContestStatusByDate(contest.startDate, contest.endDate)
-  // const isActive = contest.status === 'active' && dateStatus === 'active'
   const canJoin = contest.status === 'active' && !isParticipant && 
     (contest.maxParticipants === 0 || contest.currentParticipants < contest.maxParticipants)
 
-  return (
-    <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <CardContent sx={{ flexGrow: 1 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-          <Typography variant="h6" component="h2" sx={{ flexGrow: 1, mr: 1 }}>
-            {contest.title}
-          </Typography>
-          <Box sx={{ display: 'flex', gap: 0.5 }}>
-            <Chip
-              label={contest.status}
-              color={getStatusColor(contest.status)}
-              size="small"
-            />
-            <Chip
-              label={dateStatus}
-              color={getStatusByDateColor(dateStatus)}
-              size="small"
-            />
-          </Box>
-        </Box>
+  const actions = []
+  
+  if (canJoin && onJoin) {
+    actions.push(
+      <Button type="primary" size="small" onClick={() => onJoin(contest)}>
+        Join Contest
+      </Button>
+    )
+  }
+  
+  if (isParticipant && onLeave) {
+    actions.push(
+      <Button danger size="small" onClick={() => onLeave(contest)}>
+        Leave Contest
+      </Button>
+    )
+  }
+  
+  if (onViewParticipants) {
+    actions.push(
+      <Button type="link" size="small" icon={<TeamOutlined />} onClick={() => onViewParticipants(contest)}>
+        View Participants
+      </Button>
+    )
+  }
 
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-          <SportsIcon sx={{ mr: 1, color: 'text.secondary' }} />
-          <Typography variant="body2" color="text.secondary">
-            {contest.sportType}
-          </Typography>
-        </Box>
+  const extra = canEdit ? (
+    <Space>
+      {onEdit && (
+        <Tooltip title="Edit Contest">
+          <Button type="text" size="small" icon={<EditOutlined />} onClick={() => onEdit(contest)} />
+        </Tooltip>
+      )}
+      {onDelete && (
+        <Tooltip title="Delete Contest">
+          <Button type="text" size="small" danger icon={<DeleteOutlined />} onClick={() => onDelete(contest)} />
+        </Tooltip>
+      )}
+    </Space>
+  ) : undefined
+
+  return (
+    <Card
+      title={
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Title level={5} style={{ margin: 0 }}>{contest.title}</Title>
+          <Space size={4}>
+            <Tag color={getStatusColor(contest.status)}>{contest.status}</Tag>
+            <Tag color={getStatusByDateColor(dateStatus)}>{dateStatus}</Tag>
+          </Space>
+        </div>
+      }
+      extra={extra}
+      actions={actions.length > 0 ? actions : undefined}
+      style={{ height: '100%', display: 'flex', flexDirection: 'column' }}
+      bodyStyle={{ flexGrow: 1 }}
+    >
+      <Space direction="vertical" size="small" style={{ width: '100%' }}>
+        <Space>
+          <TrophyOutlined style={{ color: '#8c8c8c' }} />
+          <Text type="secondary">{contest.sportType}</Text>
+        </Space>
 
         {contest.description && (
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          <Text type="secondary">
             {contest.description.length > 100
               ? `${contest.description.substring(0, 100)}...`
               : contest.description}
-          </Typography>
+          </Text>
         )}
 
-        <Box sx={{ mb: 2 }}>
-          <Typography variant="body2" color="text.secondary">
-            <strong>Start:</strong> {formatDate(contest.startDate)}
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            <strong>End:</strong> {formatDate(contest.endDate)}
-          </Typography>
-        </Box>
+        <div>
+          <Text type="secondary"><strong>Start:</strong> {formatDate(contest.startDate)}</Text>
+          <br />
+          <Text type="secondary"><strong>End:</strong> {formatDate(contest.endDate)}</Text>
+        </div>
 
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-          <PeopleIcon sx={{ mr: 1, color: 'text.secondary' }} />
-          <Typography variant="body2" color="text.secondary">
+        <Space>
+          <TeamOutlined style={{ color: '#8c8c8c' }} />
+          <Text type="secondary">
             {contest.currentParticipants}
             {contest.maxParticipants > 0 && ` / ${contest.maxParticipants}`} participants
-          </Typography>
-        </Box>
+          </Text>
+        </Space>
 
-        <Typography variant="caption" color="text.secondary">
+        <Text type="secondary" style={{ fontSize: '12px' }}>
           Created {formatRelativeTime(contest.createdAt)}
-        </Typography>
-      </CardContent>
-
-      <CardActions sx={{ justifyContent: 'space-between', px: 2, pb: 2 }}>
-        <Box>
-          {canJoin && onJoin && (
-            <Button
-              size="small"
-              variant="contained"
-              color="primary"
-              onClick={() => onJoin(contest)}
-            >
-              Join Contest
-            </Button>
-          )}
-          {isParticipant && onLeave && (
-            <Button
-              size="small"
-              variant="outlined"
-              color="secondary"
-              onClick={() => onLeave(contest)}
-            >
-              Leave Contest
-            </Button>
-          )}
-          {onViewParticipants && (
-            <Button
-              size="small"
-              variant="text"
-              startIcon={<PeopleIcon />}
-              onClick={() => onViewParticipants(contest)}
-            >
-              View Participants
-            </Button>
-          )}
-        </Box>
-
-        {canEdit && (
-          <Box>
-            {onEdit && (
-              <Tooltip title="Edit Contest">
-                <IconButton
-                  size="small"
-                  onClick={() => onEdit(contest)}
-                  color="primary"
-                >
-                  <EditIcon />
-                </IconButton>
-              </Tooltip>
-            )}
-            {onDelete && (
-              <Tooltip title="Delete Contest">
-                <IconButton
-                  size="small"
-                  onClick={() => onDelete(contest)}
-                  color="error"
-                >
-                  <DeleteIcon />
-                </IconButton>
-              </Tooltip>
-            )}
-          </Box>
-        )}
-      </CardActions>
+        </Text>
+      </Space>
     </Card>
   )
 }

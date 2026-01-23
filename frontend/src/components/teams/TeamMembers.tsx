@@ -1,10 +1,12 @@
 import React from 'react'
-import { Box, List, ListItem, ListItemText, ListItemSecondaryAction, IconButton, Chip, Typography, CircularProgress } from '@mui/material'
-import { Delete as DeleteIcon } from '@mui/icons-material'
+import { List, Tag, Button, Spin, Typography, Popconfirm } from 'antd'
+import { DeleteOutlined, CrownOutlined } from '@ant-design/icons'
 import { useTeamMembers, useRemoveMember } from '../../hooks/use-teams'
 import { useAuth } from '../../contexts/AuthContext'
 import { formatRelativeTime } from '../../utils/date-utils'
 import type { Team } from '../../types/team.types'
+
+const { Text } = Typography
 
 interface TeamMembersProps {
   team: Team
@@ -17,41 +19,51 @@ export const TeamMembers: React.FC<TeamMembersProps> = ({ team }) => {
 
   const isCaptain = team.captainId === user?.id
 
-  const handleRemove = (userId: number, userName: string) => {
-    if (window.confirm(`Remove ${userName || `User #${userId}`} from the team?`)) {
-      removeMemberMutation.mutate({ teamId: team.id, userId })
-    }
+  const handleRemove = (userId: number) => {
+    removeMemberMutation.mutate({ teamId: team.id, userId })
   }
 
-  if (isLoading) return <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}><CircularProgress /></Box>
-  if (isError) return <Typography color="error">Failed to load members</Typography>
+  if (isLoading) return <div style={{ textAlign: 'center', padding: 24 }}><Spin /></div>
+  if (isError) return <Text type="danger">Failed to load members</Text>
 
   return (
-    <List>
-      {data?.members.map((member) => (
-        <ListItem key={member.id} divider>
-          <ListItemText
-            primary={
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Typography>{member.userName || `User #${member.userId}`}</Typography>
-                <Chip label={member.role} size="small" color={member.role === 'captain' ? 'primary' : 'default'} />
-              </Box>
+    <List
+      dataSource={data?.members || []}
+      locale={{ emptyText: 'No members found' }}
+      renderItem={(member) => (
+        <List.Item
+          actions={
+            isCaptain && member.role !== 'captain'
+              ? [
+                  <Popconfirm
+                    key="remove"
+                    title="Remove member"
+                    description={`Remove ${member.userName || `User #${member.userId}`} from the team?`}
+                    onConfirm={() => handleRemove(member.userId)}
+                    okText="Yes"
+                    cancelText="No"
+                  >
+                    <Button type="text" danger icon={<DeleteOutlined />} loading={removeMemberMutation.isPending} />
+                  </Popconfirm>,
+                ]
+              : []
+          }
+        >
+          <List.Item.Meta
+            title={
+              <span>
+                {member.userName || `User #${member.userId}`}
+                {' '}
+                <Tag color={member.role === 'captain' ? 'gold' : 'default'} icon={member.role === 'captain' ? <CrownOutlined /> : undefined}>
+                  {member.role}
+                </Tag>
+              </span>
             }
-            secondary={`Joined ${formatRelativeTime(member.joinedAt)}`}
+            description={`Joined ${formatRelativeTime(member.joinedAt)}`}
           />
-          {isCaptain && member.role !== 'captain' && (
-            <ListItemSecondaryAction>
-              <IconButton edge="end" color="error" onClick={() => handleRemove(member.userId, member.userName)} disabled={removeMemberMutation.isPending}>
-                <DeleteIcon />
-              </IconButton>
-            </ListItemSecondaryAction>
-          )}
-        </ListItem>
-      ))}
-      {(!data?.members || data.members.length === 0) && (
-        <ListItem><ListItemText primary="No members found" /></ListItem>
+        </List.Item>
       )}
-    </List>
+    />
   )
 }
 

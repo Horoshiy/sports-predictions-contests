@@ -1,9 +1,11 @@
 import React from 'react'
-import { Box, Container, Typography, Link as MuiLink } from '@mui/material'
+import { Space, Typography } from 'antd'
 import { Link, useNavigate } from 'react-router-dom'
 import { RegisterForm } from '../components/auth/RegisterForm'
 import { useAuth } from '../contexts/AuthContext'
 import type { RegisterFormData } from '../utils/auth-validation'
+
+const { Title, Text } = Typography
 
 const RegisterPage: React.FC = () => {
   const { register, isLoading } = useAuth()
@@ -22,38 +24,25 @@ const RegisterPage: React.FC = () => {
   }
 
   return (
-    <Container component="main" maxWidth="sm">
-      <Box
-        sx={{
-          minHeight: '100vh',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          py: 4,
-        }}
-      >
-        <Box sx={{ mb: 4, textAlign: 'center' }}>
-          <Typography variant="h3" component="h1" gutterBottom>
-            Sports Prediction Contests
-          </Typography>
-          <Typography variant="h6" color="text.secondary">
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+      <Space direction="vertical" size="large" align="center" style={{ width: '100%', maxWidth: '500px' }}>
+        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+          <Title level={1}>Sports Prediction Contests</Title>
+          <Title level={4} type="secondary" style={{ fontWeight: 'normal' }}>
             Join the community and start making predictions today!
-          </Typography>
-        </Box>
+          </Title>
+        </div>
 
         <RegisterForm onSubmit={handleRegister} loading={isLoading} />
 
-        <Box sx={{ mt: 3, textAlign: 'center' }}>
-          <Typography variant="body2" color="text.secondary">
-            Already have an account?{' '}
-            <MuiLink component={Link} to="/login" underline="hover">
-              Sign in here
-            </MuiLink>
-          </Typography>
-        </Box>
-      </Box>
-    </Container>
+        <Text type="secondary">
+          Already have an account?{' '}
+          <Link to="/login" style={{ color: '#1976d2' }}>
+            Sign in here
+          </Link>
+        </Text>
+      </Space>
+    </div>
   )
 }
 

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
-import { Box, CircularProgress, Typography, Button } from '@mui/material'
+import { Spin, Result, Button, Space } from 'antd'
 import { useAuth } from '../../contexts/AuthContext'
 
 interface ProtectedRouteProps {
@@ -26,52 +26,32 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   // Show error state if timeout occurred
   if (hasError) {
     return (
-      <Box
-        sx={{
-          display: 'flex',
-          flexDirection: 'column',
-          justifyContent: 'center',
-          alignItems: 'center',
-          minHeight: '50vh',
-          textAlign: 'center',
-        }}
-      >
-        <Typography variant="h6" color="error" gutterBottom>
-          Authentication check timed out
-        </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Please try refreshing the page or login again.
-        </Typography>
-        <Button 
-          variant="contained" 
-          onClick={() => window.location.reload()}
-          sx={{ mr: 1 }}
-        >
-          Refresh Page
-        </Button>
-        <Button 
-          variant="outlined" 
-          onClick={() => window.location.href = '/login'}
-        >
-          Go to Login
-        </Button>
-      </Box>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
+        <Result
+          status="error"
+          title="Authentication check timed out"
+          subTitle="Please try refreshing the page or login again."
+          extra={
+            <Space>
+              <Button type="primary" onClick={() => window.location.reload()}>
+                Refresh Page
+              </Button>
+              <Button onClick={() => window.location.href = '/login'}>
+                Go to Login
+              </Button>
+            </Space>
+          }
+        />
+      </div>
     )
   }
 
   // Show loading spinner while checking authentication
   if (isLoading) {
     return (
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          minHeight: '50vh',
-        }}
-      >
-        <CircularProgress />
-      </Box>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
+        <Spin size="large" />
+      </div>
     )
   }
 

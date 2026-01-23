@@ -1,17 +1,11 @@
 import React from 'react'
-import {
-  Box,
-  TextField,
-  Button,
-  Typography,
-  Paper,
-  InputAdornment,
-  IconButton,
-} from '@mui/material'
-import { Visibility, VisibilityOff, Email, Lock } from '@mui/icons-material'
+import { Form, Input, Button, Card, Typography, Space } from 'antd'
+import { MailOutlined, LockOutlined } from '@ant-design/icons'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { loginSchema, type LoginFormData } from '../../utils/auth-validation'
+
+const { Title, Text } = Typography
 
 interface LoginFormProps {
   onSubmit: (data: LoginFormData) => void
@@ -22,8 +16,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   onSubmit,
   loading = false,
 }) => {
-  const [showPassword, setShowPassword] = React.useState(false)
-
   const {
     control,
     handleSubmit,
@@ -41,96 +33,74 @@ export const LoginForm: React.FC<LoginFormProps> = ({
     onSubmit(data)
   }
 
-  const togglePasswordVisibility = () => {
-    setShowPassword(!showPassword)
-  }
-
   return (
-    <Paper elevation={3} sx={{ p: 4, maxWidth: 400, width: '100%' }}>
-      <Box component="form" onSubmit={handleSubmit(handleFormSubmit)} noValidate>
-        <Typography variant="h4" component="h1" gutterBottom align="center">
-          Sign In
-        </Typography>
-        
-        <Typography variant="body2" color="text.secondary" align="center" sx={{ mb: 3 }}>
-          Welcome back! Please sign in to your account.
-        </Typography>
+    <Card style={{ maxWidth: 400, width: '100%', padding: '24px' }}>
+      <Space direction="vertical" size="large" style={{ width: '100%' }}>
+        <div style={{ textAlign: 'center' }}>
+          <Title level={2}>Sign In</Title>
+          <Text type="secondary">Welcome back! Please sign in to your account.</Text>
+        </div>
 
-        <Controller
-          name="email"
-          control={control}
-          render={({ field }) => (
-            <TextField
-              {...field}
-              fullWidth
-              label="Email Address"
-              type="email"
-              autoComplete="email"
-              autoFocus
-              error={!!errors.email}
-              helperText={errors.email?.message}
-              disabled={loading}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Email color="action" />
-                  </InputAdornment>
-                ),
-              }}
-              sx={{ mb: 2 }}
+        <form onSubmit={handleSubmit(handleFormSubmit)}>
+          <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+            <Controller
+              name="email"
+              control={control}
+              render={({ field }) => (
+                <Form.Item
+                  validateStatus={errors.email ? 'error' : ''}
+                  help={errors.email?.message}
+                  style={{ marginBottom: 16 }}
+                >
+                  <Input
+                    {...field}
+                    prefix={<MailOutlined />}
+                    placeholder="Email Address"
+                    type="email"
+                    autoComplete="email"
+                    autoFocus
+                    disabled={loading}
+                    size="large"
+                  />
+                </Form.Item>
+              )}
             />
-          )}
-        />
 
-        <Controller
-          name="password"
-          control={control}
-          render={({ field }) => (
-            <TextField
-              {...field}
-              fullWidth
-              label="Password"
-              type={showPassword ? 'text' : 'password'}
-              autoComplete="current-password"
-              error={!!errors.password}
-              helperText={errors.password?.message}
-              disabled={loading}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <Lock color="action" />
-                  </InputAdornment>
-                ),
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton
-                      aria-label="toggle password visibility"
-                      onClick={togglePasswordVisibility}
-                      edge="end"
-                      disabled={loading}
-                    >
-                      {showPassword ? <VisibilityOff /> : <Visibility />}
-                    </IconButton>
-                  </InputAdornment>
-                ),
-              }}
-              sx={{ mb: 3 }}
+            <Controller
+              name="password"
+              control={control}
+              render={({ field }) => (
+                <Form.Item
+                  validateStatus={errors.password ? 'error' : ''}
+                  help={errors.password?.message}
+                  style={{ marginBottom: 24 }}
+                >
+                  <Input.Password
+                    {...field}
+                    prefix={<LockOutlined />}
+                    placeholder="Password"
+                    autoComplete="current-password"
+                    disabled={loading}
+                    size="large"
+                  />
+                </Form.Item>
+              )}
             />
-          )}
-        />
 
-        <Button
-          type="submit"
-          fullWidth
-          variant="contained"
-          size="large"
-          disabled={!isValid || loading}
-          sx={{ mb: 2 }}
-        >
-          {loading ? 'Signing In...' : 'Sign In'}
-        </Button>
-      </Box>
-    </Paper>
+            <Button
+              type="primary"
+              htmlType="submit"
+              block
+              size="large"
+              disabled={!isValid || loading}
+              loading={loading}
+            >
+              {loading ? 'Signing In...' : 'Sign In'}
+            </Button>
+          </Space>
+        </form>
+      </Space>
+    </Card>
   )
 }
 

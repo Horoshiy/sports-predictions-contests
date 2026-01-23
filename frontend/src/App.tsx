@@ -1,20 +1,9 @@
 import React from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom'
-import { ThemeProvider, createTheme } from '@mui/material/styles'
-import { 
-  CssBaseline, 
-  Container, 
-  AppBar, 
-  Toolbar, 
-  Typography, 
-  Button, 
-  Box,
-  Menu,
-  MenuItem,
-  IconButton,
-  Avatar
-} from '@mui/material'
-import { AccountCircle, ExitToApp } from '@mui/icons-material'
+import { ConfigProvider, Layout, Menu, Dropdown, Avatar, Space, Typography } from 'antd'
+import { UserOutlined, LogoutOutlined, TrophyOutlined, TeamOutlined, LineChartOutlined, FundOutlined, BarChartOutlined } from '@ant-design/icons'
+import type { MenuProps } from 'antd'
+import { antdTheme } from './theme/antd-theme'
 import { ToastProvider } from './contexts/ToastContext'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
 import { ProtectedRoute } from './components/auth/ProtectedRoute'
@@ -27,166 +16,131 @@ import ProfilePage from './pages/ProfilePage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 
-const theme = createTheme({
-  palette: {
-    mode: 'light',
-    primary: {
-      main: '#1976d2',
-    },
-    secondary: {
-      main: '#dc004e',
-    },
-  },
-  typography: {
-    fontFamily: 'Roboto, Arial, sans-serif',
-  },
-})
+const { Header, Content } = Layout
+const { Text } = Typography
 
-const AppBarContent: React.FC = () => {
+const AppHeader: React.FC = () => {
   const { user, isAuthenticated, logout } = useAuth()
-  const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null)
 
-  const handleMenu = (event: React.MouseEvent<HTMLElement>) => {
-    setAnchorEl(event.currentTarget)
-  }
-
-  const handleClose = () => {
-    setAnchorEl(null)
-  }
-
-  const handleLogout = () => {
-    logout()
-    handleClose()
-  }
+  const menuItems: MenuProps['items'] = [
+    {
+      key: 'profile',
+      icon: <UserOutlined />,
+      label: <Link to="/profile">Profile</Link>,
+    },
+    {
+      type: 'divider',
+    },
+    {
+      key: 'logout',
+      icon: <LogoutOutlined />,
+      label: 'Logout',
+      onClick: logout,
+    },
+  ]
 
   return (
-    <Toolbar>
-      <Typography variant="h6" component="div" sx={{ mr: 2 }}>
+    <Header style={{ display: 'flex', alignItems: 'center', background: '#1976d2' }}>
+      <div style={{ color: 'white', fontSize: '20px', fontWeight: 'bold', marginRight: '40px' }}>
         Sports Prediction Contests
-      </Typography>
+      </div>
       
       {isAuthenticated && user ? (
-        <Box sx={{ display: 'flex', alignItems: 'center', flexGrow: 1 }}>
-          <Button color="inherit" component={Link} to="/contests">Contests</Button>
-          <Button color="inherit" component={Link} to="/teams">Teams</Button>
-          <Button color="inherit" component={Link} to="/predictions">Predictions</Button>
-          <Button color="inherit" component={Link} to="/sports">Sports</Button>
-          <Button color="inherit" component={Link} to="/analytics">Analytics</Button>
-          <Box sx={{ flexGrow: 1 }} />
-          <Typography variant="body2" sx={{ mr: 2 }}>
-            Welcome, {user.name}
-          </Typography>
-          <IconButton
-            size="large"
-            aria-label="account of current user"
-            aria-controls="menu-appbar"
-            aria-haspopup="true"
-            onClick={handleMenu}
-            color="inherit"
-          >
-            <Avatar sx={{ width: 32, height: 32 }}>
-              {user.name.charAt(0).toUpperCase()}
-            </Avatar>
-          </IconButton>
+        <>
           <Menu
-            id="menu-appbar"
-            anchorEl={anchorEl}
-            anchorOrigin={{
-              vertical: 'top',
-              horizontal: 'right',
-            }}
-            keepMounted
-            transformOrigin={{
-              vertical: 'top',
-              horizontal: 'right',
-            }}
-            open={Boolean(anchorEl)}
-            onClose={handleClose}
-          >
-            <MenuItem onClick={handleClose} component={Link} to="/profile">
-              <AccountCircle sx={{ mr: 1 }} />
-              Profile
-            </MenuItem>
-            <MenuItem onClick={handleLogout}>
-              <ExitToApp sx={{ mr: 1 }} />
-              Logout
-            </MenuItem>
-          </Menu>
-        </Box>
+            theme="dark"
+            mode="horizontal"
+            style={{ flex: 1, minWidth: 0, background: '#1976d2' }}
+            items={[
+              { key: 'contests', icon: <TrophyOutlined />, label: <Link to="/contests">Contests</Link> },
+              { key: 'teams', icon: <TeamOutlined />, label: <Link to="/teams">Teams</Link> },
+              { key: 'predictions', icon: <LineChartOutlined />, label: <Link to="/predictions">Predictions</Link> },
+              { key: 'sports', icon: <FundOutlined />, label: <Link to="/sports">Sports</Link> },
+              { key: 'analytics', icon: <BarChartOutlined />, label: <Link to="/analytics">Analytics</Link> },
+            ]}
+          />
+          <Space style={{ marginLeft: 'auto' }}>
+            <Text style={{ color: 'white' }}>Welcome, {user.name}</Text>
+            <Dropdown menu={{ items: menuItems }} placement="bottomRight">
+              <Avatar style={{ cursor: 'pointer', backgroundColor: '#1565c0' }}>
+                {user.name.charAt(0).toUpperCase()}
+              </Avatar>
+            </Dropdown>
+          </Space>
+        </>
       ) : null}
-    </Toolbar>
+    </Header>
   )
 }
 
 function App() {
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
+    <ConfigProvider theme={antdTheme}>
       <ToastProvider>
         <AuthProvider>
           <Router>
-            <AppBar position="static">
-              <AppBarContent />
-            </AppBar>
-            <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
-              <Routes>
-                <Route path="/login" element={<LoginPage />} />
-                <Route path="/register" element={<RegisterPage />} />
-                <Route 
-                  path="/contests" 
-                  element={
-                    <ProtectedRoute>
-                      <ContestsPage />
-                    </ProtectedRoute>
-                  } 
-                />
-                <Route 
-                  path="/sports" 
-                  element={
-                    <ProtectedRoute>
-                      <SportsPage />
-                    </ProtectedRoute>
-                  } 
-                />
-                <Route 
-                  path="/predictions" 
-                  element={
-                    <ProtectedRoute>
-                      <PredictionsPage />
-                    </ProtectedRoute>
-                  } 
-                />
-                <Route 
-                  path="/analytics" 
-                  element={
-                    <ProtectedRoute>
-                      <AnalyticsPage />
-                    </ProtectedRoute>
-                  } 
-                />
-                <Route 
-                  path="/teams" 
-                  element={
-                    <ProtectedRoute>
-                      <TeamsPage />
-                    </ProtectedRoute>
-                  } 
-                />
-                <Route 
-                  path="/profile" 
-                  element={
-                    <ProtectedRoute>
-                      <ProfilePage />
-                    </ProtectedRoute>
-                  } 
-                />
-                <Route path="/" element={<Navigate to="/contests" replace />} />
-              </Routes>
-            </Container>
+            <Layout style={{ minHeight: '100vh' }}>
+              <AppHeader />
+              <Content style={{ padding: '24px 50px', maxWidth: '1600px', width: '100%', margin: '0 auto' }}>
+                <Routes>
+                  <Route path="/login" element={<LoginPage />} />
+                  <Route path="/register" element={<RegisterPage />} />
+                  <Route 
+                    path="/contests" 
+                    element={
+                      <ProtectedRoute>
+                        <ContestsPage />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/sports" 
+                    element={
+                      <ProtectedRoute>
+                        <SportsPage />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/predictions" 
+                    element={
+                      <ProtectedRoute>
+                        <PredictionsPage />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/analytics" 
+                    element={
+                      <ProtectedRoute>
+                        <AnalyticsPage />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/teams" 
+                    element={
+                      <ProtectedRoute>
+                        <TeamsPage />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/profile" 
+                    element={
+                      <ProtectedRoute>
+                        <ProfilePage />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route path="/" element={<Navigate to="/contests" replace />} />
+                </Routes>
+              </Content>
+            </Layout>
           </Router>
         </AuthProvider>
       </ToastProvider>
-    </ThemeProvider>
+    </ConfigProvider>
   )
 }
 

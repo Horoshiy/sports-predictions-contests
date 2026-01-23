@@ -1,11 +1,5 @@
 import React, { useState } from 'react'
-import {
-  Box,
-  Typography,
-  Paper,
-  Tabs,
-  Tab,
-} from '@mui/material'
+import { Typography, Card, Tabs, Space } from 'antd'
 import ContestList from '../components/contests/ContestList'
 import ContestForm from '../components/contests/ContestForm'
 import ParticipantList from '../components/contests/ParticipantList'
@@ -18,11 +12,13 @@ import { useAuth } from '../contexts/AuthContext'
 import type { Contest, ContestFormData } from '../types/contest.types'
 import { toISOString } from '../utils/date-utils'
 
+const { Title, Text } = Typography
+
 const ContestsPage: React.FC = () => {
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [isParticipantsOpen, setIsParticipantsOpen] = useState(false)
   const [selectedContest, setSelectedContest] = useState<Contest | null>(null)
-  const [tabValue, setTabValue] = useState(0)
+  const [tabValue, setTabValue] = useState('1')
 
   const createContestMutation = useCreateContest()
   const updateContestMutation = useUpdateContest()
@@ -43,11 +39,6 @@ const ContestsPage: React.FC = () => {
     setIsParticipantsOpen(true)
   }
 
-  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
-    setTabValue(newValue)
-  }
-
-
   const handleFormSubmit = async (data: ContestFormData) => {
     try {
       const contestData = {
@@ -61,14 +52,12 @@ const ContestsPage: React.FC = () => {
       }
 
       if (selectedContest) {
-        // Update existing contest
         await updateContestMutation.mutateAsync({
           id: selectedContest.id,
           ...contestData,
           status: selectedContest.status,
         })
       } else {
-        // Create new contest
         await createContestMutation.mutateAsync(contestData)
       }
 
@@ -76,7 +65,6 @@ const ContestsPage: React.FC = () => {
       setSelectedContest(null)
     } catch (error) {
       console.error('Failed to save contest:', error)
-      // Error handling is now done in the hooks with toast notifications
     }
   }
 
@@ -91,52 +79,45 @@ const ContestsPage: React.FC = () => {
   }
 
   return (
-    <Box>
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
-          Contest Management
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Create and manage sports prediction contests
-        </Typography>
-      </Box>
+    <Space direction="vertical" size="large" style={{ width: '100%' }}>
+      <div>
+        <Title level={2}>Contest Management</Title>
+        <Text type="secondary">Create and manage sports prediction contests</Text>
+      </div>
 
-      <Paper sx={{ mb: 2 }}>
-        <Tabs value={tabValue} onChange={handleTabChange}>
-          <Tab label="Contests" />
-          <Tab label="Leaderboards" />
-        </Tabs>
-      </Paper>
-
-      {tabValue === 0 && (
-        <Paper sx={{ p: 0, overflow: 'hidden' }}>
-          <ContestList
-            onCreateContest={handleCreateContest}
-            onEditContest={handleEditContest}
-            onViewParticipants={handleViewParticipants}
-          />
-        </Paper>
-      )}
-
-      {tabValue === 1 && (
-        <Box>
-          <Typography variant="h6" gutterBottom>
-            Contest Leaderboards
-          </Typography>
-          {selectedContest ? (
-            <LeaderboardTable 
-              contestId={selectedContest.id}
-              currentUserId={user?.id || 0}
-            />
-          ) : (
-            <Paper sx={{ p: 4, textAlign: 'center' }}>
-              <Typography color="text.secondary">
-                Select a contest to view its leaderboard
-              </Typography>
-            </Paper>
-          )}
-        </Box>
-      )}
+      <Card>
+        <Tabs
+          activeKey={tabValue}
+          onChange={setTabValue}
+          items={[
+            {
+              key: '1',
+              label: 'Contests',
+              children: (
+                <ContestList
+                  onCreateContest={handleCreateContest}
+                  onEditContest={handleEditContest}
+                  onViewParticipants={handleViewParticipants}
+                />
+              ),
+            },
+            {
+              key: '2',
+              label: 'Leaderboards',
+              children: selectedContest ? (
+                <LeaderboardTable 
+                  contestId={selectedContest.id}
+                  currentUserId={user?.id || 0}
+                />
+              ) : (
+                <div style={{ padding: 48, textAlign: 'center' }}>
+                  <Text type="secondary">Select a contest to view its leaderboard</Text>
+                </div>
+              ),
+            },
+          ]}
+        />
+      </Card>
 
       <ContestForm
         open={isFormOpen}
@@ -151,7 +132,7 @@ const ContestsPage: React.FC = () => {
         onClose={handleParticipantsClose}
         contest={selectedContest}
       />
-    </Box>
+    </Space>
   )
 }
 

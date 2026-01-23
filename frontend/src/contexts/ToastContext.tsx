@@ -1,8 +1,8 @@
-import React, { createContext, useContext, useState } from 'react'
-import { Snackbar, Alert } from '@mui/material'
+import React, { createContext, useContext } from 'react'
+import { message } from 'antd'
 
 interface ToastContextType {
-  showToast: (message: string, severity?: 'success' | 'error' | 'info' | 'warning') => void
+  showToast: (msg: string, severity?: 'success' | 'error' | 'info' | 'warning') => void
 }
 
 const ToastContext = createContext<ToastContextType | undefined>(undefined)
@@ -20,37 +20,16 @@ interface ToastProviderProps {
 }
 
 export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
-  const [toast, setToast] = useState<{
-    open: boolean
-    message: string
-    severity: 'success' | 'error' | 'info' | 'warning'
-  }>({
-    open: false,
-    message: '',
-    severity: 'success',
-  })
+  const [messageApi, contextHolder] = message.useMessage()
 
-  const showToast = (message: string, severity: 'success' | 'error' | 'info' | 'warning' = 'success') => {
-    setToast({ open: true, message, severity })
-  }
-
-  const handleClose = () => {
-    setToast(prev => ({ ...prev, open: false }))
+  const showToast = (msg: string, severity: 'success' | 'error' | 'info' | 'warning' = 'success') => {
+    messageApi[severity](msg)
   }
 
   return (
     <ToastContext.Provider value={{ showToast }}>
+      {contextHolder}
       {children}
-      <Snackbar
-        open={toast.open}
-        autoHideDuration={6000}
-        onClose={handleClose}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-      >
-        <Alert onClose={handleClose} severity={toast.severity} sx={{ width: '100%' }}>
-          {toast.message}
-        </Alert>
-      </Snackbar>
     </ToastContext.Provider>
   )
 }

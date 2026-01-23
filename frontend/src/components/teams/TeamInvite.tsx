@@ -1,8 +1,10 @@
 import React from 'react'
-import { Box, Typography, TextField, IconButton, Tooltip } from '@mui/material'
-import { ContentCopy, Refresh } from '@mui/icons-material'
-import { useToast } from '../../contexts/ToastContext'
+import { Space, Typography, Input, Button, Tooltip, Popconfirm } from 'antd'
+import { CopyOutlined, ReloadOutlined } from '@ant-design/icons'
+import { showSuccess, showWarning } from '../../utils/antd-helpers'
 import { useRegenerateInviteCode } from '../../hooks/use-teams'
+
+const { Text } = Typography
 
 interface TeamInviteProps {
   teamId: number
@@ -11,39 +13,44 @@ interface TeamInviteProps {
 }
 
 export const TeamInvite: React.FC<TeamInviteProps> = ({ teamId, inviteCode, isCaptain }) => {
-  const { showToast } = useToast()
   const regenerateMutation = useRegenerateInviteCode()
 
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(inviteCode)
-      showToast('Invite code copied!', 'success')
+      showSuccess('Invite code copied!')
     } catch {
-      showToast('Failed to copy - please copy manually', 'warning')
+      showWarning('Failed to copy - please copy manually')
     }
   }
 
   const handleRegenerate = () => {
-    if (window.confirm('Regenerate invite code? The old code will stop working.')) {
-      regenerateMutation.mutate(teamId)
-    }
+    regenerateMutation.mutate(teamId)
   }
 
   return (
-    <Box sx={{ p: 2, bgcolor: 'grey.100', borderRadius: 1 }}>
-      <Typography variant="subtitle2" color="text.secondary" gutterBottom>Invite Code</Typography>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <TextField value={inviteCode} InputProps={{ readOnly: true }} size="small" sx={{ fontFamily: 'monospace', flex: 1 }} />
+    <div style={{ padding: 16, backgroundColor: '#f5f5f5', borderRadius: 4 }}>
+      <Text type="secondary" strong>Invite Code</Text>
+      <Space.Compact style={{ width: '100%', marginTop: 8 }}>
+        <Input value={inviteCode} readOnly style={{ fontFamily: 'monospace' }} />
         <Tooltip title="Copy code">
-          <IconButton onClick={handleCopy} color="primary"><ContentCopy /></IconButton>
+          <Button icon={<CopyOutlined />} onClick={handleCopy} />
         </Tooltip>
         {isCaptain && (
-          <Tooltip title="Regenerate code">
-            <IconButton onClick={handleRegenerate} disabled={regenerateMutation.isPending} color="warning"><Refresh /></IconButton>
-          </Tooltip>
+          <Popconfirm
+            title="Regenerate invite code?"
+            description="The old code will stop working."
+            onConfirm={handleRegenerate}
+            okText="Yes"
+            cancelText="No"
+          >
+            <Tooltip title="Regenerate code">
+              <Button icon={<ReloadOutlined />} loading={regenerateMutation.isPending} danger />
+            </Tooltip>
+          </Popconfirm>
         )}
-      </Box>
-    </Box>
+      </Space.Compact>
+    </div>
   )
 }
 

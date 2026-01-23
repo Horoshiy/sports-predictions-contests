@@ -1,28 +1,12 @@
 import React from 'react'
-import {
-  Card,
-  CardContent,
-  Typography,
-  Box,
-  Chip,
-  LinearProgress,
-  Avatar,
-  Tooltip,
-  IconButton,
-  Divider,
-} from '@mui/material'
-import {
-  TrendingUp as TrendingUpIcon,
-  TrendingDown as TrendingDownIcon,
-  Remove as StableIcon,
-  EmojiEvents as TrophyIcon,
-  Timeline as TimelineIcon,
-  Refresh as RefreshIcon,
-} from '@mui/icons-material'
+import { Card, Statistic, Row, Col, Avatar, Button, Tooltip, Progress, Tag, Space, Divider, Typography } from 'antd'
+import { TrophyOutlined, RiseOutlined, FallOutlined, ReloadOutlined, LineChartOutlined } from '@ant-design/icons'
 import { useQuery } from '@tanstack/react-query'
 import scoringService from '../../services/scoring-service'
 import type { Score } from '../../types/scoring.types'
 import { formatRelativeTime } from '../../utils/date-utils'
+
+const { Text } = Typography
 
 interface UserScoreProps {
   userId: number
@@ -45,9 +29,9 @@ interface ScoreBreakdown {
 const getRankColor = (rank: number) => {
   if (rank === 1) return 'gold'
   if (rank === 2) return 'silver'
-  if (rank === 3) return '#CD7F32' // Bronze
-  if (rank <= 10) return 'primary'
-  return 'text.secondary'
+  if (rank === 3) return 'orange'
+  if (rank <= 10) return 'blue'
+  return 'default'
 }
 
 export const UserScore: React.FC<UserScoreProps> = ({
@@ -59,7 +43,6 @@ export const UserScore: React.FC<UserScoreProps> = ({
   refreshInterval = 30000,
   onRefresh,
 }) => {
-  // Query for user scores
   const {
     data: userScores,
     isLoading: isLoadingScores,
@@ -71,7 +54,6 @@ export const UserScore: React.FC<UserScoreProps> = ({
     refetchInterval: autoRefresh ? refreshInterval : false,
   })
 
-  // Query for user rank
   const {
     data: userRank,
     isLoading: isLoadingRank,
@@ -83,28 +65,19 @@ export const UserScore: React.FC<UserScoreProps> = ({
     refetchInterval: autoRefresh ? refreshInterval : false,
   })
 
-  // Calculate score breakdown
   const scoreBreakdown: ScoreBreakdown | null = React.useMemo(() => {
     if (!userScores?.scores) return null
 
     const scores = userScores.scores
     const totalPredictions = scores.length
     const scoredPredictions = scores.filter(s => s.points > 0).length
-    const averagePoints = totalPredictions > 0 
-      ? userScores.totalPoints / totalPredictions 
-      : 0
+    const averagePoints = totalPredictions > 0 ? userScores.totalPoints / totalPredictions : 0
     const bestScore = Math.max(...scores.map(s => s.points), 0)
     const recentScores = scores
       .sort((a, b) => new Date(b.scoredAt).getTime() - new Date(a.scoredAt).getTime())
       .slice(0, 5)
 
-    return {
-      totalPredictions,
-      scoredPredictions,
-      averagePoints,
-      bestScore,
-      recentScores,
-    }
+    return { totalPredictions, scoredPredictions, averagePoints, bestScore, recentScores }
   }, [userScores])
 
   const handleRefresh = () => {
@@ -118,183 +91,115 @@ export const UserScore: React.FC<UserScoreProps> = ({
 
   if (hasError) {
     return (
-      <Card variant="outlined" sx={{ bgcolor: 'error.50' }}>
-        <CardContent>
-          <Typography color="error" variant="body2">
-            Failed to load user score data
-          </Typography>
-        </CardContent>
+      <Card>
+        <Text type="danger">Failed to load user score data</Text>
       </Card>
     )
   }
 
   return (
-    <Card variant="outlined">
-      <CardContent>
-        {/* Header */}
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-          <Box display="flex" alignItems="center" gap={2}>
-            <Avatar sx={{ width: 40, height: 40 }}>
-              {userName ? userName.charAt(0).toUpperCase() : 'U'}
-            </Avatar>
-            <Box>
-              <Typography variant="h6">
-                {userName || `User ${userId}`}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                Contest Performance
-              </Typography>
-            </Box>
-          </Box>
-          <Tooltip title="Refresh scores">
-            <IconButton onClick={handleRefresh} size="small">
-              <RefreshIcon />
-            </IconButton>
-          </Tooltip>
-        </Box>
+    <Card
+      loading={isLoading}
+      title={
+        <Space>
+          <Avatar>{userName ? userName.charAt(0).toUpperCase() : 'U'}</Avatar>
+          <div>
+            <div>{userName || `User ${userId}`}</div>
+            <Text type="secondary" style={{ fontSize: '12px' }}>Contest Performance</Text>
+          </div>
+        </Space>
+      }
+      extra={
+        <Tooltip title="Refresh scores">
+          <Button type="text" icon={<ReloadOutlined />} onClick={handleRefresh} />
+        </Tooltip>
+      }
+    >
+      {!isLoading && userRank && (
+        <Space direction="vertical" size="large" style={{ width: '100%' }}>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Statistic
+                title="Current Rank"
+                value={userRank.rank}
+                prefix={<TrophyOutlined style={{ color: getRankColor(userRank.rank) === 'gold' ? '#FFD700' : undefined }} />}
+                valueStyle={{ color: getRankColor(userRank.rank) === 'gold' ? '#FFD700' : undefined }}
+              />
+            </Col>
+            <Col span={12}>
+              <Statistic
+                title="Total Points"
+                value={userRank.totalPoints}
+                precision={1}
+                valueStyle={{ color: '#1976d2' }}
+              />
+            </Col>
+          </Row>
 
-        {/* Loading State */}
-        {isLoading && (
-          <Box>
-            <LinearProgress sx={{ mb: 2 }} />
-            <Typography variant="body2" color="text.secondary" textAlign="center">
-              Loading score data...
-            </Typography>
-          </Box>
-        )}
+          {showDetails && scoreBreakdown && (
+            <>
+              <Divider />
+              <Row gutter={16}>
+                <Col span={6}>
+                  <Statistic title="Predictions" value={scoreBreakdown.totalPredictions} />
+                </Col>
+                <Col span={6}>
+                  <Statistic title="Scored" value={scoreBreakdown.scoredPredictions} valueStyle={{ color: '#52c41a' }} />
+                </Col>
+                <Col span={6}>
+                  <Statistic title="Avg Points" value={scoreBreakdown.averagePoints} precision={1} valueStyle={{ color: '#1890ff' }} />
+                </Col>
+                <Col span={6}>
+                  <Statistic title="Best Score" value={scoreBreakdown.bestScore} precision={1} valueStyle={{ color: '#faad14' }} />
+                </Col>
+              </Row>
 
-        {/* Main Score Display */}
-        {!isLoading && userRank && (
-          <Box>
-            {/* Rank and Points */}
-            <Box display="flex" justifyContent="space-around" mb={2}>
-              <Box textAlign="center">
-                <Box display="flex" alignItems="center" justifyContent="center" gap={1}>
-                  <TrophyIcon sx={{ color: getRankColor(userRank.rank) }} />
-                  <Typography 
-                    variant="h4" 
-                    sx={{ color: getRankColor(userRank.rank), fontWeight: 'bold' }}
-                  >
-                    #{userRank.rank}
-                  </Typography>
-                </Box>
-                <Typography variant="caption" color="text.secondary">
-                  Current Rank
-                </Typography>
-              </Box>
-              
-              <Divider orientation="vertical" flexItem />
-              
-              <Box textAlign="center">
-                <Typography variant="h4" color="primary" fontWeight="bold">
-                  {userRank.totalPoints.toFixed(1)}
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Total Points
-                </Typography>
-              </Box>
-            </Box>
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <Text>Success Rate</Text>
+                  <Text type="secondary">
+                    {scoreBreakdown.totalPredictions > 0 
+                      ? Math.round((scoreBreakdown.scoredPredictions / scoreBreakdown.totalPredictions) * 100)
+                      : 0}%
+                  </Text>
+                </div>
+                <Progress 
+                  percent={scoreBreakdown.totalPredictions > 0 
+                    ? Math.round((scoreBreakdown.scoredPredictions / scoreBreakdown.totalPredictions) * 100)
+                    : 0}
+                  strokeColor="#52c41a"
+                />
+              </div>
 
-            {/* Score Breakdown */}
-            {showDetails && scoreBreakdown && (
-              <>
-                <Divider sx={{ my: 2 }} />
-                
-                <Box display="flex" justifyContent="space-between" mb={2}>
-                  <Box textAlign="center" flex={1}>
-                    <Typography variant="h6" color="text.primary">
-                      {scoreBreakdown.totalPredictions}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      Predictions
-                    </Typography>
-                  </Box>
-                  
-                  <Box textAlign="center" flex={1}>
-                    <Typography variant="h6" color="success.main">
-                      {scoreBreakdown.scoredPredictions}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      Scored
-                    </Typography>
-                  </Box>
-                  
-                  <Box textAlign="center" flex={1}>
-                    <Typography variant="h6" color="info.main">
-                      {scoreBreakdown.averagePoints.toFixed(1)}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      Avg Points
-                    </Typography>
-                  </Box>
-                  
-                  <Box textAlign="center" flex={1}>
-                    <Typography variant="h6" color="warning.main">
-                      {scoreBreakdown.bestScore.toFixed(1)}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      Best Score
-                    </Typography>
-                  </Box>
-                </Box>
-
-                {/* Success Rate Progress */}
-                <Box mb={2}>
-                  <Box display="flex" justifyContent="space-between" mb={1}>
-                    <Typography variant="body2">Success Rate</Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {scoreBreakdown.totalPredictions > 0 
-                        ? Math.round((scoreBreakdown.scoredPredictions / scoreBreakdown.totalPredictions) * 100)
-                        : 0}%
-                    </Typography>
-                  </Box>
-                  <LinearProgress 
-                    variant="determinate" 
-                    value={scoreBreakdown.totalPredictions > 0 
-                      ? (scoreBreakdown.scoredPredictions / scoreBreakdown.totalPredictions) * 100
-                      : 0}
-                    sx={{ height: 8, borderRadius: 4 }}
-                  />
-                </Box>
-
-                {/* Recent Scores */}
-                {scoreBreakdown.recentScores.length > 0 && (
-                  <Box>
-                    <Typography variant="subtitle2" gutterBottom>
-                      Recent Scores
-                    </Typography>
-                    <Box display="flex" gap={1} flexWrap="wrap">
+              {scoreBreakdown.recentScores.length > 0 && (
+                <div>
+                  <Text strong>Recent Scores</Text>
+                  <div style={{ marginTop: 8 }}>
+                    <Space wrap>
                       {scoreBreakdown.recentScores.map((score) => (
-                        <Tooltip 
-                          key={score.id}
-                          title={`Prediction ${score.predictionId} - ${formatRelativeTime(score.scoredAt)}`}
-                        >
-                          <Chip
-                            label={score.points.toFixed(1)}
-                            size="small"
-                            color={score.points > 0 ? 'success' : 'default'}
-                            variant="outlined"
-                          />
+                        <Tooltip key={score.id} title={`Prediction ${score.predictionId} - ${formatRelativeTime(score.scoredAt)}`}>
+                          <Tag color={score.points > 0 ? 'success' : 'default'}>
+                            {score.points.toFixed(1)}
+                          </Tag>
                         </Tooltip>
                       ))}
-                    </Box>
-                  </Box>
-                )}
-              </>
-            )}
-          </Box>
-        )}
+                    </Space>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </Space>
+      )}
 
-        {/* Empty State */}
-        {!isLoading && !userRank && (
-          <Box textAlign="center" py={2}>
-            <TimelineIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 1 }} />
-            <Typography variant="body2" color="text.secondary">
-              No scores yet. Make some predictions to see your performance!
-            </Typography>
-          </Box>
-        )}
-      </CardContent>
+      {!isLoading && !userRank && (
+        <div style={{ textAlign: 'center', padding: '24px 0' }}>
+          <LineChartOutlined style={{ fontSize: 48, color: '#8c8c8c', marginBottom: 8 }} />
+          <div>
+            <Text type="secondary">No scores yet. Make some predictions to see your performance!</Text>
+          </div>
+        </div>
+      )}
     </Card>
   )
 }
