@@ -1,83 +1,59 @@
-import { z } from 'zod'
-
-// Contest validation schema matching backend constraints
-export const contestSchema = z.object({
-  title: z
-    .string()
-    .min(1, 'Title is required')
-    .max(200, 'Title cannot exceed 200 characters')
-    .trim(),
-  description: z
-    .string()
-    .max(1000, 'Description cannot exceed 1000 characters')
-    .optional()
-    .or(z.literal('')),
-  sportType: z
-    .string()
-    .min(1, 'Sport type is required')
-    .trim(),
-  rules: z
-    .string()
-    .optional()
-    .or(z.literal('')),
-  startDate: z
-    .date()
-    .refine(date => date > new Date(), {
-      message: 'Start date must be in the future',
-    }),
-  endDate: z
-    .date(),
-  maxParticipants: z
-    .number()
-    .min(0, 'Max participants must be 0 or greater')
-    .max(10000, 'Max participants cannot exceed 10,000'),
-}).refine(
-  (data) => data.endDate > data.startDate,
-  {
-    message: 'End date must be after start date',
-    path: ['endDate'],
-  }
-)
-
-export type ContestFormData = z.infer<typeof contestSchema>
-
-// Participant validation
-export const participantSchema = z.object({
-  userId: z.number().min(1, 'User ID is required'),
-  role: z.enum(['admin', 'participant'], {
-    errorMap: () => ({ message: 'Role must be admin or participant' }),
-  }),
-})
-
-export type ParticipantFormData = z.infer<typeof participantSchema>
-
-// Search and filter validation
-export const contestFiltersSchema = z.object({
-  status: z.enum(['draft', 'active', 'completed', 'cancelled']).optional(),
-  sportType: z.string().optional(),
-  search: z.string().optional(),
-  page: z.number().min(1).default(1),
-  limit: z.number().min(1).max(100).default(10),
-  sortBy: z.string().optional(),
-  sortOrder: z.enum(['asc', 'desc']).default('desc'),
-})
-
-export type ContestFiltersData = z.infer<typeof contestFiltersSchema>
-
-// Validation helper functions
-export const validateRequired = (value: string): boolean => {
-  return value.trim().length > 0
-}
+import { z } from 'zod';
 
 export const validateEmail = (email: string): boolean => {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-  return emailRegex.test(email)
-}
+  // More robust email validation
+  const re = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  return re.test(email);
+};
 
-export const validateDateRange = (startDate: Date, endDate: Date): boolean => {
-  return endDate > startDate
-}
+export const validatePassword = (password: string): boolean => {
+  // Require at least 8 characters with uppercase, lowercase, and number
+  if (password.length < 8) return false;
+  const hasUpper = /[A-Z]/.test(password);
+  const hasLower = /[a-z]/.test(password);
+  const hasNumber = /\d/.test(password);
+  return hasUpper && hasLower && hasNumber;
+};
 
-export const validateFutureDate = (date: Date): boolean => {
-  return date > new Date()
-}
+export const getPasswordStrength = (password: string): 'weak' | 'medium' | 'strong' => {
+  if (password.length < 8) return 'weak';
+  
+  let strength = 0;
+  if (/[a-z]/.test(password)) strength++;
+  if (/[A-Z]/.test(password)) strength++;
+  if (/\d/.test(password)) strength++;
+  if (/[^a-zA-Z0-9]/.test(password)) strength++;
+  if (password.length >= 12) strength++;
+  
+  if (strength <= 2) return 'weak';
+  if (strength <= 3) return 'medium';
+  return 'strong';
+};
+
+// Proper Zod validation schema for contests
+export const contestSchema = z.object({
+  title: z.string()
+    .trim()
+    .min(3, 'Title must be at least 3 characters')
+    .max(200, 'Title cannot exceed 200 characters'),
+  description: z.string()
+    .max(1000, 'Description cannot exceed 1000 characters')
+    .optional(),
+  sportType: z.string()
+    .trim()
+    .min(1, 'Sport type is required'),
+  rules: z.string().optional(),
+  startDate: z.date().refine(date => date > new Date(), {
+    message: 'Start date must be in the future'
+  }),
+  endDate: z.date(),
+  maxParticipants: z.number()
+    .int()
+    .min(0, 'Must be 0 or positive')
+    .max(10000, 'Cannot exceed 10,000 participants'),
+}).refine(data => data.endDate > data.startDate, {
+  message: 'End date must be after start date',
+  path: ['endDate'],
+});
+
+export type ContestFormData = z.infer<typeof contestSchema>;

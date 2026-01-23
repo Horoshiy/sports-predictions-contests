@@ -140,9 +140,9 @@ export interface ErrorResponse {
 // Form types
 export interface ContestFormData {
   title: string
-  description: string
+  description?: string
   sportType: string
-  rules: string
+  rules?: string
   startDate: Date
   endDate: Date
   maxParticipants: number

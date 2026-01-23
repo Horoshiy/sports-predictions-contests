@@ -33,10 +33,6 @@ interface ChallengeListProps {
   onCreateChallenge?: () => void
 }
 
-const getStatusColor = (status: Challenge['status']) => {
-  return CHALLENGE_STATUSES[status]?.color || 'default'
-}
-
 export const ChallengeList: React.FC<ChallengeListProps> = ({
   userId,
   statusFilter,

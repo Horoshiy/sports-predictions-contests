@@ -62,8 +62,8 @@ func NewTeamService(
 }
 
 func (s *TeamService) CreateTeam(ctx context.Context, name, description string, maxMembers uint) (*TeamResponse, error) {
-	userID, err := auth.GetUserIDFromContext(ctx)
-	if err != nil {
+	userID, ok := auth.GetUserIDFromContext(ctx)
+	if !ok {
 		return &TeamResponse{Response: errorResponse("Authentication required", common.ErrorCode_UNAUTHENTICATED)}, nil
 	}
 
@@ -100,8 +100,8 @@ func (s *TeamService) CreateTeam(ctx context.Context, name, description string, 
 }
 
 func (s *TeamService) UpdateTeam(ctx context.Context, id uint, name, description string, maxMembers uint) (*TeamResponse, error) {
-	userID, err := auth.GetUserIDFromContext(ctx)
-	if err != nil {
+	userID, ok := auth.GetUserIDFromContext(ctx)
+	if !ok {
 		return &TeamResponse{Response: errorResponse("Authentication required", common.ErrorCode_UNAUTHENTICATED)}, nil
 	}
 
@@ -142,8 +142,8 @@ func (s *TeamService) GetTeam(ctx context.Context, id uint) (*TeamResponse, erro
 }
 
 func (s *TeamService) DeleteTeam(ctx context.Context, id uint) (*common.Response, error) {
-	userID, err := auth.GetUserIDFromContext(ctx)
-	if err != nil {
+	userID, ok := auth.GetUserIDFromContext(ctx)
+	if !ok {
 		return errorResponse("Authentication required", common.ErrorCode_UNAUTHENTICATED), nil
 	}
 
@@ -187,9 +187,9 @@ func (s *TeamService) ListTeams(ctx context.Context, page, limit int, myTeamsOnl
 }
 
 func (s *TeamService) JoinTeam(ctx context.Context, inviteCode string) (*TeamMemberProto, error) {
-	userID, err := auth.GetUserIDFromContext(ctx)
-	if err != nil {
-		return nil, err
+	userID, ok := auth.GetUserIDFromContext(ctx)
+	if !ok {
+		return nil, fmt.Errorf("authentication required")
 	}
 
 	team, err := s.teamRepo.GetByInviteCode(inviteCode)
@@ -225,9 +225,9 @@ func (s *TeamService) JoinTeam(ctx context.Context, inviteCode string) (*TeamMem
 }
 
 func (s *TeamService) LeaveTeam(ctx context.Context, teamID uint) error {
-	userID, err := auth.GetUserIDFromContext(ctx)
-	if err != nil {
-		return err
+	userID, ok := auth.GetUserIDFromContext(ctx)
+	if !ok {
+		return fmt.Errorf("authentication required")
 	}
 
 	team, err := s.teamRepo.GetByID(teamID)
@@ -249,9 +249,9 @@ func (s *TeamService) LeaveTeam(ctx context.Context, teamID uint) error {
 }
 
 func (s *TeamService) RemoveMember(ctx context.Context, teamID, targetUserID uint) error {
-	userID, err := auth.GetUserIDFromContext(ctx)
-	if err != nil {
-		return err
+	userID, ok := auth.GetUserIDFromContext(ctx)
+	if !ok {
+		return fmt.Errorf("authentication required")
 	}
 
 	team, err := s.teamRepo.GetByID(teamID)
@@ -298,9 +298,9 @@ func (s *TeamService) ListMembers(ctx context.Context, teamID uint, page, limit 
 }
 
 func (s *TeamService) RegenerateInviteCode(ctx context.Context, teamID uint) (string, error) {
-	userID, err := auth.GetUserIDFromContext(ctx)
-	if err != nil {
-		return "", err
+	userID, ok := auth.GetUserIDFromContext(ctx)
+	if !ok {
+		return "", fmt.Errorf("authentication required")
 	}
 
 	team, err := s.teamRepo.GetByID(teamID)
@@ -326,9 +326,9 @@ func (s *TeamService) RegenerateInviteCode(ctx context.Context, teamID uint) (st
 }
 
 func (s *TeamService) JoinContestAsTeam(ctx context.Context, teamID, contestID uint) error {
-	userID, err := auth.GetUserIDFromContext(ctx)
-	if err != nil {
-		return err
+	userID, ok := auth.GetUserIDFromContext(ctx)
+	if !ok {
+		return fmt.Errorf("authentication required")
 	}
 
 	team, err := s.teamRepo.GetByID(teamID)
@@ -350,9 +350,9 @@ func (s *TeamService) JoinContestAsTeam(ctx context.Context, teamID, contestID u
 }
 
 func (s *TeamService) LeaveContestAsTeam(ctx context.Context, teamID, contestID uint) error {
-	userID, err := auth.GetUserIDFromContext(ctx)
-	if err != nil {
-		return err
+	userID, ok := auth.GetUserIDFromContext(ctx)
+	if !ok {
+		return fmt.Errorf("authentication required")
 	}
 
 	team, err := s.teamRepo.GetByID(teamID)

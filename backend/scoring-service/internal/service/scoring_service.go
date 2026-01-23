@@ -69,9 +69,9 @@ type ResultData struct {
 // CreateScore creates a new score record
 func (s *ScoringService) CreateScore(ctx context.Context, req *pb.CreateScoreRequest) (*pb.CreateScoreResponse, error) {
 	// Extract user ID from JWT token for authorization
-	_, err := auth.GetUserIDFromContext(ctx)
-	if err != nil {
-		log.Printf("[ERROR] Failed to get user ID from context: %v", err)
+	_, ok := auth.GetUserIDFromContext(ctx)
+	if !ok {
+		log.Printf("[ERROR] Failed to get user ID from context")
 		return &pb.CreateScoreResponse{
 			Response: &common.Response{
 				Success:   false,
@@ -136,9 +136,9 @@ func (s *ScoringService) CreateScore(ctx context.Context, req *pb.CreateScoreReq
 
 	// Create score model with multiplied points
 	score := &models.Score{
-		UserID:          req.UserId,
-		ContestID:       req.ContestId,
-		PredictionID:    req.PredictionId,
+		UserID:          uint(req.UserId),
+		ContestID:       uint(req.ContestId),
+		PredictionID:    uint(req.PredictionId),
 		Points:          finalPoints,
 		TimeCoefficient: timeCoefficient,
 	}
@@ -157,7 +157,7 @@ func (s *ScoringService) CreateScore(ctx context.Context, req *pb.CreateScoreReq
 	}
 
 	// Update leaderboard
-	totalPoints, err := s.scoreRepo.GetTotalPointsByContestAndUser(ctx, req.ContestId, req.UserId)
+	totalPoints, err := s.scoreRepo.GetTotalPointsByContestAndUser(ctx, uint(req.ContestId), uint(req.UserId))
 	if err != nil {
 		log.Printf("[ERROR] Failed to get total points: %v", err)
 		return &pb.CreateScoreResponse{
@@ -170,7 +170,7 @@ func (s *ScoringService) CreateScore(ctx context.Context, req *pb.CreateScoreReq
 		}, nil
 	}
 	
-	if err := s.leaderboardRepo.UpsertUserScore(ctx, req.ContestId, req.UserId, totalPoints); err != nil {
+	if err := s.leaderboardRepo.UpsertUserScore(ctx, uint(req.ContestId), uint(req.UserId), totalPoints); err != nil {
 		log.Printf("[ERROR] Failed to update leaderboard: %v", err)
 		return &pb.CreateScoreResponse{
 			Response: &common.Response{
@@ -183,13 +183,13 @@ func (s *ScoringService) CreateScore(ctx context.Context, req *pb.CreateScoreReq
 	}
 
 	log.Printf("[INFO] Score created: user=%d, contest=%d, base=%.2f, streak=%.2fx, time=%.2fx, final=%.2f",
-		req.UserId, req.ContestId, basePoints, multiplier, timeCoefficient, finalPoints)
+		uint(req.UserId), uint(req.ContestId), basePoints, multiplier, timeCoefficient, finalPoints)
 
 	return &pb.CreateScoreResponse{
 		Response: &common.Response{
 			Success:   true,
 			Message:   fmt.Sprintf("Score created successfully (%.2fx streak, %.2fx time)", multiplier, timeCoefficient),
-			Code:      int32(common.ErrorCode_SUCCESS),
+			Code:      int32(0),
 			Timestamp: timestamppb.Now(),
 		},
 		Score: s.modelToProto(score),
@@ -198,7 +198,7 @@ func (s *ScoringService) CreateScore(ctx context.Context, req *pb.CreateScoreReq
 
 // GetScore retrieves a score by ID
 func (s *ScoringService) GetScore(ctx context.Context, req *pb.GetScoreRequest) (*pb.GetScoreResponse, error) {
-	score, err := s.scoreRepo.GetByID(ctx, req.Id)
+	score, err := s.scoreRepo.GetByID(ctx, uint(req.Id))
 	if err != nil {
 		log.Printf("[ERROR] Failed to get score: %v", err)
 		return &pb.GetScoreResponse{
@@ -215,7 +215,7 @@ func (s *ScoringService) GetScore(ctx context.Context, req *pb.GetScoreRequest) 
 		Response: &common.Response{
 			Success:   true,
 			Message:   "Score retrieved successfully",
-			Code:      int32(common.ErrorCode_SUCCESS),
+			Code:      int32(0),
 			Timestamp: timestamppb.Now(),
 		},
 		Score: s.modelToProto(score),
@@ -259,7 +259,7 @@ func (s *ScoringService) CalculateScore(ctx context.Context, req *pb.CalculateSc
 		Response: &common.Response{
 			Success:   true,
 			Message:   "Score calculated successfully",
-			Code:      int32(common.ErrorCode_SUCCESS),
+			Code:      int32(0),
 			Timestamp: timestamppb.Now(),
 		},
 		Points:             points,
@@ -392,7 +392,7 @@ func (s *ScoringService) determineWinner(homeScore, awayScore int) string {
 
 // GetUserScores retrieves all scores for a user in a contest
 func (s *ScoringService) GetUserScores(ctx context.Context, req *pb.GetUserScoresRequest) (*pb.GetUserScoresResponse, error) {
-	scores, err := s.scoreRepo.GetByContestAndUser(ctx, req.ContestId, req.UserId)
+	scores, err := s.scoreRepo.GetByContestAndUser(ctx, uint(req.ContestId), uint(req.UserId))
 	if err != nil {
 		log.Printf("[ERROR] Failed to get user scores: %v", err)
 		return &pb.GetUserScoresResponse{
@@ -406,7 +406,7 @@ func (s *ScoringService) GetUserScores(ctx context.Context, req *pb.GetUserScore
 	}
 
 	// Calculate total points
-	totalPoints, err := s.scoreRepo.GetTotalPointsByContestAndUser(ctx, req.ContestId, req.UserId)
+	totalPoints, err := s.scoreRepo.GetTotalPointsByContestAndUser(ctx, uint(req.ContestId), uint(req.UserId))
 	if err != nil {
 		log.Printf("[ERROR] Failed to get total points: %v", err)
 		totalPoints = 0
@@ -422,7 +422,7 @@ func (s *ScoringService) GetUserScores(ctx context.Context, req *pb.GetUserScore
 		Response: &common.Response{
 			Success:   true,
 			Message:   "User scores retrieved successfully",
-			Code:      int32(common.ErrorCode_SUCCESS),
+			Code:      int32(0),
 			Timestamp: timestamppb.Now(),
 		},
 		Scores:      protoScores,
@@ -447,7 +447,7 @@ func (s *ScoringService) modelToProto(score *models.Score) *pb.Score {
 
 // GetUserAnalytics retrieves comprehensive analytics for a user
 func (s *ScoringService) GetUserAnalytics(ctx context.Context, req *pb.GetUserAnalyticsRequest) (*pb.GetUserAnalyticsResponse, error) {
-	if req.UserId == 0 {
+	if uint(req.UserId) == 0 {
 		return &pb.GetUserAnalyticsResponse{
 			Response: &common.Response{
 				Success:   false,
@@ -516,7 +516,7 @@ func (s *ScoringService) GetUserAnalytics(ctx context.Context, req *pb.GetUserAn
 		Response: &common.Response{
 			Success:   true,
 			Message:   "Analytics retrieved successfully",
-			Code:      int32(common.ErrorCode_SUCCESS),
+			Code:      int32(0),
 			Timestamp: timestamppb.Now(),
 		},
 		Analytics: s.analyticsToProto(analytics),
@@ -546,13 +546,13 @@ func (s *ScoringService) ExportAnalytics(ctx context.Context, req *pb.ExportAnal
 	}
 
 	csv := s.generateCSV(analyticsResp.Analytics)
-	filename := fmt.Sprintf("analytics_%d_%s.csv", req.UserId, timeRange)
+	filename := fmt.Sprintf("analytics_%d_%s.csv", uint(req.UserId), timeRange)
 
 	return &pb.ExportAnalyticsResponse{
 		Response: &common.Response{
 			Success:   true,
 			Message:   "Export generated successfully",
-			Code:      int32(common.ErrorCode_SUCCESS),
+			Code:      int32(0),
 			Timestamp: timestamppb.Now(),
 		},
 		Data:     csv,

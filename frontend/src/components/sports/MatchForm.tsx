@@ -33,7 +33,7 @@ export const MatchForm: React.FC<MatchFormProps> = ({ open, onClose, onSubmit, m
     resultData: match?.resultData || '',
   }), [match])
 
-  const { control, handleSubmit, reset, watch, formState: { errors, isValid } } = useForm<MatchFormData>({
+  const { control, handleSubmit, reset, watch, setValue, formState: { errors, isValid } } = useForm<MatchFormData>({
     resolver: zodResolver(matchSchema),
     defaultValues,
     mode: 'onChange',

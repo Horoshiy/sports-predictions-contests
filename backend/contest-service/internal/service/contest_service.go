@@ -32,9 +32,9 @@ func NewContestService(contestRepo repository.ContestRepositoryInterface, partic
 // CreateContest handles contest creation
 func (s *ContestService) CreateContest(ctx context.Context, req *pb.CreateContestRequest) (*pb.CreateContestResponse, error) {
 	// Extract user ID from JWT token
-	userID, err := auth.GetUserIDFromContext(ctx)
-	if err != nil {
-		log.Printf("[ERROR] Failed to get user ID from context: %v", err)
+	userID, ok := auth.GetUserIDFromContext(ctx)
+	if !ok {
+		log.Printf("[ERROR] Failed to get user ID from context")
 		return &pb.CreateContestResponse{
 			Response: &common.Response{
 				Success:   false,
@@ -115,8 +115,8 @@ func (s *ContestService) CreateContest(ctx context.Context, req *pb.CreateContes
 // UpdateContest handles contest updates
 func (s *ContestService) UpdateContest(ctx context.Context, req *pb.UpdateContestRequest) (*pb.UpdateContestResponse, error) {
 	// Extract user ID from JWT token
-	userID, err := auth.GetUserIDFromContext(ctx)
-	if err != nil {
+	userID, ok := auth.GetUserIDFromContext(ctx)
+	if !ok {
 		return &pb.UpdateContestResponse{
 			Response: &common.Response{
 				Success:   false,
@@ -221,8 +221,8 @@ func (s *ContestService) GetContest(ctx context.Context, req *pb.GetContestReque
 // DeleteContest handles contest deletion
 func (s *ContestService) DeleteContest(ctx context.Context, req *pb.DeleteContestRequest) (*pb.DeleteContestResponse, error) {
 	// Extract user ID from JWT token
-	userID, err := auth.GetUserIDFromContext(ctx)
-	if err != nil {
+	userID, ok := auth.GetUserIDFromContext(ctx)
+	if !ok {
 		return &pb.DeleteContestResponse{
 			Response: &common.Response{
 				Success:   false,
@@ -339,8 +339,8 @@ func (s *ContestService) ListContests(ctx context.Context, req *pb.ListContestsR
 // JoinContest handles user joining a contest
 func (s *ContestService) JoinContest(ctx context.Context, req *pb.JoinContestRequest) (*pb.JoinContestResponse, error) {
 	// Extract user ID from JWT token
-	userID, err := auth.GetUserIDFromContext(ctx)
-	if err != nil {
+	userID, ok := auth.GetUserIDFromContext(ctx)
+	if !ok {
 		return &pb.JoinContestResponse{
 			Response: &common.Response{
 				Success:   false,
@@ -417,8 +417,8 @@ func (s *ContestService) JoinContest(ctx context.Context, req *pb.JoinContestReq
 // LeaveContest handles user leaving a contest
 func (s *ContestService) LeaveContest(ctx context.Context, req *pb.LeaveContestRequest) (*pb.LeaveContestResponse, error) {
 	// Extract user ID from JWT token
-	userID, err := auth.GetUserIDFromContext(ctx)
-	if err != nil {
+	userID, ok := auth.GetUserIDFromContext(ctx)
+	if !ok {
 		return &pb.LeaveContestResponse{
 			Response: &common.Response{
 				Success:   false,

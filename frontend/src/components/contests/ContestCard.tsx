@@ -69,7 +69,7 @@ export const ContestCard: React.FC<ContestCardProps> = ({
   canEdit = false,
 }) => {
   const dateStatus = getContestStatusByDate(contest.startDate, contest.endDate)
-  const isActive = contest.status === 'active' && dateStatus === 'active'
+  // const isActive = contest.status === 'active' && dateStatus === 'active'
   const canJoin = contest.status === 'active' && !isParticipant && 
     (contest.maxParticipants === 0 || contest.currentParticipants < contest.maxParticipants)
 

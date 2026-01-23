@@ -105,3 +105,10 @@ jspm_packages/
 tmp/
 temp/
 .tmp/
+.env
+
+# Backup files
+*.bak
+*.bak2
+*.bak3
+*.fix

@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"github.com/sports-prediction-contests/scoring-service/internal/cache"
 	"github.com/sports-prediction-contests/scoring-service/internal/models"

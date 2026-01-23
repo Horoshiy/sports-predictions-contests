@@ -37,7 +37,7 @@ func (s *LeaderboardService) GetLeaderboard(ctx context.Context, req *pb.GetLead
 	}
 
 	// Get leaderboard entries
-	leaderboards, err := s.leaderboardRepo.GetContestLeaderboard(ctx, req.ContestId, limit)
+	leaderboards, err := s.leaderboardRepo.GetContestLeaderboard(ctx, uint(uint(req.ContestId)), limit)
 	if err != nil {
 		log.Printf("[ERROR] Failed to get leaderboard: %v", err)
 		return &pb.GetLeaderboardResponse{
@@ -58,7 +58,7 @@ func (s *LeaderboardService) GetLeaderboard(ctx context.Context, req *pb.GetLead
 	for i, lb := range leaderboards {
 		userIDs[i] = lb.UserID
 	}
-	streaks, _ := s.streakRepo.GetByContestAndUsers(ctx, uint(req.ContestId), userIDs)
+	streaks, _ := s.streakRepo.GetByContestAndUsers(ctx, uint(uint(req.ContestId)), userIDs)
 	streakMap := make(map[uint]*models.UserStreak)
 	for _, streak := range streaks {
 		streakMap[streak.UserID] = streak
@@ -91,7 +91,7 @@ func (s *LeaderboardService) GetLeaderboard(ctx context.Context, req *pb.GetLead
 		Response: &common.Response{
 			Success:   true,
 			Message:   "Leaderboard retrieved successfully",
-			Code:      int32(common.ErrorCode_SUCCESS),
+			Code:      int32(0),
 			Timestamp: timestamppb.Now(),
 		},
 		Leaderboard: leaderboard,
@@ -101,7 +101,7 @@ func (s *LeaderboardService) GetLeaderboard(ctx context.Context, req *pb.GetLead
 // GetUserRank retrieves a user's rank in a contest
 func (s *LeaderboardService) GetUserRank(ctx context.Context, req *pb.GetUserRankRequest) (*pb.GetUserRankResponse, error) {
 	// Get user's leaderboard entry
-	leaderboard, err := s.leaderboardRepo.GetByContestAndUser(ctx, req.ContestId, req.UserId)
+	leaderboard, err := s.leaderboardRepo.GetByContestAndUser(ctx, uint(uint(req.ContestId)), uint(req.UserId))
 	if err != nil {
 		log.Printf("[ERROR] Failed to get user rank: %v", err)
 		return &pb.GetUserRankResponse{
@@ -118,7 +118,7 @@ func (s *LeaderboardService) GetUserRank(ctx context.Context, req *pb.GetUserRan
 		Response: &common.Response{
 			Success:   true,
 			Message:   "User rank retrieved successfully",
-			Code:      int32(common.ErrorCode_SUCCESS),
+			Code:      int32(0),
 			Timestamp: timestamppb.Now(),
 		},
 		Rank:        uint32(leaderboard.Rank),
@@ -129,9 +129,9 @@ func (s *LeaderboardService) GetUserRank(ctx context.Context, req *pb.GetUserRan
 // UpdateLeaderboard recalculates and updates the leaderboard for a contest
 func (s *LeaderboardService) UpdateLeaderboard(ctx context.Context, req *pb.UpdateLeaderboardRequest) (*pb.UpdateLeaderboardResponse, error) {
 	// Extract user ID from JWT token for authorization
-	_, err := auth.GetUserIDFromContext(ctx)
-	if err != nil {
-		log.Printf("[ERROR] Failed to get user ID from context: %v", err)
+	_, ok := auth.GetUserIDFromContext(ctx)
+	if !ok {
+		log.Printf("[ERROR] Failed to get user ID from context")
 		return &pb.UpdateLeaderboardResponse{
 			Response: &common.Response{
 				Success:   false,
@@ -143,7 +143,7 @@ func (s *LeaderboardService) UpdateLeaderboard(ctx context.Context, req *pb.Upda
 	}
 
 	// Recalculate all user scores for the contest
-	if err := s.recalculateContestScores(ctx, req.ContestId); err != nil {
+	if err := s.recalculateContestScores(ctx, uint(uint(req.ContestId))); err != nil {
 		log.Printf("[ERROR] Failed to recalculate contest scores: %v", err)
 		return &pb.UpdateLeaderboardResponse{
 			Response: &common.Response{
@@ -156,7 +156,7 @@ func (s *LeaderboardService) UpdateLeaderboard(ctx context.Context, req *pb.Upda
 	}
 
 	// Update rankings
-	if err := s.leaderboardRepo.UpdateRankings(ctx, req.ContestId); err != nil {
+	if err := s.leaderboardRepo.UpdateRankings(ctx, uint(req.ContestId)); err != nil {
 		log.Printf("[ERROR] Failed to update rankings: %v", err)
 		return &pb.UpdateLeaderboardResponse{
 			Response: &common.Response{
@@ -169,7 +169,7 @@ func (s *LeaderboardService) UpdateLeaderboard(ctx context.Context, req *pb.Upda
 	}
 
 	// Get updated leaderboard
-	leaderboards, err := s.leaderboardRepo.GetContestLeaderboard(ctx, req.ContestId, 50)
+	leaderboards, err := s.leaderboardRepo.GetContestLeaderboard(ctx, uint(req.ContestId), 50)
 	if err != nil {
 		log.Printf("[ERROR] Failed to get updated leaderboard: %v", err)
 		return &pb.UpdateLeaderboardResponse{
@@ -204,7 +204,7 @@ func (s *LeaderboardService) UpdateLeaderboard(ctx context.Context, req *pb.Upda
 		Response: &common.Response{
 			Success:   true,
 			Message:   "Leaderboard updated successfully",
-			Code:      int32(common.ErrorCode_SUCCESS),
+			Code:      int32(0),
 			Timestamp: timestamppb.Now(),
 		},
 		Leaderboard: leaderboard,
@@ -251,7 +251,7 @@ func (s *LeaderboardService) BatchUpdateUserScores(ctx context.Context, contestI
 
 // GetLeaderboardSize returns the number of participants in a contest leaderboard
 func (s *LeaderboardService) GetLeaderboardSize(ctx context.Context, contestID uint) (int64, error) {
-	leaderboards, _, err := s.leaderboardRepo.ListByContest(ctx, contestID, 1, 0)
+	_, _, err := s.leaderboardRepo.ListByContest(ctx, contestID, 1, 0)
 	if err != nil {
 		return 0, err
 	}
@@ -276,7 +276,7 @@ func (s *LeaderboardService) RefreshLeaderboardCache(ctx context.Context, contes
 
 // GetUserStreak retrieves a user's streak information for a contest
 func (s *LeaderboardService) GetUserStreak(ctx context.Context, req *pb.GetUserStreakRequest) (*pb.GetUserStreakResponse, error) {
-	streak, err := s.streakRepo.GetByContestAndUser(ctx, uint(req.ContestId), uint(req.UserId))
+	streak, err := s.streakRepo.GetByContestAndUser(ctx, uint(uint(req.ContestId)), uint(req.UserId))
 	if err != nil {
 		log.Printf("[ERROR] Failed to get user streak: %v", err)
 		return &pb.GetUserStreakResponse{
@@ -293,7 +293,7 @@ func (s *LeaderboardService) GetUserStreak(ctx context.Context, req *pb.GetUserS
 		Response: &common.Response{
 			Success:   true,
 			Message:   "Streak retrieved successfully",
-			Code:      int32(common.ErrorCode_SUCCESS),
+			Code:      int32(0),
 			Timestamp: timestamppb.Now(),
 		},
 		CurrentStreak: uint32(streak.CurrentStreak),

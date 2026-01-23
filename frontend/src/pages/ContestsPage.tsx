@@ -10,17 +10,15 @@ import ContestList from '../components/contests/ContestList'
 import ContestForm from '../components/contests/ContestForm'
 import ParticipantList from '../components/contests/ParticipantList'
 import { LeaderboardTable } from '../components/leaderboard/LeaderboardTable'
-import { UserScore } from '../components/leaderboard/UserScore'
 import {
   useCreateContest,
   useUpdateContest,
 } from '../hooks/use-contests'
-import { useToast } from '../contexts/ToastContext'
 import { useAuth } from '../contexts/AuthContext'
 import type { Contest, ContestFormData } from '../types/contest.types'
 import { toISOString } from '../utils/date-utils'
 
-export const ContestsPage: React.FC = () => {
+const ContestsPage: React.FC = () => {
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [isParticipantsOpen, setIsParticipantsOpen] = useState(false)
   const [selectedContest, setSelectedContest] = useState<Contest | null>(null)
@@ -28,7 +26,6 @@ export const ContestsPage: React.FC = () => {
 
   const createContestMutation = useCreateContest()
   const updateContestMutation = useUpdateContest()
-  const { showToast } = useToast()
   const { user } = useAuth()
 
   const handleCreateContest = () => {
@@ -46,19 +43,10 @@ export const ContestsPage: React.FC = () => {
     setIsParticipantsOpen(true)
   }
 
-  const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
+  const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue)
   }
 
-  const handleEditContest = (contest: Contest) => {
-    setSelectedContest(contest)
-    setIsFormOpen(true)
-  }
-
-  const handleViewParticipants = (contest: Contest) => {
-    setSelectedContest(contest)
-    setIsParticipantsOpen(true)
-  }
 
   const handleFormSubmit = async (data: ContestFormData) => {
     try {
@@ -167,4 +155,4 @@ export const ContestsPage: React.FC = () => {
   )
 }
 
-export default ContestsPage
+export { ContestsPage as default }

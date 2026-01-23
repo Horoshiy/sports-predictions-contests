@@ -1,3 +1,7 @@
+# WARNING: This docker-compose.yml uses environment variables for secrets.
+# Copy .env.example to .env and set secure values before deploying to production.
+# Never commit .env to version control!
+
 version: '3.8'
 
 services:
@@ -7,7 +11,7 @@ services:
     environment:
       POSTGRES_DB: sports_prediction
       POSTGRES_USER: sports_user
-      POSTGRES_PASSWORD: sports_password
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-sports_password}
     ports:
       - "5432:5432"
     volumes:
@@ -43,7 +47,7 @@ services:
       - SPORTS_SERVICE_ENDPOINT=sports-service:8088
       - NOTIFICATION_SERVICE_ENDPOINT=notification-service:8089
       - CHALLENGE_SERVICE_ENDPOINT=challenge-service:8090
-      - JWT_SECRET=your_jwt_secret_key_here
+      - JWT_SECRET=${JWT_SECRET:-changeme_insecure_default}
       - CORS_ALLOWED_ORIGINS=*
       - LOG_LEVEL=info
     depends_on:
@@ -63,9 +67,14 @@ services:
     ports:
       - "8084:8084"
     environment:
-      - DATABASE_URL=postgres://sports_user:sports_password@postgres:5432/sports_prediction?sslmode=disable
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=sports_user
+      - DB_PASSWORD=${DB_PASSWORD:-sports_password}
+      - DB_NAME=sports_prediction
+      - DB_SSLMODE=${DB_SSLMODE:-disable}
       - REDIS_URL=redis://redis:6379
-      - JWT_SECRET=your_jwt_secret_key_here
+      - JWT_SECRET=${JWT_SECRET:-changeme_insecure_default}
       - JWT_EXPIRATION=24h
       - USER_SERVICE_PORT=8084
     depends_on:
@@ -85,9 +94,14 @@ services:
     ports:
       - "8085:8085"
     environment:
-      - DATABASE_URL=postgres://sports_user:sports_password@postgres:5432/sports_prediction?sslmode=disable
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=sports_user
+      - DB_PASSWORD=${DB_PASSWORD:-sports_password}
+      - DB_NAME=sports_prediction
+      - DB_SSLMODE=${DB_SSLMODE:-disable}
       - REDIS_URL=redis://redis:6379
-      - JWT_SECRET=your_jwt_secret_key_here
+      - JWT_SECRET=${JWT_SECRET:-changeme_insecure_default}
       - CONTEST_SERVICE_PORT=8085
     depends_on:
       - postgres
@@ -106,8 +120,13 @@ services:
     ports:
       - "8086:8086"
     environment:
-      - DATABASE_URL=postgres://sports_user:sports_password@postgres:5432/sports_prediction?sslmode=disable
-      - JWT_SECRET=your_jwt_secret_key_here
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=sports_user
+      - DB_PASSWORD=${DB_PASSWORD:-sports_password}
+      - DB_NAME=sports_prediction
+      - DB_SSLMODE=${DB_SSLMODE:-disable}
+      - JWT_SECRET=${JWT_SECRET:-changeme_insecure_default}
       - PREDICTION_SERVICE_PORT=8086
       - CONTEST_SERVICE_ENDPOINT=contest-service:8085
       - LOG_LEVEL=info
@@ -128,9 +147,14 @@ services:
     ports:
       - "8087:8087"
     environment:
-      - DATABASE_URL=postgres://sports_user:sports_password@postgres:5432/sports_prediction?sslmode=disable
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=sports_user
+      - DB_PASSWORD=${DB_PASSWORD:-sports_password}
+      - DB_NAME=sports_prediction
+      - DB_SSLMODE=${DB_SSLMODE:-disable}
       - REDIS_URL=redis://redis:6379
-      - JWT_SECRET=your_jwt_secret_key_here
+      - JWT_SECRET=${JWT_SECRET:-changeme_insecure_default}
       - SCORING_SERVICE_PORT=8087
       - CONTEST_SERVICE_ENDPOINT=contest-service:8085
       - PREDICTION_SERVICE_ENDPOINT=prediction-service:8086
@@ -152,8 +176,13 @@ services:
     ports:
       - "8088:8088"
     environment:
-      - DATABASE_URL=postgres://sports_user:sports_password@postgres:5432/sports_prediction?sslmode=disable
-      - JWT_SECRET=your_jwt_secret_key_here
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=sports_user
+      - DB_PASSWORD=${DB_PASSWORD:-sports_password}
+      - DB_NAME=sports_prediction
+      - DB_SSLMODE=${DB_SSLMODE:-disable}
+      - JWT_SECRET=${JWT_SECRET:-changeme_insecure_default}
       - SPORTS_SERVICE_PORT=8088
       - LOG_LEVEL=info
     depends_on:
@@ -172,9 +201,14 @@ services:
     ports:
       - "8089:8089"
     environment:
-      - DATABASE_URL=postgres://sports_user:sports_password@postgres:5432/sports_prediction?sslmode=disable
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=sports_user
+      - DB_PASSWORD=${DB_PASSWORD:-sports_password}
+      - DB_NAME=sports_prediction
+      - DB_SSLMODE=${DB_SSLMODE:-disable}
       - REDIS_URL=redis://redis:6379
-      - JWT_SECRET=your_jwt_secret_key_here
+      - JWT_SECRET=${JWT_SECRET:-changeme_insecure_default}
       - NOTIFICATION_SERVICE_PORT=8089
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
       - TELEGRAM_ENABLED=${TELEGRAM_ENABLED:-false}
@@ -203,8 +237,13 @@ services:
     ports:
       - "8090:8090"
     environment:
-      - DATABASE_URL=postgres://sports_user:sports_password@postgres:5432/sports_prediction?sslmode=disable
-      - JWT_SECRET=your_jwt_secret_key_here
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=sports_user
+      - DB_PASSWORD=${DB_PASSWORD:-sports_password}
+      - DB_NAME=sports_prediction
+      - DB_SSLMODE=${DB_SSLMODE:-disable}
+      - JWT_SECRET=${JWT_SECRET:-changeme_insecure_default}
       - CHALLENGE_SERVICE_PORT=8090
       - LOG_LEVEL=info
     depends_on:

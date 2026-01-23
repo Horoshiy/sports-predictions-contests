@@ -50,12 +50,6 @@ const getRankColor = (rank: number) => {
   return 'text.secondary'
 }
 
-const getTrendIcon = (change: number) => {
-  if (change > 0) return <TrendingUpIcon color="success" fontSize="small" />
-  if (change < 0) return <TrendingDownIcon color="error" fontSize="small" />
-  return <StableIcon color="disabled" fontSize="small" />
-}
-
 export const UserScore: React.FC<UserScoreProps> = ({
   userId,
   contestId,

@@ -1,146 +1,37 @@
-import { format, parseISO, isValid, formatDistanceToNow } from 'date-fns'
+export const formatDate = (date: Date | string): string => {
+  const d = typeof date === 'string' ? new Date(date) : date;
+  return d.toLocaleDateString();
+};
 
-// Format date for display
-export const formatDate = (date: string | Date): string => {
-  try {
-    const dateObj = typeof date === 'string' ? parseISO(date) : date
-    if (!isValid(dateObj)) {
-      return 'Invalid date'
-    }
-    return format(dateObj, 'MMM dd, yyyy')
-  } catch (error) {
-    console.error('Error formatting date:', error)
-    return 'Invalid date'
-  }
-}
+export const formatDateTime = (date: Date | string): string => {
+  const d = typeof date === 'string' ? new Date(date) : date;
+  return d.toLocaleString();
+};
 
-// Format datetime for display
-export const formatDateTime = (date: string | Date): string => {
-  try {
-    const dateObj = typeof date === 'string' ? parseISO(date) : date
-    if (!isValid(dateObj)) {
-      return 'Invalid date'
-    }
-    return format(dateObj, 'MMM dd, yyyy HH:mm')
-  } catch (error) {
-    console.error('Error formatting datetime:', error)
-    return 'Invalid date'
-  }
-}
+export const toISOString = (date: Date | string): string => {
+  const d = typeof date === 'string' ? new Date(date) : date;
+  return d.toISOString();
+};
 
-// Format date for form inputs (YYYY-MM-DD)
-export const formatDateForInput = (date: string | Date): string => {
-  try {
-    const dateObj = typeof date === 'string' ? parseISO(date) : date
-    if (!isValid(dateObj)) {
-      return ''
-    }
-    return format(dateObj, 'yyyy-MM-dd')
-  } catch (error) {
-    console.error('Error formatting date for input:', error)
-    return ''
-  }
-}
+export const formatRelativeTime = (date: Date | string): string => {
+  const d = typeof date === 'string' ? new Date(date) : date;
+  const now = new Date();
+  const diff = now.getTime() - d.getTime();
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  
+  if (days === 0) return 'Today';
+  if (days === 1) return 'Yesterday';
+  if (days < 7) return `${days} days ago`;
+  if (days < 30) return `${Math.floor(days / 7)} weeks ago`;
+  return formatDate(d);
+};
 
-// Format datetime for form inputs (YYYY-MM-DDTHH:mm)
-export const formatDateTimeForInput = (date: string | Date): string => {
-  try {
-    const dateObj = typeof date === 'string' ? parseISO(date) : date
-    if (!isValid(dateObj)) {
-      return ''
-    }
-    return format(dateObj, "yyyy-MM-dd'T'HH:mm")
-  } catch (error) {
-    console.error('Error formatting datetime for input:', error)
-    return ''
-  }
-}
-
-// Format relative time (e.g., "2 hours ago", "in 3 days")
-export const formatRelativeTime = (date: string | Date): string => {
-  try {
-    const dateObj = typeof date === 'string' ? parseISO(date) : date
-    if (!isValid(dateObj)) {
-      return 'Invalid date'
-    }
-    return formatDistanceToNow(dateObj, { addSuffix: true })
-  } catch (error) {
-    console.error('Error formatting relative time:', error)
-    return 'Invalid date'
-  }
-}
-
-// Convert Date to ISO string for API
-export const toISOString = (date: Date): string => {
-  try {
-    if (!isValid(date)) {
-      throw new Error('Invalid date')
-    }
-    return date.toISOString()
-  } catch (error) {
-    console.error('Error converting to ISO string:', error)
-    throw error
-  }
-}
-
-// Parse ISO string to Date
-export const fromISOString = (isoString: string): Date => {
-  try {
-    const date = parseISO(isoString)
-    if (!isValid(date)) {
-      throw new Error('Invalid ISO string')
-    }
-    return date
-  } catch (error) {
-    console.error('Error parsing ISO string:', error)
-    throw error
-  }
-}
-
-// Check if date is in the past
-export const isPastDate = (date: string | Date): boolean => {
-  try {
-    const dateObj = typeof date === 'string' ? parseISO(date) : date
-    if (!isValid(dateObj)) {
-      return false
-    }
-    return dateObj < new Date()
-  } catch (error) {
-    console.error('Error checking if date is past:', error)
-    return false
-  }
-}
-
-// Check if date is in the future
-export const isFutureDate = (date: string | Date): boolean => {
-  try {
-    const dateObj = typeof date === 'string' ? parseISO(date) : date
-    if (!isValid(dateObj)) {
-      return false
-    }
-    return dateObj > new Date()
-  } catch (error) {
-    console.error('Error checking if date is future:', error)
-    return false
-  }
-}
-
-// Get contest status based on dates
-export const getContestStatusByDate = (startDate: string | Date, endDate: string | Date): 'upcoming' | 'active' | 'completed' => {
-  const now = new Date()
-  const start = typeof startDate === 'string' ? parseISO(startDate) : startDate
-  const end = typeof endDate === 'string' ? parseISO(endDate) : endDate
-
-  // Validate dates
-  if (!isValid(start) || !isValid(end)) {
-    return 'completed'
-  }
-
-  if (now < start) {
-    return 'upcoming'
-  } else if (now >= start && now <= end) {
-    return 'active'
-  } else {
-    return 'completed'
-  }
-}
+export const getContestStatusByDate = (startDate: Date | string, endDate: Date | string): 'upcoming' | 'active' | 'completed' => {
+  const now = new Date();
+  const start = typeof startDate === 'string' ? new Date(startDate) : startDate;
+  const end = typeof endDate === 'string' ? new Date(endDate) : endDate;
+  
+  if (now < start) return 'upcoming';
+  if (now > end) return 'completed';
+  return 'active';
+};

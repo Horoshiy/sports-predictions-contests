@@ -1,4 +1,4 @@
-import type { PaginationRequest, PaginationResponse } from './common.types'
+// import type { PaginationRequest, PaginationResponse } from './common.types'
 
 export interface Team {
   id: number
@@ -45,7 +45,7 @@ export interface UpdateTeamRequest {
 }
 
 export interface ListTeamsRequest {
-  pagination?: PaginationRequest
+  pagination?: { page: number; limit: number; sortBy?: string; sortOrder?: "asc" | "desc" }
   myTeamsOnly?: boolean
 }
 
@@ -55,7 +55,7 @@ export interface JoinTeamRequest {
 
 export interface ListMembersRequest {
   teamId: number
-  pagination?: PaginationRequest
+  pagination?: { page: number; limit: number; sortBy?: string; sortOrder?: "asc" | "desc" }
 }
 
 export interface TeamFormData {

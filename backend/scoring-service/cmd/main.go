@@ -104,10 +104,21 @@ func main() {
 		// Set health status to not serving
 		healthServer.SetServingStatus("", grpc_health_v1.HealthCheckResponse_NOT_SERVING)
 
-		// Graceful stop
-		server.GracefulStop()
+		// Graceful stop with context (for future use with cleanup operations)
+		done := make(chan struct{})
+		go func() {
+			server.GracefulStop()
+			close(done)
+		}()
+
+		select {
+		case <-done:
+			log.Println("Scoring Service stopped gracefully")
+		case <-ctx.Done():
+			log.Println("Shutdown timeout exceeded, forcing stop")
+			server.Stop()
+		}
 		
-		log.Println("Scoring Service stopped")
 		os.Exit(0)
 	}()
 

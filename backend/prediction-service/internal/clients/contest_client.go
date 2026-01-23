@@ -85,7 +85,7 @@ func (c *ContestClient) IsUserParticipant(ctx context.Context, contestID uint32,
 		ContestId: contestID,
 		Pagination: &common.PaginationRequest{
 			Page:     1,
-			PageSize: 100, // Check first 100 participants
+			Limit: 100, // Check first 100 participants
 		},
 	}
 

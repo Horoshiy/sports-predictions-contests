@@ -3,7 +3,6 @@ package config
 import (
 	"errors"
 	"os"
-	"time"
 )
 
 // Config holds all configuration for the API Gateway service

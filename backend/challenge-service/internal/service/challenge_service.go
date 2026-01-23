@@ -32,9 +32,9 @@ func NewChallengeService(challengeRepo repository.ChallengeRepositoryInterface, 
 // CreateChallenge handles challenge creation
 func (s *ChallengeService) CreateChallenge(ctx context.Context, req *pb.CreateChallengeRequest) (*pb.CreateChallengeResponse, error) {
 	// Extract user ID from JWT token
-	userID, err := auth.GetUserIDFromContext(ctx)
-	if err != nil {
-		log.Printf("[ERROR] Failed to get user ID from context: %v", err)
+	userID, ok := auth.GetUserIDFromContext(ctx)
+	if !ok {
+		log.Printf("[ERROR] Failed to get user ID from context")
 		return &pb.CreateChallengeResponse{
 			Response: &common.Response{
 				Success:   false,
@@ -73,7 +73,7 @@ func (s *ChallengeService) CreateChallenge(ctx context.Context, req *pb.CreateCh
 
 	// Validate event ID is within valid range
 	if req.EventId == 0 {
-		log.Printf("[ERROR] Invalid event ID: %d", req.EventId)
+		log.Printf("[ERROR] Invalid event ID: %d", uint(req.EventId))
 		return &pb.CreateChallengeResponse{
 			Response: &common.Response{
 				Success:   false,
@@ -118,7 +118,7 @@ func (s *ChallengeService) CreateChallenge(ctx context.Context, req *pb.CreateCh
 			Response: &common.Response{
 				Success:   false,
 				Message:   "Failed to create challenge",
-				Code:      int32(common.ErrorCode_INTERNAL),
+				Code:      int32(common.ErrorCode_INTERNAL_ERROR),
 				Timestamp: timestamppb.Now(),
 			},
 		}, nil
@@ -130,7 +130,7 @@ func (s *ChallengeService) CreateChallenge(ctx context.Context, req *pb.CreateCh
 		Response: &common.Response{
 			Success:   true,
 			Message:   "Challenge created successfully",
-			Code:      int32(common.ErrorCode_SUCCESS),
+			Code:      int32(0),
 			Timestamp: timestamppb.Now(),
 		},
 		Challenge: s.challengeModelToProto(challenge),
@@ -140,9 +140,9 @@ func (s *ChallengeService) CreateChallenge(ctx context.Context, req *pb.CreateCh
 // AcceptChallenge handles challenge acceptance
 func (s *ChallengeService) AcceptChallenge(ctx context.Context, req *pb.AcceptChallengeRequest) (*pb.AcceptChallengeResponse, error) {
 	// Extract user ID from JWT token
-	userID, err := auth.GetUserIDFromContext(ctx)
-	if err != nil {
-		log.Printf("[ERROR] Failed to get user ID from context: %v", err)
+	userID, ok := auth.GetUserIDFromContext(ctx)
+	if !ok {
+		log.Printf("[ERROR] Failed to get user ID from context")
 		return &pb.AcceptChallengeResponse{
 			Response: &common.Response{
 				Success:   false,
@@ -154,8 +154,8 @@ func (s *ChallengeService) AcceptChallenge(ctx context.Context, req *pb.AcceptCh
 	}
 
 	// Get challenge from database
-	challenge, err := s.challengeRepo.GetByID(req.Id)
-	if err != nil {
+	challenge, err := s.challengeRepo.GetByID(uint(req.Id))
+	if !ok {
 		log.Printf("[ERROR] Failed to get challenge %d: %v", req.Id, err)
 		return &pb.AcceptChallengeResponse{
 			Response: &common.Response{
@@ -169,7 +169,7 @@ func (s *ChallengeService) AcceptChallenge(ctx context.Context, req *pb.AcceptCh
 
 	// Validate that user is the opponent
 	if challenge.OpponentID != userID {
-		log.Printf("[ERROR] User %d is not the opponent for challenge %d", userID, req.Id)
+		log.Printf("[ERROR] User %d is not the opponent for challenge %d", userID, uint(req.Id))
 		return &pb.AcceptChallengeResponse{
 			Response: &common.Response{
 				Success:   false,
@@ -203,7 +203,7 @@ func (s *ChallengeService) AcceptChallenge(ctx context.Context, req *pb.AcceptCh
 			Response: &common.Response{
 				Success:   false,
 				Message:   "Failed to accept challenge",
-				Code:      int32(common.ErrorCode_INTERNAL),
+				Code:      int32(common.ErrorCode_INTERNAL_ERROR),
 				Timestamp: timestamppb.Now(),
 			},
 		}, nil
@@ -215,7 +215,7 @@ func (s *ChallengeService) AcceptChallenge(ctx context.Context, req *pb.AcceptCh
 		Response: &common.Response{
 			Success:   true,
 			Message:   "Challenge accepted successfully",
-			Code:      int32(common.ErrorCode_SUCCESS),
+			Code:      int32(0),
 			Timestamp: timestamppb.Now(),
 		},
 		Challenge: s.challengeModelToProto(challenge),
@@ -225,9 +225,9 @@ func (s *ChallengeService) AcceptChallenge(ctx context.Context, req *pb.AcceptCh
 // DeclineChallenge handles challenge decline
 func (s *ChallengeService) DeclineChallenge(ctx context.Context, req *pb.DeclineChallengeRequest) (*pb.DeclineChallengeResponse, error) {
 	// Extract user ID from JWT token
-	userID, err := auth.GetUserIDFromContext(ctx)
-	if err != nil {
-		log.Printf("[ERROR] Failed to get user ID from context: %v", err)
+	userID, ok := auth.GetUserIDFromContext(ctx)
+	if !ok {
+		log.Printf("[ERROR] Failed to get user ID from context")
 		return &pb.DeclineChallengeResponse{
 			Response: &common.Response{
 				Success:   false,
@@ -239,8 +239,8 @@ func (s *ChallengeService) DeclineChallenge(ctx context.Context, req *pb.Decline
 	}
 
 	// Get challenge from database
-	challenge, err := s.challengeRepo.GetByID(req.Id)
-	if err != nil {
+	challenge, err := s.challengeRepo.GetByID(uint(req.Id))
+	if !ok {
 		log.Printf("[ERROR] Failed to get challenge %d: %v", req.Id, err)
 		return &pb.DeclineChallengeResponse{
 			Response: &common.Response{
@@ -254,7 +254,7 @@ func (s *ChallengeService) DeclineChallenge(ctx context.Context, req *pb.Decline
 
 	// Validate that user is the opponent
 	if challenge.OpponentID != userID {
-		log.Printf("[ERROR] User %d is not the opponent for challenge %d", userID, req.Id)
+		log.Printf("[ERROR] User %d is not the opponent for challenge %d", userID, uint(req.Id))
 		return &pb.DeclineChallengeResponse{
 			Response: &common.Response{
 				Success:   false,
@@ -288,7 +288,7 @@ func (s *ChallengeService) DeclineChallenge(ctx context.Context, req *pb.Decline
 			Response: &common.Response{
 				Success:   false,
 				Message:   "Failed to decline challenge",
-				Code:      int32(common.ErrorCode_INTERNAL),
+				Code:      int32(common.ErrorCode_INTERNAL_ERROR),
 				Timestamp: timestamppb.Now(),
 			},
 		}, nil
@@ -300,7 +300,7 @@ func (s *ChallengeService) DeclineChallenge(ctx context.Context, req *pb.Decline
 		Response: &common.Response{
 			Success:   true,
 			Message:   "Challenge declined successfully",
-			Code:      int32(common.ErrorCode_SUCCESS),
+			Code:      int32(0),
 			Timestamp: timestamppb.Now(),
 		},
 	}, nil
@@ -309,9 +309,9 @@ func (s *ChallengeService) DeclineChallenge(ctx context.Context, req *pb.Decline
 // WithdrawChallenge handles challenge withdrawal
 func (s *ChallengeService) WithdrawChallenge(ctx context.Context, req *pb.WithdrawChallengeRequest) (*pb.WithdrawChallengeResponse, error) {
 	// Extract user ID from JWT token
-	userID, err := auth.GetUserIDFromContext(ctx)
-	if err != nil {
-		log.Printf("[ERROR] Failed to get user ID from context: %v", err)
+	userID, ok := auth.GetUserIDFromContext(ctx)
+	if !ok {
+		log.Printf("[ERROR] Failed to get user ID from context")
 		return &pb.WithdrawChallengeResponse{
 			Response: &common.Response{
 				Success:   false,
@@ -323,8 +323,8 @@ func (s *ChallengeService) WithdrawChallenge(ctx context.Context, req *pb.Withdr
 	}
 
 	// Get challenge from database
-	challenge, err := s.challengeRepo.GetByID(req.Id)
-	if err != nil {
+	challenge, err := s.challengeRepo.GetByID(uint(req.Id))
+	if !ok {
 		log.Printf("[ERROR] Failed to get challenge %d: %v", req.Id, err)
 		return &pb.WithdrawChallengeResponse{
 			Response: &common.Response{
@@ -338,7 +338,7 @@ func (s *ChallengeService) WithdrawChallenge(ctx context.Context, req *pb.Withdr
 
 	// Validate that user is the challenger
 	if challenge.ChallengerID != userID {
-		log.Printf("[ERROR] User %d is not the challenger for challenge %d", userID, req.Id)
+		log.Printf("[ERROR] User %d is not the challenger for challenge %d", userID, uint(req.Id))
 		return &pb.WithdrawChallengeResponse{
 			Response: &common.Response{
 				Success:   false,
@@ -363,13 +363,13 @@ func (s *ChallengeService) WithdrawChallenge(ctx context.Context, req *pb.Withdr
 	}
 
 	// Delete the challenge
-	if err := s.challengeRepo.Delete(req.Id); err != nil {
+	if err := s.challengeRepo.Delete(uint(req.Id)); err != nil {
 		log.Printf("[ERROR] Failed to delete challenge %d: %v", req.Id, err)
 		return &pb.WithdrawChallengeResponse{
 			Response: &common.Response{
 				Success:   false,
 				Message:   "Failed to withdraw challenge",
-				Code:      int32(common.ErrorCode_INTERNAL),
+				Code:      int32(common.ErrorCode_INTERNAL_ERROR),
 				Timestamp: timestamppb.Now(),
 			},
 		}, nil
@@ -381,7 +381,7 @@ func (s *ChallengeService) WithdrawChallenge(ctx context.Context, req *pb.Withdr
 		Response: &common.Response{
 			Success:   true,
 			Message:   "Challenge withdrawn successfully",
-			Code:      int32(common.ErrorCode_SUCCESS),
+			Code:      int32(0),
 			Timestamp: timestamppb.Now(),
 		},
 	}, nil
@@ -390,9 +390,9 @@ func (s *ChallengeService) WithdrawChallenge(ctx context.Context, req *pb.Withdr
 // GetChallenge retrieves a challenge by ID
 func (s *ChallengeService) GetChallenge(ctx context.Context, req *pb.GetChallengeRequest) (*pb.GetChallengeResponse, error) {
 	// Extract user ID from JWT token
-	userID, err := auth.GetUserIDFromContext(ctx)
-	if err != nil {
-		log.Printf("[ERROR] Failed to get user ID from context: %v", err)
+	userID, ok := auth.GetUserIDFromContext(ctx)
+	if !ok {
+		log.Printf("[ERROR] Failed to get user ID from context")
 		return &pb.GetChallengeResponse{
 			Response: &common.Response{
 				Success:   false,
@@ -404,8 +404,8 @@ func (s *ChallengeService) GetChallenge(ctx context.Context, req *pb.GetChalleng
 	}
 
 	// Get challenge from database
-	challenge, err := s.challengeRepo.GetByID(req.Id)
-	if err != nil {
+	challenge, err := s.challengeRepo.GetByID(uint(req.Id))
+	if !ok {
 		log.Printf("[ERROR] Failed to get challenge %d: %v", req.Id, err)
 		return &pb.GetChallengeResponse{
 			Response: &common.Response{
@@ -419,7 +419,7 @@ func (s *ChallengeService) GetChallenge(ctx context.Context, req *pb.GetChalleng
 
 	// Validate that user is involved in the challenge
 	if challenge.ChallengerID != userID && challenge.OpponentID != userID {
-		log.Printf("[ERROR] User %d is not involved in challenge %d", userID, req.Id)
+		log.Printf("[ERROR] User %d is not involved in challenge %d", userID, uint(req.Id))
 		return &pb.GetChallengeResponse{
 			Response: &common.Response{
 				Success:   false,
@@ -434,7 +434,7 @@ func (s *ChallengeService) GetChallenge(ctx context.Context, req *pb.GetChalleng
 		Response: &common.Response{
 			Success:   true,
 			Message:   "Challenge retrieved successfully",
-			Code:      int32(common.ErrorCode_SUCCESS),
+			Code:      int32(0),
 			Timestamp: timestamppb.Now(),
 		},
 		Challenge: s.challengeModelToProto(challenge),
@@ -444,9 +444,9 @@ func (s *ChallengeService) GetChallenge(ctx context.Context, req *pb.GetChalleng
 // ListUserChallenges retrieves challenges for a user
 func (s *ChallengeService) ListUserChallenges(ctx context.Context, req *pb.ListUserChallengesRequest) (*pb.ListUserChallengesResponse, error) {
 	// Extract user ID from JWT token
-	userID, err := auth.GetUserIDFromContext(ctx)
-	if err != nil {
-		log.Printf("[ERROR] Failed to get user ID from context: %v", err)
+	userID, ok := auth.GetUserIDFromContext(ctx)
+	if !ok {
+		log.Printf("[ERROR] Failed to get user ID from context")
 		return &pb.ListUserChallengesResponse{
 			Response: &common.Response{
 				Success:   false,
@@ -458,7 +458,7 @@ func (s *ChallengeService) ListUserChallenges(ctx context.Context, req *pb.ListU
 	}
 
 	// Validate that user can only list their own challenges
-	if req.UserId != userID {
+	if uint32(userID) != req.UserId {
 		log.Printf("[ERROR] User %d trying to list challenges for user %d", userID, req.UserId)
 		return &pb.ListUserChallengesResponse{
 			Response: &common.Response{
@@ -492,13 +492,13 @@ func (s *ChallengeService) ListUserChallenges(ctx context.Context, req *pb.ListU
 
 	// Get challenges from database
 	challenges, total, err := s.challengeRepo.ListByUser(userID, req.Status, limit, offset)
-	if err != nil {
+	if !ok {
 		log.Printf("[ERROR] Failed to list challenges for user %d: %v", userID, err)
 		return &pb.ListUserChallengesResponse{
 			Response: &common.Response{
 				Success:   false,
 				Message:   "Failed to retrieve challenges",
-				Code:      int32(common.ErrorCode_INTERNAL),
+				Code:      int32(common.ErrorCode_INTERNAL_ERROR),
 				Timestamp: timestamppb.Now(),
 			},
 		}, nil
@@ -516,14 +516,14 @@ func (s *ChallengeService) ListUserChallenges(ctx context.Context, req *pb.ListU
 		Response: &common.Response{
 			Success:   true,
 			Message:   "Challenges retrieved successfully",
-			Code:      int32(common.ErrorCode_SUCCESS),
+			Code:      int32(0),
 			Timestamp: timestamppb.Now(),
 		},
 		Challenges: protoChallenges,
 		Pagination: &common.PaginationResponse{
 			Page:       req.Pagination.Page,
 			Limit:      int32(limit),
-			Total:      total,
+			Total: int32(total),
 			TotalPages: totalPages,
 		},
 	}, nil
@@ -552,14 +552,14 @@ func (s *ChallengeService) ListOpenChallenges(ctx context.Context, req *pb.ListO
 	}
 
 	// Get challenges from database
-	challenges, total, err := s.challengeRepo.ListByEvent(req.EventId, limit, offset)
+	challenges, total, err := s.challengeRepo.ListByEvent(uint(req.EventId), limit, offset)
 	if err != nil {
 		log.Printf("[ERROR] Failed to list challenges for event %d: %v", req.EventId, err)
 		return &pb.ListOpenChallengesResponse{
 			Response: &common.Response{
 				Success:   false,
 				Message:   "Failed to retrieve challenges",
-				Code:      int32(common.ErrorCode_INTERNAL),
+				Code:      int32(common.ErrorCode_INTERNAL_ERROR),
 				Timestamp: timestamppb.Now(),
 			},
 		}, nil
@@ -577,14 +577,14 @@ func (s *ChallengeService) ListOpenChallenges(ctx context.Context, req *pb.ListO
 		Response: &common.Response{
 			Success:   true,
 			Message:   "Challenges retrieved successfully",
-			Code:      int32(common.ErrorCode_SUCCESS),
+			Code:      int32(0),
 			Timestamp: timestamppb.Now(),
 		},
 		Challenges: protoChallenges,
 		Pagination: &common.PaginationResponse{
 			Page:       req.Pagination.Page,
 			Limit:      int32(limit),
-			Total:      total,
+			Total: int32(total),
 			TotalPages: totalPages,
 		},
 	}, nil
@@ -595,7 +595,7 @@ func (s *ChallengeService) Check(ctx context.Context, req *emptypb.Empty) (*comm
 	return &common.Response{
 		Success:   true,
 		Message:   "Challenge service is healthy",
-		Code:      int32(common.ErrorCode_SUCCESS),
+		Code:      int32(0),
 		Timestamp: timestamppb.Now(),
 	}, nil
 }

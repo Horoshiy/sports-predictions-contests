@@ -210,8 +210,8 @@ func (s *PredictionService) GetUserPredictions(ctx context.Context, req *pb.GetU
 		if req.Pagination.Page > 0 {
 			page = req.Pagination.Page
 		}
-		if req.Pagination.PageSize > 0 {
-			pageSize = req.Pagination.PageSize
+		if req.Pagination.Limit > 0 {
+			pageSize = req.Pagination.Limit
 		}
 	}
 

@@ -6,14 +6,13 @@ toolchain go1.24.12
 
 require (
 	github.com/sports-prediction-contests/shared v0.0.0
-	google.golang.org/grpc v1.60.1
-	google.golang.org/protobuf v1.32.0
+	google.golang.org/grpc v1.78.0
+	google.golang.org/protobuf v1.36.10
 	gorm.io/gorm v1.25.5
 )
 
 require (
 	github.com/golang-jwt/jwt/v5 v5.2.0 // indirect
-	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.19.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20221227161230-091c0ba34f0a // indirect
@@ -24,8 +23,8 @@ require (
 	golang.org/x/net v0.48.0 // indirect
 	golang.org/x/sys v0.40.0 // indirect
 	golang.org/x/text v0.33.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20240102182953-50ed04b92917 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240102182953-50ed04b92917 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20251029180050-ab9386a59fda // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20251029180050-ab9386a59fda // indirect
 	gorm.io/driver/postgres v1.5.4 // indirect
 )
 
