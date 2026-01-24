@@ -17,6 +17,44 @@ CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 -- Create index on deleted_at for soft delete queries
 CREATE INDEX IF NOT EXISTS idx_users_deleted_at ON users(deleted_at);
 
+-- Create profiles table
+CREATE TABLE IF NOT EXISTS profiles (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER UNIQUE NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    bio TEXT,
+    avatar_url VARCHAR(500),
+    location VARCHAR(100),
+    website VARCHAR(200),
+    twitter_url VARCHAR(200),
+    linked_in_url VARCHAR(200),
+    git_hub_url VARCHAR(200),
+    profile_visibility VARCHAR(20) DEFAULT 'public',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_profiles_user_id ON profiles(user_id);
+CREATE INDEX IF NOT EXISTS idx_profiles_deleted_at ON profiles(deleted_at);
+
+-- Create user_preferences table
+CREATE TABLE IF NOT EXISTS user_preferences (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER UNIQUE NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    language VARCHAR(10) DEFAULT 'en',
+    timezone VARCHAR(50) DEFAULT 'UTC',
+    email_notifications BOOLEAN DEFAULT true,
+    push_notifications BOOLEAN DEFAULT true,
+    telegram_notifications BOOLEAN DEFAULT false,
+    theme VARCHAR(20) DEFAULT 'light',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMP NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_preferences_user_id ON user_preferences(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_preferences_deleted_at ON user_preferences(deleted_at);
+
 -- Create scores table for scoring service
 CREATE TABLE IF NOT EXISTS scores (
     id SERIAL PRIMARY KEY,

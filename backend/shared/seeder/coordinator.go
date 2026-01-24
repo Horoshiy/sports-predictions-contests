@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/brianvoe/gofakeit/v6"
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -43,6 +44,33 @@ func NewCoordinator(config *Config) (*Coordinator, error) {
 	if err := db.Exec("SELECT 1").Error; err != nil {
 		return nil, fmt.Errorf("database functionality test failed: %w", err)
 	}
+
+	// Auto-migrate all tables
+	log.Println("Running database migrations...")
+	if err := db.AutoMigrate(
+		&User{},
+		&Profile{},
+		&UserPreferences{},
+		&Contest{},
+		&Challenge{},
+		&ChallengeParticipant{},
+		&Sport{},
+		&League{},
+		&Team{},
+		&Match{},
+		&Prediction{},
+		&Score{},
+		&Leaderboard{},
+		&UserStreak{},
+		&PropType{},
+		&UserTeam{},
+		&UserTeamMember{},
+		&Notification{},
+		&NotificationPreference{},
+	); err != nil {
+		return nil, fmt.Errorf("failed to run migrations: %w", err)
+	}
+	log.Println("Database migrations completed successfully")
 
 	// Create factory and sports generator
 	factory := NewDataFactory(db, config.Seed)
@@ -270,6 +298,63 @@ func (c *Coordinator) TestSeed() (err error) {
 // Individual seeding methods
 
 func (c *Coordinator) seedUsers(tx *gorm.DB, count int) ([]*User, []*Profile, []*UserPreferences, error) {
+	// First, create default admin account
+	adminPassword := "admin123"
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(adminPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("failed to hash admin password: %w", err)
+	}
+
+	adminUser := &User{
+		Email:    "admin@sportsprediction.com",
+		Password: string(hashedPassword),
+		Name:     "Admin User",
+	}
+
+	// Check if admin already exists
+	var existingAdmin User
+	result := tx.Where("email = ?", adminUser.Email).First(&existingAdmin)
+	if result.Error == nil {
+		log.Println("Admin user already exists, skipping creation")
+	} else if result.Error == gorm.ErrRecordNotFound {
+		// Create admin user
+		if err := tx.Create(adminUser).Error; err != nil {
+			return nil, nil, nil, fmt.Errorf("failed to create admin user: %w", err)
+		}
+
+		// Create admin profile
+		adminProfile := &Profile{
+			UserID:            adminUser.ID,
+			Bio:               "Platform Administrator",
+			ProfileVisibility: "public",
+		}
+		if err := tx.Create(adminProfile).Error; err != nil {
+			return nil, nil, nil, fmt.Errorf("failed to create admin profile: %w", err)
+		}
+
+		// Create admin preferences
+		adminPreferences := &UserPreferences{
+			UserID:                adminUser.ID,
+			Language:              "en",
+			Timezone:              "UTC",
+			EmailNotifications:    true,
+			PushNotifications:     true,
+			TelegramNotifications: false,
+			Theme:                 "light",
+		}
+		if err := tx.Create(adminPreferences).Error; err != nil {
+			return nil, nil, nil, fmt.Errorf("failed to create admin preferences: %w", err)
+		}
+
+		log.Printf("✅ Created default admin account:")
+		log.Printf("   Email: %s", adminUser.Email)
+		log.Printf("   Password: %s", adminPassword)
+		log.Printf("   ⚠️  Change this password in production!")
+	} else {
+		return nil, nil, nil, fmt.Errorf("failed to check for existing admin: %w", result.Error)
+	}
+
+	// Generate regular users
 	users, profiles, preferences, err := c.factory.GenerateUsers(count)
 	if err != nil {
 		return nil, nil, nil, err
@@ -296,7 +381,10 @@ func (c *Coordinator) seedUsers(tx *gorm.DB, count int) ([]*User, []*Profile, []
 		return nil, nil, nil, fmt.Errorf("failed to insert preferences: %w", err)
 	}
 
-	return users, profiles, preferences, nil
+	// Prepend admin user to the list
+	allUsers := append([]*User{adminUser}, users...)
+
+	return allUsers, profiles, preferences, nil
 }
 
 func (c *Coordinator) seedSports(tx *gorm.DB, count int) ([]*Sport, error) {

@@ -437,13 +437,16 @@ func (s *PredictionService) GetEvent(ctx context.Context, req *pb.GetEventReques
 
 // ListEvents lists events with optional filters
 func (s *PredictionService) ListEvents(ctx context.Context, req *pb.ListEventsRequest) (*pb.ListEventsResponse, error) {
-	limit := int(req.Pagination.Limit)
-	if limit <= 0 {
-		limit = 10
-	}
-	offset := int(req.Pagination.Page-1) * limit
-	if offset < 0 {
-		offset = 0
+	limit := 10
+	offset := 0
+	
+	if req.Pagination != nil {
+		if req.Pagination.Limit > 0 {
+			limit = int(req.Pagination.Limit)
+		}
+		if req.Pagination.Page > 1 {
+			offset = int(req.Pagination.Page-1) * limit
+		}
 	}
 
 	events, total, err := s.eventRepo.List(limit, offset, req.SportType, req.Status)

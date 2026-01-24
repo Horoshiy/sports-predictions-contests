@@ -61,12 +61,20 @@ class AuthService {
       request
     )
 
+    console.log('Login response:', response)
+
     if (!this.validateResponse(response)) {
+      console.error('Invalid response structure:', response)
       throw new Error('Invalid API response format')
     }
 
     if (!response.response.success) {
       throw new Error(response.response.message || 'Login failed')
+    }
+
+    if (!response.token || !response.user) {
+      console.error('Missing token or user in response:', response)
+      throw new Error('Invalid login response: missing token or user data')
     }
 
     return {

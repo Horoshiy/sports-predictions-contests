@@ -6,11 +6,11 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci
-
-# Run security audit (non-blocking for dev dependencies)
-RUN npm audit --audit-level=critical || true
+# Install dependencies with retry and timeout settings
+RUN npm config set fetch-retry-maxtimeout 120000 && \
+    npm config set fetch-retry-mintimeout 10000 && \
+    npm config set fetch-retries 5 && \
+    npm ci --prefer-offline --no-audit || npm install
 
 # Copy source code
 COPY . .

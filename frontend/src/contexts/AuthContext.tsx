@@ -25,6 +25,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const isAuthenticated = !!user
 
+  // Debug logging
+  useEffect(() => {
+    console.log('AuthProvider state changed:', { user, isAuthenticated, isLoading })
+  }, [user, isAuthenticated, isLoading])
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -54,6 +59,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           console.error('Token verification failed:', error)
         }
       }
+      // Always set loading to false, even if no token
       if (isMountedRef.current) {
         setIsLoading(false)
       }
@@ -64,53 +70,49 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (email: string, password: string): Promise<void> => {
     try {
-      if (isMountedRef.current) {
-        setIsLoading(true)
-      }
+      setIsLoading(true)
+      console.log('Attempting login for:', email)
       const { user: userData, token } = await authService.login(email, password)
+      
+      console.log('Login successful, user:', userData)
+      console.log('Token received:', token ? 'Yes' : 'No')
       
       // Store token and user data
       localStorage.setItem('authToken', token)
-      if (isMountedRef.current) {
-        setUser(userData)
-        showToast('Login successful!', 'success')
-      }
+      // Always set user, even if component is unmounting (navigation will happen)
+      console.log('Setting user in state:', userData)
+      setUser(userData)
+      setIsLoading(false) // Set loading to false immediately after setting user
+      console.log('User set, isAuthenticated should be:', !!userData)
+      showToast('Login successful!', 'success')
     } catch (error) {
+      console.error('Login error:', error)
+      setIsLoading(false) // Also set loading to false on error
       if (isMountedRef.current) {
         const message = error instanceof Error ? error.message : 'Login failed'
         showToast(message, 'error')
       }
       throw error
-    } finally {
-      if (isMountedRef.current) {
-        setIsLoading(false)
-      }
     }
   }
 
   const register = async (email: string, password: string, name: string): Promise<void> => {
     try {
-      if (isMountedRef.current) {
-        setIsLoading(true)
-      }
+      setIsLoading(true)
       const { user: userData, token } = await authService.register(email, password, name)
       
       // Store token and user data
       localStorage.setItem('authToken', token)
-      if (isMountedRef.current) {
-        setUser(userData)
-        showToast('Registration successful! Welcome!', 'success')
-      }
+      setUser(userData)
+      setIsLoading(false)
+      showToast('Registration successful! Welcome!', 'success')
     } catch (error) {
+      setIsLoading(false)
       if (isMountedRef.current) {
         const message = error instanceof Error ? error.message : 'Registration failed'
         showToast(message, 'error')
       }
       throw error
-    } finally {
-      if (isMountedRef.current) {
-        setIsLoading(false)
-      }
     }
   }
 

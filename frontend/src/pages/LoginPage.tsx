@@ -18,10 +18,14 @@ const LoginPage: React.FC = () => {
 
   const handleLogin = async (data: LoginFormData) => {
     try {
+      console.log('handleLogin: Starting login...')
       await login(data.email, data.password)
+      console.log('handleLogin: Login successful, navigating to:', from)
       // Redirect to intended destination after successful login
       navigate(from, { replace: true })
+      console.log('handleLogin: Navigation complete')
     } catch (error) {
+      console.error('handleLogin: Login failed:', error)
       // Error is handled by the auth context (toast notification)
     }
   }
@@ -35,6 +39,28 @@ const LoginPage: React.FC = () => {
             Make predictions, compete with friends, and climb the leaderboards!
           </Title>
         </div>
+
+        {/* Development credentials notice */}
+        {import.meta.env.DEV && (
+          <div style={{ 
+            width: '100%', 
+            padding: '12px', 
+            background: '#e6f7ff', 
+            border: '1px solid #91d5ff',
+            borderRadius: '4px',
+            marginBottom: '16px'
+          }}>
+            <Text strong style={{ display: 'block', marginBottom: '8px' }}>
+              🔑 Development Admin Credentials:
+            </Text>
+            <Text style={{ display: 'block', fontSize: '13px' }}>
+              Email: <Text code>admin@sportsprediction.com</Text>
+            </Text>
+            <Text style={{ display: 'block', fontSize: '13px' }}>
+              Password: <Text code>admin123</Text>
+            </Text>
+          </div>
+        )}
 
         <LoginForm onSubmit={handleLogin} loading={isLoading} />
 
