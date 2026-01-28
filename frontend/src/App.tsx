@@ -53,7 +53,7 @@ const AppHeader: React.FC = () => {
             style={{ flex: 1, minWidth: 0, background: '#1976d2' }}
             items={[
               { key: 'contests', icon: <TrophyOutlined />, label: <Link to="/contests">Contests</Link> },
-              { key: 'teams', icon: <TeamOutlined />, label: <Link to="/teams">Teams</Link> },
+              // { key: 'teams', icon: <TeamOutlined />, label: <Link to="/teams">Teams</Link> }, // TODO: Implement TeamService in backend
               { key: 'predictions', icon: <LineChartOutlined />, label: <Link to="/predictions">Predictions</Link> },
               { key: 'sports', icon: <FundOutlined />, label: <Link to="/sports">Sports</Link> },
               { key: 'analytics', icon: <BarChartOutlined />, label: <Link to="/analytics">Analytics</Link> },
@@ -117,6 +117,7 @@ function App() {
                       </ProtectedRoute>
                     } 
                   />
+                  {/* TODO: Implement TeamService in backend
                   <Route 
                     path="/teams" 
                     element={
@@ -125,6 +126,7 @@ function App() {
                       </ProtectedRoute>
                     } 
                   />
+                  */}
                   <Route 
                     path="/profile" 
                     element={

@@ -88,6 +88,11 @@ func NewCoordinator(config *Config) (*Coordinator, error) {
 func (c *Coordinator) SeedAll() (err error) {
 	log.Println("Starting comprehensive data seeding...")
 
+	// Clean existing data first
+	if err := c.cleanExistingData(); err != nil {
+		return fmt.Errorf("failed to clean existing data: %w", err)
+	}
+
 	counts := c.config.GetDataCounts()
 
 	// Start transaction for data consistency
@@ -145,6 +150,13 @@ func (c *Coordinator) SeedAll() (err error) {
 		return fmt.Errorf("failed to seed matches: %w", err)
 	}
 
+	// 5.5. Events (create from matches for prediction-service)
+	events, err := c.seedEvents(tx, matches, teams, sports)
+	if err != nil {
+		tx.Rollback()
+		return fmt.Errorf("failed to seed events: %w", err)
+	}
+
 	// 6. Contests (depends on users and sports)
 	contests, err := c.seedContests(tx, counts.Contests, users, sports)
 	if err != nil {
@@ -152,8 +164,8 @@ func (c *Coordinator) SeedAll() (err error) {
 		return fmt.Errorf("failed to seed contests: %w", err)
 	}
 
-	// 6.5. Challenges (depends on users and matches)
-	challenges, err := c.seedChallenges(tx, counts.Challenges, users, matches)
+	// 6.5. Challenges (depends on users and events)
+	challenges, err := c.seedChallenges(tx, counts.Challenges, users, events)
 	if err != nil {
 		tx.Rollback()
 		return fmt.Errorf("failed to seed challenges: %w", err)
@@ -162,8 +174,8 @@ func (c *Coordinator) SeedAll() (err error) {
 	// Phase 3: Complex entities
 	log.Println("Phase 3: Seeding complex entities...")
 
-	// 7. Predictions (depends on users, contests, matches)
-	predictions, err := c.seedPredictions(tx, counts.Predictions, users, contests, matches)
+	// 7. Predictions (depends on users, contests, events)
+	predictions, err := c.seedPredictions(tx, counts.Predictions, users, contests, events)
 	if err != nil {
 		tx.Rollback()
 		return fmt.Errorf("failed to seed predictions: %w", err)
@@ -261,13 +273,18 @@ func (c *Coordinator) TestSeed() (err error) {
 		return fmt.Errorf("test failed to seed matches: %w", err)
 	}
 
+	events, err := c.seedEvents(tx, matches, teams, sports)
+	if err != nil {
+		return fmt.Errorf("test failed to seed events: %w", err)
+	}
+
 	contests, err := c.seedContests(tx, minInt(counts.Contests, 2), users, sports)
 	if err != nil {
 		return fmt.Errorf("test failed to seed contests: %w", err)
 	}
 
 	log.Println("Testing Phase 3: Complex entities...")
-	predictions, err := c.seedPredictions(tx, minInt(counts.Predictions, 20), users, contests, matches)
+	predictions, err := c.seedPredictions(tx, minInt(counts.Predictions, 20), users, contests, events)
 	if err != nil {
 		return fmt.Errorf("test failed to seed predictions: %w", err)
 	}
@@ -439,6 +456,53 @@ func (c *Coordinator) seedMatches(tx *gorm.DB, count int, leagues []*League, tea
 	return matches, nil
 }
 
+func (c *Coordinator) seedEvents(tx *gorm.DB, matches []*Match, teams []*Team, sports []*Sport) ([]*Event, error) {
+	log.Printf("Creating %d events from matches...", len(matches))
+	
+	// Create team lookup map
+	teamMap := make(map[uint]*Team)
+	for _, team := range teams {
+		teamMap[team.ID] = team
+	}
+	
+	// Create sport lookup map
+	sportMap := make(map[uint]*Sport)
+	for _, sport := range sports {
+		sportMap[sport.ID] = sport
+	}
+	
+	events := make([]*Event, len(matches))
+	for i, match := range matches {
+		homeTeam := teamMap[match.HomeTeamID]
+		awayTeam := teamMap[match.AwayTeamID]
+		sport := sportMap[homeTeam.SportID]
+		
+		// Ensure ResultData is valid JSON or empty
+		resultData := match.ResultData
+		if resultData == "" {
+			resultData = "{}"
+		}
+		
+		events[i] = &Event{
+			ID:         match.ID, // Use same ID as match
+			Title:      fmt.Sprintf("%s vs %s", homeTeam.Name, awayTeam.Name),
+			SportType:  sport.Name,
+			HomeTeam:   homeTeam.Name,
+			AwayTeam:   awayTeam.Name,
+			EventDate:  match.ScheduledAt,
+			Status:     match.Status,
+			ResultData: resultData,
+		}
+	}
+	
+	if err := tx.CreateInBatches(events, c.config.BatchSize).Error; err != nil {
+		return nil, fmt.Errorf("failed to insert events: %w", err)
+	}
+	
+	log.Printf("Successfully created %d events", len(events))
+	return events, nil
+}
+
 func (c *Coordinator) seedContests(tx *gorm.DB, count int, users []*User, sports []*Sport) ([]*Contest, error) {
 	// Extract user IDs and sport types
 	userIDs := make([]uint, len(users))
@@ -463,7 +527,7 @@ func (c *Coordinator) seedContests(tx *gorm.DB, count int, users []*User, sports
 	return contests, nil
 }
 
-func (c *Coordinator) seedPredictions(tx *gorm.DB, count int, users []*User, contests []*Contest, matches []*Match) ([]*Prediction, error) {
+func (c *Coordinator) seedPredictions(tx *gorm.DB, count int, users []*User, contests []*Contest, events []*Event) ([]*Prediction, error) {
 	// Extract IDs
 	userIDs := make([]uint, len(users))
 	for i, user := range users {
@@ -475,12 +539,12 @@ func (c *Coordinator) seedPredictions(tx *gorm.DB, count int, users []*User, con
 		contestIDs[i] = contest.ID
 	}
 
-	matchIDs := make([]uint, len(matches))
-	for i, match := range matches {
-		matchIDs[i] = match.ID
+	eventIDs := make([]uint, len(events))
+	for i, event := range events {
+		eventIDs[i] = event.ID
 	}
 
-	predictions, err := c.factory.GeneratePredictions(count, userIDs, contestIDs, matchIDs)
+	predictions, err := c.factory.GeneratePredictions(count, userIDs, contestIDs, eventIDs)
 	if err != nil {
 		return nil, err
 	}
@@ -733,15 +797,15 @@ func (c *Coordinator) seedNotifications(tx *gorm.DB, users []*User) error {
 }
 
 // seedChallenges creates realistic challenge data
-func (c *Coordinator) seedChallenges(tx *gorm.DB, count int, users []*User, matches []*Match) ([]*Challenge, error) {
+func (c *Coordinator) seedChallenges(tx *gorm.DB, count int, users []*User, events []*Event) ([]*Challenge, error) {
 	log.Printf("Generating %d challenges...", count)
 
 	if len(users) < 2 {
 		return nil, fmt.Errorf("need at least 2 users to create challenges, got %d", len(users))
 	}
 
-	if len(matches) == 0 {
-		return nil, fmt.Errorf("need at least 1 match to create challenges")
+	if len(events) == 0 {
+		return nil, fmt.Errorf("need at least 1 event to create challenges")
 	}
 
 	challenges := make([]*Challenge, 0, count)
@@ -798,7 +862,7 @@ func (c *Coordinator) seedChallenges(tx *gorm.DB, count int, users []*User, matc
 		opponent := users[opponentIdx]
 
 		// Select random match/event
-		match := matches[c.factory.faker.IntRange(0, len(matches)-1)]
+		event := events[c.factory.faker.IntRange(0, len(events)-1)]
 
 		// Select weighted random status
 		totalWeight := 0
@@ -822,7 +886,7 @@ func (c *Coordinator) seedChallenges(tx *gorm.DB, count int, users []*User, matc
 		challenge := &Challenge{
 			ChallengerID: challenger.ID,
 			OpponentID:   opponent.ID,
-			EventID:      match.ID,
+			EventID:      event.ID,
 			Message:      c.factory.faker.RandomString(messages),
 			Status:       status,
 			ExpiresAt:    time.Now().Add(24 * time.Hour), // Default 24h expiration
@@ -926,6 +990,43 @@ func (c *Coordinator) generateTeamName() string {
 	return fmt.Sprintf("%s %s",
 		c.factory.faker.RandomString(adjectives),
 		c.factory.faker.RandomString(nouns))
+}
+
+// cleanExistingData removes all existing data in reverse dependency order
+func (c *Coordinator) cleanExistingData() error {
+	log.Println("Cleaning existing data...")
+
+	// Delete in reverse dependency order (children first)
+	tables := []string{
+		"notifications",
+		"user_team_members",
+		"challenge_participants",
+		"challenges",
+		"user_teams",
+		"user_streaks",
+		"leaderboards",
+		"scores",
+		"predictions",
+		"events",
+		"contests",
+		"matches",
+		"teams",
+		"leagues",
+		"sports",
+		"user_preferences",
+		"profiles",
+		"users",
+	}
+
+	for _, table := range tables {
+		if err := c.db.Exec(fmt.Sprintf("DELETE FROM %s", table)).Error; err != nil {
+			// Ignore errors for tables that don't exist
+			log.Printf("Warning: failed to clean table %s: %v", table, err)
+		}
+	}
+
+	log.Println("✅ Existing data cleaned")
+	return nil
 }
 
 // Close closes the database connection

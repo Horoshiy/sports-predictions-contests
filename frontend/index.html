@@ -5,6 +5,16 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Sports Prediction Contests</title>
+    <script>
+      // Debug script for Safari
+      window.addEventListener('error', function(e) {
+        console.error('Global error:', e.error);
+        document.body.innerHTML = '<div style="padding: 20px; color: red;"><h1>Error!</h1><pre>' + e.error + '</pre></div>';
+      });
+      window.addEventListener('unhandledrejection', function(e) {
+        console.error('Unhandled promise rejection:', e.reason);
+      });
+    </script>
   </head>
   <body>
     <div id="root"></div>

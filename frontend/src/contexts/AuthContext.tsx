@@ -44,11 +44,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (token) {
         try {
           // Add timeout to token verification
+          const timeoutPromise = new Promise<never>((_, reject) => 
+            setTimeout(() => reject(new Error('Token verification timeout')), 3000)
+          )
           const userData = await Promise.race([
             authService.verifyToken(),
-            new Promise<never>((_, reject) => 
-              setTimeout(() => reject(new Error('Token verification timeout')), 5000)
-            )
+            timeoutPromise
           ])
           if (isMountedRef.current) {
             setUser(userData)

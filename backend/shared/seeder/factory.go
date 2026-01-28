@@ -121,28 +121,43 @@ func (f *DataFactory) GenerateContests(count int, userIDs []uint, sportTypes []s
 func (f *DataFactory) GeneratePredictions(count int, userIDs []uint, contestIDs []uint, matchIDs []uint) ([]*Prediction, error) {
 	log.Printf("Generating %d predictions...", count)
 
-	predictions := make([]*Prediction, count)
+	predictions := make([]*Prediction, 0, count)
 	predictionTypes := []string{"match_result", "exact_score", "over_under", "both_teams_score"}
+	
+	// Track unique combinations to avoid duplicates
+	seen := make(map[string]bool)
 
-	for i := 0; i < count; i++ {
+	for i := 0; i < count*2 && len(predictions) < count; i++ { // Try up to 2x to handle collisions
 		submittedAt := f.faker.DateRange(time.Now().AddDate(0, -2, 0), time.Now())
 		predType := f.faker.RandomString(predictionTypes)
+		
+		userID := f.faker.RandomUint(userIDs)
+		contestID := f.faker.RandomUint(contestIDs)
+		matchID := f.faker.RandomUint(matchIDs)
+		
+		// Create unique key for this combination
+		key := fmt.Sprintf("%d-%d-%d", userID, contestID, matchID)
+		if seen[key] {
+			continue // Skip duplicate
+		}
+		seen[key] = true
 
 		prediction := &Prediction{
-			ID:             uint(i + 1),
-			UserID:         f.faker.RandomUint(userIDs),
-			ContestID:      f.faker.RandomUint(contestIDs),
-			MatchID:        f.faker.RandomUint(matchIDs),
+			ID:             uint(len(predictions) + 1),
+			UserID:         userID,
+			ContestID:      contestID,
+			EventID:        matchID, // EventID is the same as MatchID
+			MatchID:        matchID,
 			PredictionType: predType,
 			PredictionData: f.generatePredictionData(predType),
 			SubmittedAt:    submittedAt,
 			IsCorrect:      f.generateIsCorrect(),
 			Points:         f.faker.Float64Range(0, 10),
 		}
-		predictions[i] = prediction
+		predictions = append(predictions, prediction)
 	}
 
-	log.Printf("Successfully generated %d predictions", count)
+	log.Printf("Successfully generated %d predictions", len(predictions))
 	return predictions, nil
 }
 

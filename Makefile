@@ -99,3 +99,29 @@ seed-test: ## Test seeding configuration without adding data
 seed-custom: ## Seed with custom parameters (use SEED_SIZE and SEED_VALUE env vars)
 	@echo "Seeding with custom parameters..."
 	@./scripts/seed-data.sh --size $(or $(SEED_SIZE),small) --seed $(or $(SEED_VALUE),42)
+
+check-services: ## Check and restart failed services
+	@./scripts/check-services.sh
+
+playwright-install: ## Install Playwright browsers
+	@echo "Installing Playwright browsers..."
+	@./scripts/playwright-install.sh
+
+playwright-test: ## Run Playwright E2E tests with services
+	@echo "Running Playwright E2E tests..."
+	@./scripts/playwright-test.sh
+
+playwright-test-ui: ## Run Playwright tests in UI mode
+	@echo "Running Playwright in UI mode..."
+	@./scripts/playwright-test.sh --ui
+
+playwright-test-headed: ## Run Playwright tests in headed mode
+	@echo "Running Playwright in headed mode..."
+	@./scripts/playwright-test.sh --headed
+
+playwright-test-only: ## Run Playwright tests (assumes services running)
+	@echo "Running Playwright tests..."
+	@cd frontend && npm run test:e2e
+
+playwright-report: ## Show Playwright test report
+	@cd frontend && npm run test:e2e:report

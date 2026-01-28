@@ -13,7 +13,7 @@ import (
 	"github.com/sports-prediction-contests/contest-service/internal/service"
 	"github.com/sports-prediction-contests/shared/auth"
 	"github.com/sports-prediction-contests/shared/database"
-	pb "github.com/sports-prediction-contests/shared/proto/contest"
+	contestpb "github.com/sports-prediction-contests/shared/proto/contest"
 	"google.golang.org/grpc"
 )
 
@@ -48,7 +48,7 @@ func main() {
 	)
 
 	// Register services
-	pb.RegisterContestServiceServer(server, contestService)
+	contestpb.RegisterContestServiceServer(server, contestService)
 
 	// Start listening
 	lis, err := net.Listen("tcp", ":"+cfg.Port)

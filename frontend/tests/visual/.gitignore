@@ -1,0 +1,6 @@
+# Ignore test results
+*-actual.png
+*-diff.png
+
+# Keep baseline snapshots
+!*-expected.png

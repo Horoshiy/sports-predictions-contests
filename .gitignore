@@ -112,3 +112,5 @@ temp/
 *.bak2
 *.bak3
 *.fix
+frontend/.env.test
+*.backup

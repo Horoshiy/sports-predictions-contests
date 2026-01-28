@@ -145,11 +145,25 @@ type Match struct {
 	gorm.Model
 }
 
+// Event represents a sports event for predictions (from prediction-service)
+type Event struct {
+	ID         uint      `gorm:"primaryKey" json:"id"`
+	Title      string    `gorm:"not null" json:"title"`
+	SportType  string    `gorm:"not null;index" json:"sport_type"`
+	HomeTeam   string    `gorm:"not null" json:"home_team"`
+	AwayTeam   string    `gorm:"not null" json:"away_team"`
+	EventDate  time.Time `gorm:"not null;index" json:"event_date"`
+	Status     string    `gorm:"not null;default:'scheduled';index" json:"status"`
+	ResultData string    `gorm:"type:jsonb" json:"result_data"`
+	gorm.Model
+}
+
 // Prediction represents a user prediction (from prediction-service)
 type Prediction struct {
 	ID             uint      `gorm:"primaryKey" json:"id"`
 	UserID         uint      `gorm:"not null" json:"user_id"`
 	ContestID      uint      `gorm:"not null" json:"contest_id"`
+	EventID        uint      `gorm:"not null" json:"event_id"`
 	MatchID        uint      `json:"match_id,omitempty"`
 	PredictionType string    `gorm:"not null" json:"prediction_type"`
 	PredictionData string    `gorm:"type:jsonb" json:"prediction_data"`

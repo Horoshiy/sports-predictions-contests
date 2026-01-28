@@ -20,7 +20,8 @@ Welcome to the comprehensive English documentation for the Sports Prediction Con
 - [Notification Service](api/notification-service.md) - Multi-channel notifications
 
 ### 🧪 Testing
-- [E2E Testing](testing/e2e-testing.md) - End-to-end testing procedures
+- [E2E Testing](testing/e2e-testing.md) - Backend end-to-end testing procedures
+- [Playwright Testing](testing/playwright-testing.md) - Frontend E2E testing with Playwright
 - [Unit Testing](testing/unit-testing.md) - Unit testing for all services
 - [Performance Testing](testing/performance-testing.md) - Load testing and benchmarks
 

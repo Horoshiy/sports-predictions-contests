@@ -463,14 +463,16 @@ func (s *ContestService) LeaveContest(ctx context.Context, req *pb.LeaveContestR
 // ListParticipants retrieves participants for a contest
 func (s *ContestService) ListParticipants(ctx context.Context, req *pb.ListParticipantsRequest) (*pb.ListParticipantsResponse, error) {
 	// Set default pagination
-	limit := int(req.Pagination.Limit)
-	if limit <= 0 || limit > 100 {
-		limit = 20
-	}
-
-	page := int(req.Pagination.Page)
-	if page <= 0 {
-		page = 1
+	limit := 20
+	page := 1
+	
+	if req.Pagination != nil {
+		if req.Pagination.Limit > 0 && req.Pagination.Limit <= 100 {
+			limit = int(req.Pagination.Limit)
+		}
+		if req.Pagination.Page > 0 {
+			page = int(req.Pagination.Page)
+		}
 	}
 
 	offset := (page - 1) * limit
