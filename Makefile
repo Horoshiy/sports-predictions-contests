@@ -125,3 +125,7 @@ playwright-test-only: ## Run Playwright tests (assumes services running)
 
 playwright-report: ## Show Playwright test report
 	@cd frontend && npm run test:e2e:report
+
+generate-screenshots: ## Generate screenshots for documentation
+	@echo "Generating screenshots for documentation..."
+	@./scripts/generate-screenshots.sh
