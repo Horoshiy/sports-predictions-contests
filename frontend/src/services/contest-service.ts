@@ -28,6 +28,10 @@ class ContestService {
       this.basePath,
       request
     )
+    console.log('Create contest response:', response)
+    if (!response.contest) {
+      throw new Error('Server returned empty contest data')
+    }
     return response.contest
   }
 

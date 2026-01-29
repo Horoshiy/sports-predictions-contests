@@ -52,6 +52,8 @@ const ContestsPage: React.FC = () => {
         maxParticipants: data.maxParticipants,
       }
 
+      console.log('Submitting contest data:', contestData)
+
       if (selectedContest) {
         await updateContestMutation.mutateAsync({
           id: selectedContest.id,
@@ -60,13 +62,15 @@ const ContestsPage: React.FC = () => {
         })
         showSuccess('Contest updated successfully')
       } else {
-        await createContestMutation.mutateAsync(contestData)
+        const result = await createContestMutation.mutateAsync(contestData)
+        console.log('Create result:', result)
         showSuccess('Contest created successfully')
       }
 
       setIsFormOpen(false)
       setSelectedContest(null)
     } catch (error: any) {
+      console.error('Form submit error:', error)
       showError(error?.message || 'Failed to save contest')
     }
   }

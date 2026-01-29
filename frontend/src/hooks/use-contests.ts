@@ -58,11 +58,15 @@ export const useCreateContest = () => {
   return useMutation({
     mutationFn: (request: CreateContestRequest) => contestService.createContest(request),
     onSuccess: (newContest) => {
+      console.log('Contest created:', newContest)
+      
       // Invalidate and refetch contests list
       queryClient.invalidateQueries({ queryKey: contestKeys.lists() })
       
-      // Add the new contest to the cache
-      queryClient.setQueryData(contestKeys.detail(newContest.id), newContest)
+      // Add the new contest to the cache if it has an id
+      if (newContest?.id) {
+        queryClient.setQueryData(contestKeys.detail(newContest.id), newContest)
+      }
       
       showToast('Contest created successfully!', 'success')
     },
@@ -102,46 +106,44 @@ export const useDeleteContest = () => {
   const { showToast } = useToast()
 
   return useMutation({
-    mutationFn: (id: number) => contestService.deleteContest(id),
-    onMutate: async (deletedId) => {
-      // Cancel any outgoing refetches
-      await queryClient.cancelQueries({ queryKey: contestKeys.lists() })
+    mutationFn: (id: number) => {
+      console.log('Deleting contest:', id)
+      return contestService.deleteContest(id)
+    },
+    onSuccess: (_, deletedId) => {
+      console.log('Contest deleted successfully:', deletedId)
       
-      // Snapshot the previous value
-      const previousContests = queryClient.getQueriesData({ queryKey: contestKeys.lists() })
+      // Get all queries with contests lists
+      const queries = queryClient.getQueriesData({ queryKey: contestKeys.lists() })
+      console.log('Found queries to update:', queries.length)
       
-      // Optimistically update to remove the contest
+      // Update each query to remove the deleted contest
       queryClient.setQueriesData({ queryKey: contestKeys.lists() }, (old: any) => {
-        if (!old?.contests) return old
+        console.log('Updating query data, old:', old)
+        if (!old?.contests) {
+          console.log('No contests in old data')
+          return old
+        }
+        
+        const newContests = old.contests.filter((c: Contest) => c.id !== deletedId)
+        console.log('Filtered contests:', old.contests.length, '->', newContests.length)
+        
         return {
           ...old,
-          contests: old.contests.filter((c: Contest) => c.id !== deletedId),
+          contests: newContests,
           pagination: {
             ...old.pagination,
-            total: (old.pagination?.total || 0) - 1,
+            total: Math.max(0, (old.pagination?.total || 0) - 1),
           },
         }
       })
       
-      return { previousContests }
-    },
-    onSuccess: (_, deletedId) => {
       // Remove the contest from the detail cache
       queryClient.removeQueries({ queryKey: contestKeys.detail(deletedId) })
       
-      // Refetch to ensure consistency
-      queryClient.invalidateQueries({ queryKey: contestKeys.lists() })
-      
       showToast('Contest deleted successfully!', 'success')
     },
-    onError: (error, _, context) => {
-      // Rollback on error
-      if (context?.previousContests) {
-        context.previousContests.forEach(([queryKey, data]) => {
-          queryClient.setQueryData(queryKey, data)
-        })
-      }
-      
+    onError: (error) => {
       console.error('Failed to delete contest:', error)
       showToast(`Failed to delete contest: ${error.message}`, 'error')
     },
