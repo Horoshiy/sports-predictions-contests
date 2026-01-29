@@ -1,5 +1,5 @@
 import React from 'react'
-import { List, Tag, Button, Spin, Typography, Popconfirm } from 'antd'
+import { List, Tag, Button, Spin, Typography, Popconfirm, Skeleton } from 'antd'
 import { DeleteOutlined, CrownOutlined } from '@ant-design/icons'
 import { useTeamMembers, useRemoveMember } from '../../hooks/use-teams'
 import { useAuth } from '../../contexts/AuthContext'
@@ -23,7 +23,19 @@ export const TeamMembers: React.FC<TeamMembersProps> = ({ team }) => {
     removeMemberMutation.mutate({ teamId: team.id, userId })
   }
 
-  if (isLoading) return <div style={{ textAlign: 'center', padding: 24 }}><Spin /></div>
+  if (isLoading) {
+    return (
+      <List
+        dataSource={[1, 2, 3]}
+        renderItem={() => (
+          <List.Item>
+            <Skeleton avatar active />
+          </List.Item>
+        )}
+      />
+    )
+  }
+
   if (isError) return <Text type="danger">Failed to load members</Text>
 
   return (

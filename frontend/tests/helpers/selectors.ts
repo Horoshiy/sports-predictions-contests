@@ -48,6 +48,11 @@ export const SELECTORS = {
     leaveTeamButton: 'button:has-text("Leave Team")',
     teamNameInput: 'input[placeholder*="team name"]',
     membersList: '.ant-list',
+    teamDetailsModal: '[data-testid="team-details-modal"]',
+    teamLeaderboardTab: 'div[data-testid="team-leaderboard"]',
+    joinTeamForm: '[data-testid="join-team-form"]',
+    inviteCodeInput: 'input[placeholder*="invite code"]',
+    deleteTeamButton: 'button:has-text("Delete Team")',
   },
   
   analytics: {

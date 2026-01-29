@@ -4,6 +4,7 @@ import ContestList from '../components/contests/ContestList'
 import ContestForm from '../components/contests/ContestForm'
 import ParticipantList from '../components/contests/ParticipantList'
 import { LeaderboardTable } from '../components/leaderboard/LeaderboardTable'
+import TeamLeaderboard from '../components/teams/TeamLeaderboard'
 import {
   useCreateContest,
   useUpdateContest,
@@ -119,6 +120,19 @@ const ContestsPage: React.FC = () => {
               ) : (
                 <div style={{ padding: 48, textAlign: 'center' }}>
                   <Text type="secondary">Select a contest to view its leaderboard</Text>
+                </div>
+              ),
+            },
+            {
+              key: '3',
+              label: 'Team Leaderboard',
+              children: selectedContest ? (
+                <div data-testid="team-leaderboard">
+                  <TeamLeaderboard contestId={selectedContest.id} />
+                </div>
+              ) : (
+                <div style={{ padding: 48, textAlign: 'center' }}>
+                  <Text type="secondary">Select a contest to view team leaderboard</Text>
                 </div>
               ),
             },

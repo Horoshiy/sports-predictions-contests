@@ -1,6 +1,6 @@
-import React, { useMemo, useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Table, Button, Tag, Tooltip, Space, Alert } from 'antd'
+import { Table, Button, Tag, Tooltip, Space, Alert, Modal, Empty } from 'antd'
 import { EditOutlined, DeleteOutlined, PlusOutlined, TeamOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { useTeams, useDeleteTeam } from '../../hooks/use-teams'
@@ -32,17 +32,25 @@ export const TeamList: React.FC<TeamListProps> = ({ onCreateTeam, onEditTeam, on
 
   const { data, isLoading, isError, error } = useTeams({
     pagination: { page: pagination.pageIndex + 1, limit: pagination.pageSize },
+    myTeamsOnly,
   })
 
   const deleteTeamMutation = useDeleteTeam()
 
   const handleDelete = (team: Team) => {
-    if (window.confirm(`Delete team "${team.name}"?`)) {
-      deleteTeamMutation.mutate(team.id)
-    }
+    Modal.confirm({
+      title: 'Delete Team',
+      content: `Are you sure you want to delete "${team.name}"? This action cannot be undone and all members will be removed.`,
+      okText: 'Delete',
+      okType: 'danger',
+      cancelText: 'Cancel',
+      onOk: () => {
+        deleteTeamMutation.mutate(team.id)
+      },
+    })
   }
 
-  const columns: ColumnsType<Team> = useMemo(() => [
+  const columns: ColumnsType<Team> = [
     { title: 'ID', dataIndex: 'id', key: 'id', width: 60 },
     { title: 'Name', dataIndex: 'name', key: 'name', width: 200 },
     {
@@ -75,7 +83,12 @@ export const TeamList: React.FC<TeamListProps> = ({ onCreateTeam, onEditTeam, on
       render: (_, team) => (
         <Space>
           <Tooltip title="View Members">
-            <Button icon={<TeamOutlined />} size="small" onClick={() => onViewMembers(team)} />
+            <Button 
+              icon={<TeamOutlined />} 
+              size="small" 
+              onClick={() => onViewMembers(team)}
+              data-testid="view-members-button"
+            />
           </Tooltip>
           <Tooltip title="Edit">
             <Button type="primary" icon={<EditOutlined />} size="small" onClick={() => onEditTeam(team)} />
@@ -86,29 +99,40 @@ export const TeamList: React.FC<TeamListProps> = ({ onCreateTeam, onEditTeam, on
         </Space>
       ),
     },
-  ], [deleteTeamMutation.isPending])
+  ]
 
   if (isError) {
     return <Alert message="Error" description={error?.message} type="error" showIcon />
   }
 
+  const hasTeams = data?.teams && data.teams.length > 0
+
   return (
     <Space direction="vertical" size="middle" style={{ width: '100%' }}>
-      <Button type="primary" icon={<PlusOutlined />} onClick={onCreateTeam}>
+      <Button type="primary" icon={<PlusOutlined />} onClick={onCreateTeam} data-testid="create-team-button">
         Create Team
       </Button>
-      <Table
-        columns={columns}
-        dataSource={data?.teams ?? []}
-        rowKey="id"
-        loading={isLoading || deleteTeamMutation.isPending}
-        pagination={{
-          current: pagination.pageIndex + 1,
-          pageSize: pagination.pageSize,
-          total: data?.pagination?.total ?? 0,
-          onChange: (page, pageSize) => setPagination({ pageIndex: page - 1, pageSize }),
-        }}
-      />
+      {!isLoading && !hasTeams ? (
+        <Empty
+          description={myTeamsOnly ? "You haven't joined any teams yet" : "No teams available"}
+          style={{ padding: '48px 0' }}
+        >
+          <Button type="primary" onClick={onCreateTeam}>Create Your First Team</Button>
+        </Empty>
+      ) : (
+        <Table
+          columns={columns}
+          dataSource={data?.teams ?? []}
+          rowKey="id"
+          loading={isLoading || deleteTeamMutation.isPending}
+          pagination={{
+            current: pagination.pageIndex + 1,
+            pageSize: pagination.pageSize,
+            total: data?.pagination?.total ?? 0,
+            onChange: (page, pageSize) => setPagination({ pageIndex: page - 1, pageSize }),
+          }}
+        />
+      )}
     </Space>
   )
 }
