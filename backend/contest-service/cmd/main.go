@@ -14,6 +14,7 @@ import (
 	"github.com/sports-prediction-contests/shared/auth"
 	"github.com/sports-prediction-contests/shared/database"
 	contestpb "github.com/sports-prediction-contests/shared/proto/contest"
+	teampb "github.com/sports-prediction-contests/shared/proto/team"
 	"google.golang.org/grpc"
 )
 
@@ -31,16 +32,28 @@ func main() {
 	}
 
 	// Auto-migrate database schema
-	if err := db.AutoMigrate(&models.Contest{}, &models.Participant{}); err != nil {
+	if err := db.AutoMigrate(
+		&models.Contest{},
+		&models.Participant{},
+		&models.Team{},
+		&models.TeamMember{},
+		&models.TeamContestEntry{},
+	); err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)
 	}
+	log.Printf("[INFO] Database migration completed successfully")
 
 	// Initialize repositories
 	contestRepo := repository.NewContestRepository(db)
 	participantRepo := repository.NewParticipantRepository(db)
+	teamRepo := repository.NewTeamRepository(db)
+	memberRepo := repository.NewTeamMemberRepository(db)
+	contestEntryRepo := repository.NewTeamContestEntryRepository(db)
 
 	// Initialize services
 	contestService := service.NewContestService(contestRepo, participantRepo)
+	teamService := service.NewTeamService(teamRepo, memberRepo, contestEntryRepo)
+	teamServiceGRPC := service.NewTeamServiceGRPC(teamService)
 
 	// Create gRPC server with JWT interceptor
 	server := grpc.NewServer(
@@ -49,6 +62,7 @@ func main() {
 
 	// Register services
 	contestpb.RegisterContestServiceServer(server, contestService)
+	teampb.RegisterTeamServiceServer(server, teamServiceGRPC)
 
 	// Start listening
 	lis, err := net.Listen("tcp", ":"+cfg.Port)
@@ -56,7 +70,7 @@ func main() {
 		log.Fatalf("Failed to listen on port %s: %v", cfg.Port, err)
 	}
 
-	log.Printf("[INFO] Contest Service starting on port %s", cfg.Port)
+	log.Printf("[INFO] Contest & Team Service starting on port %s", cfg.Port)
 
 	// Start server in a goroutine
 	go func() {
@@ -71,7 +85,7 @@ func main() {
 
 	// Block until a signal is received
 	<-c
-	log.Println("[INFO] Shutting down Contest Service...")
+	log.Println("[INFO] Shutting down Contest & Team Service...")
 
 	// Gracefully stop the server
 	server.GracefulStop()
@@ -82,5 +96,5 @@ func main() {
 		sqlDB.Close()
 	}
 	
-	log.Println("[INFO] Contest Service stopped")
+	log.Println("[INFO] Contest & Team Service stopped")
 }

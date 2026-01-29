@@ -27,9 +27,42 @@ Contest Service is a gRPC microservice for managing sports prediction contests. 
 - `LeaveContest` - Leave a contest
 - `ListParticipants` - List contest participants with pagination
 
+### Team Operations
+
+- `CreateTeam` - Create a new team
+- `UpdateTeam` - Update team details (captain only)
+- `GetTeam` - Retrieve team by ID
+- `DeleteTeam` - Delete team (captain only)
+- `ListTeams` - List teams with pagination and filters
+- `JoinTeam` - Join team using invite code
+- `LeaveTeam` - Leave a team
+- `RemoveMember` - Remove team member (captain only)
+- `ListMembers` - List team members with pagination
+- `RegenerateInviteCode` - Generate new invite code (captain only)
+- `JoinContestAsTeam` - Join contest as a team (captain only)
+- `LeaveContestAsTeam` - Leave contest as a team (captain only)
+- `GetTeamLeaderboard` - Get team rankings for a contest
+
 ### Health Check
 
 - `Check` - Service health check
+
+## Team Management
+
+Teams allow users to collaborate in contests. Each team has:
+- **Captain**: User who created the team, has full management rights
+- **Members**: Users who joined via invite code
+- **Invite Code**: Unique 8-character code for joining
+- **Max Members**: Configurable limit (2-50, default 10)
+
+### Team Workflow
+
+1. User creates team (becomes captain)
+2. Captain shares invite code with others
+3. Users join team using invite code
+4. Captain joins contests on behalf of team
+5. Team members' predictions contribute to team score
+6. Team appears in contest leaderboard
 
 ## Configuration
 
@@ -101,6 +134,35 @@ grpcurl -plaintext -d '{
 grpcurl -plaintext -d '{
   "contest_id": 1
 }' localhost:8085 contest.ContestService/JoinContest
+```
+
+### Create Team
+
+**Note**: Team operations require JWT authentication. Include the token in gRPC metadata.
+
+```bash
+grpcurl -plaintext -H "authorization: Bearer <jwt_token>" -d '{
+  "name": "Dream Team",
+  "description": "Best predictors united",
+  "max_members": 10
+}' localhost:8085 team.TeamService/CreateTeam
+```
+
+### Join Team
+
+```bash
+grpcurl -plaintext -H "authorization: Bearer <jwt_token>" -d '{
+  "invite_code": "A1B2C3D4"
+}' localhost:8085 team.TeamService/JoinTeam
+```
+
+### List Team Members
+
+```bash
+grpcurl -plaintext -d '{
+  "team_id": 1,
+  "pagination": {"page": 1, "limit": 10}
+}' localhost:8085 team.TeamService/ListMembers
 ```
 
 ## Development

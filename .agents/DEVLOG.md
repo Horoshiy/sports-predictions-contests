@@ -1,8 +1,8 @@
 # Development Log - Sports Prediction Contests Platform
 
 **Project**: Sports Prediction Contests - Multilingual Sports Prediction Platform  
-**Duration**: January 8-23, 2026  
-**Total Time**: ~24 hours (so far)  
+**Duration**: January 8-29, 2026  
+**Total Time**: ~26 hours (so far)  
 
 ## Overview
 Building a multilingual, multi-sport API-first platform for creating and running sports prediction competitions. Using microservices architecture with Go backend, React frontend, and comprehensive Kiro CLI workflow integration.
@@ -3806,11 +3806,11 @@ Tests  7 passed (7)
 - **Documentation**: Complete bilingual docs (EN/RU)
 
 ### Kiro CLI Usage
-- **@prime**: 23 uses for context loading
+- **@prime**: 24 uses for context loading
 - **@plan-feature**: 20 uses for feature planning
 - **@execute**: 19 uses for implementation
-- **@code-review**: 33 uses for quality assurance
-- **@code-review-fix**: 22 uses for bug fixing
+- **@code-review**: 36 uses for quality assurance
+- **@code-review-fix**: 23 uses for bug fixing
 - **Custom Prompts**: Extensive use of execution reports and analysis
 
 ### Quality Metrics
@@ -3826,10 +3826,10 @@ Tests  7 passed (7)
 - ✅ 11 major innovations implemented
 - ✅ Production-ready Docker configuration
 - ✅ Comprehensive backend E2E test suite
-- ✅ **NEW: Complete frontend E2E testing with Playwright**
-- ✅ **NEW: MCP integration for AI-assisted testing**
-- ✅ **NEW: Visual regression testing**
-- ✅ **NEW: Cross-browser testing (3 browsers)**
+- ✅ Complete frontend E2E testing with Playwright
+- ✅ MCP integration for AI-assisted testing
+- ✅ Visual regression testing
+- ✅ Cross-browser testing (3 browsers)
 - ✅ Telegram bot with interactive commands
 - ✅ Fake data seeding system
 - ✅ Dependency consistency automation
@@ -3840,3 +3840,74 @@ Tests  7 passed (7)
 - ✅ Strong validation with comprehensive test coverage
 - ✅ Security documentation complete
 - ✅ Complete bilingual documentation (EN/RU)
+- ✅ **NEW: Team Service gRPC integration complete**
+- ✅ **NEW: Team management within contest-service**
+
+---
+
+## Day 17: Team Service gRPC Integration (Jan 29)
+
+### Session 1 (6:00-6:30 AM) - Backend Integration & Code Review [30min]
+
+**Context**: Team Service business logic already existed but needed gRPC integration into contest-service.
+
+**6:00-6:10**: Backend gRPC Integration
+- Created `team_service_grpc.go` (450 lines) - gRPC adapter wrapping existing TeamService
+- Implemented all 13 TeamServiceServer interface methods
+- Added defensive nil checks for CreateTeam, UpdateTeam, GetTeam
+- Added pagination validation (default limit=20 if <=0)
+- Updated `main.go` to register TeamService with gRPC server
+- Added 3 team models to database migration (Team, TeamMember, TeamContestEntry)
+- Initialized 3 team repositories (team, member, contestEntry)
+- Updated service logs to "Contest & Team Service"
+
+**6:10-6:15**: Documentation Updates
+- Updated `backend/contest-service/README.md`:
+  - Added Team Operations section (13 endpoints)
+  - Added Team Management explanation
+  - Added Team Workflow description
+  - Added 3 usage examples with authentication notes
+- Updated `.gitignore` to exclude Go binaries
+
+**6:15-6:25**: Code Review & Fixes
+- Initial review identified 10 issues (1 critical, 2 medium, 7 low)
+- Fixed 7 issues:
+  - Removed compiled binary (critical)
+  - Added .gitignore patterns (critical)
+  - Added nil checks to 3 methods (medium)
+  - Added pagination validation (low)
+  - Updated log messages (low)
+  - Added migration success log (low)
+  - Added authentication notes to README (low)
+- Post-fixes review: 5 minor optional issues remain (all low severity)
+
+**6:25-6:30**: Build Verification
+- `go build ./cmd/main.go` - SUCCESS
+- `go vet ./...` - PASSING
+- Binary not tracked in git
+
+**Architecture Decision**: Team Service implemented within contest-service (port 8085), not as standalone service
+- **Rationale**: Tight coupling with contests (team contest entries), shared database transactions, reduced inter-service communication
+- **Trade-off**: Contest service has more responsibilities but simpler deployment
+
+**Files Modified**:
+- Created: `backend/contest-service/internal/service/team_service_grpc.go` (450 lines)
+- Modified: `backend/contest-service/cmd/main.go` (+22 lines, -4 lines)
+- Modified: `backend/contest-service/README.md` (+62 lines)
+- Modified: `.gitignore` (+3 lines)
+
+**Patterns Followed**:
+- gRPC Wrapper Pattern: Separate adapter layer wraps business logic
+- Error Handling: Return gRPC responses with error details, not Go errors
+- Nil Checks: Defensive programming for response objects
+- Pagination: Default limit=20 if <=0
+- Logging: `[INFO]`, `[ERROR]` prefixes
+
+**Next Steps** (NOT STARTED):
+- Phase 2: Integration Testing (45 min) - `tests/contest-service/team_integration_test.go`
+- Phase 3: E2E Testing (30 min) - `tests/e2e/team_workflow_test.go`, `frontend/tests/e2e/teams.spec.ts`
+- Phase 4: Documentation (45 min) - Bilingual API docs (EN/RU)
+
+**Kiro Usage**: Manual implementation following existing patterns from user-service and challenge-service
+
+**Status**: Phase 1 (Backend Integration) COMPLETE ✅ - Code is functional and ready for testing
