@@ -36,15 +36,21 @@ export const ContestForm: React.FC<ContestFormProps> = ({
 }) => {
   const isEditing = !!contest
 
-  const defaultValues = React.useMemo(() => ({
-    title: contest?.title || '',
-    description: contest?.description || '',
-    sportType: contest?.sportType || '',
-    rules: contest?.rules || '',
-    startDate: contest?.startDate ? new Date(contest.startDate) : new Date(),
-    endDate: contest?.endDate ? new Date(contest.endDate) : new Date(),
-    maxParticipants: contest?.maxParticipants || 0,
-  }), [contest])
+  const defaultValues = React.useMemo(() => {
+    const now = new Date()
+    const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000) // +1 day
+    const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000) // +7 days
+    
+    return {
+      title: contest?.title || '',
+      description: contest?.description || '',
+      sportType: contest?.sportType || '',
+      rules: contest?.rules || '',
+      startDate: contest?.startDate ? new Date(contest.startDate) : tomorrow,
+      endDate: contest?.endDate ? new Date(contest.endDate) : nextWeek,
+      maxParticipants: contest?.maxParticipants || 0,
+    }
+  }, [contest])
 
   const {
     control,
