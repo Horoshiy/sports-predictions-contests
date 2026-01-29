@@ -162,3 +162,25 @@ func (c *Contest) CanJoin() bool {
 func (c *Contest) IsActive() bool {
 	return c.Status == "active" && time.Now().Before(c.EndDate) && time.Now().After(c.StartDate)
 }
+
+// GetComputedStatus returns the actual status based on current time and dates
+// This should be used for display purposes instead of the Status field
+func (c *Contest) GetComputedStatus() string {
+	now := time.Now().UTC()
+	startUTC := c.StartDate.UTC()
+	endUTC := c.EndDate.UTC()
+
+	// If manually cancelled or draft, respect that status
+	if c.Status == "cancelled" || c.Status == "draft" {
+		return c.Status
+	}
+
+	// Compute status based on dates
+	if now.Before(startUTC) {
+		return "upcoming"
+	}
+	if now.After(endUTC) {
+		return "completed"
+	}
+	return "active"
+}

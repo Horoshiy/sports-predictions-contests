@@ -552,7 +552,7 @@ func (s *ContestService) modelToProto(contest *models.Contest) *pb.Contest {
 		Description:         contest.Description,
 		SportType:           contest.SportType,
 		Rules:               contest.Rules,
-		Status:              contest.Status,
+		Status:              contest.GetComputedStatus(), // Use computed status based on dates
 		StartDate:           timestamppb.New(contest.StartDate),
 		EndDate:             timestamppb.New(contest.EndDate),
 		MaxParticipants:     uint32(contest.MaxParticipants),
