@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { Table, Button, Tag, Tooltip, Space, Alert } from 'antd'
+import { Table, Button, Tag, Tooltip, Space, Alert, Modal } from 'antd'
 import { EditOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { useSports, useDeleteSport } from '../../hooks/use-sports'
@@ -33,9 +33,24 @@ export const SportList: React.FC<SportListProps> = ({ onCreateSport, onEditSport
   const deleteMutation = useDeleteSport()
 
   const handleDelete = (sport: Sport) => {
-    if (window.confirm(`Delete "${sport.name}"?`)) {
-      deleteMutation.mutate(sport.id)
-    }
+    Modal.confirm({
+      title: `Delete "${sport.name}"?`,
+      content: 'This action cannot be undone.',
+      okText: 'Delete',
+      okType: 'danger',
+      cancelText: 'Cancel',
+      onOk: () => {
+        deleteMutation.mutate(sport.id, {
+          onError: (error: any) => {
+            // Show error in a new modal
+            Modal.error({
+              title: 'Cannot Delete Sport',
+              content: error.message || 'Failed to delete sport',
+            })
+          }
+        })
+      },
+    })
   }
 
   const columns: ColumnsType<Sport> = useMemo(() => [

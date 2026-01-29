@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react'
-import { Table, Button, Tag, Tooltip, Space, Select, Avatar, Alert } from 'antd'
+import { Table, Button, Tag, Tooltip, Space, Select, Avatar, Alert, Modal } from 'antd'
 import { EditOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { useTeams, useDeleteTeam, useSports } from '../../hooks/use-sports'
@@ -26,9 +26,23 @@ export const TeamList: React.FC<TeamListProps> = ({ onCreateTeam, onEditTeam }) 
   const deleteMutation = useDeleteTeam()
 
   const handleDelete = (team: Team) => {
-    if (window.confirm(`Delete "${team.name}"?`)) {
-      deleteMutation.mutate(team.id)
-    }
+    Modal.confirm({
+      title: `Delete "${team.name}"?`,
+      content: 'This action cannot be undone.',
+      okText: 'Delete',
+      okType: 'danger',
+      cancelText: 'Cancel',
+      onOk: () => {
+        deleteMutation.mutate(team.id, {
+          onError: (error: any) => {
+            Modal.error({
+              title: 'Cannot Delete Team',
+              content: error.message || 'Failed to delete team',
+            })
+          }
+        })
+      },
+    })
   }
 
   const columns: ColumnsType<Team> = useMemo(() => [

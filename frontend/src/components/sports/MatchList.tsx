@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react'
-import { Table, Button, Tag, Tooltip, Space, Select, Alert, Typography } from 'antd'
+import { Table, Button, Tag, Tooltip, Space, Select, Alert, Typography, Modal } from 'antd'
 import { EditOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons'
 import type { ColumnsType } from 'antd/es/table'
 import { useMatches, useDeleteMatch, useLeagues, useTeams } from '../../hooks/use-sports'
@@ -41,9 +41,23 @@ export const MatchList: React.FC<MatchListProps> = ({ onCreateMatch, onEditMatch
   const deleteMutation = useDeleteMatch()
 
   const handleDelete = (match: Match) => {
-    if (window.confirm('Delete this match?')) {
-      deleteMutation.mutate(match.id)
-    }
+    Modal.confirm({
+      title: 'Delete this match?',
+      content: 'This action cannot be undone.',
+      okText: 'Delete',
+      okType: 'danger',
+      cancelText: 'Cancel',
+      onOk: () => {
+        deleteMutation.mutate(match.id, {
+          onError: (error: any) => {
+            Modal.error({
+              title: 'Cannot Delete Match',
+              content: error.message || 'Failed to delete match',
+            })
+          }
+        })
+      },
+    })
   }
 
   const columns: ColumnsType<Match> = useMemo(() => [
