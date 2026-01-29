@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"time"
 
@@ -261,6 +262,19 @@ func (s *ContestService) DeleteContest(ctx context.Context, req *pb.DeleteContes
 		// 		Timestamp: timestamppb.Now(),
 		// 	},
 		// }, nil
+	}
+
+	// Check if contest has predictions (safe delete)
+	participantCount, err := s.participantRepo.CountByContest(contest.ID)
+	if err == nil && participantCount > 0 {
+		return &pb.DeleteContestResponse{
+			Response: &common.Response{
+				Success:   false,
+				Message:   fmt.Sprintf("Cannot delete contest with %d participants. Remove participants first.", participantCount),
+				Code:      int32(common.ErrorCode_INVALID_ARGUMENT),
+				Timestamp: timestamppb.Now(),
+			},
+		}, nil
 	}
 
 	// Delete contest

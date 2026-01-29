@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"time"
 
@@ -118,6 +119,19 @@ func (s *SportsService) UpdateSport(ctx context.Context, req *pb.UpdateSportRequ
 }
 
 func (s *SportsService) DeleteSport(ctx context.Context, req *pb.DeleteSportRequest) (*pb.DeleteResponse, error) {
+	// Check if sport has leagues (safe delete)
+	leagues, _, err := s.leagueRepo.List(100, 0, uint(req.Id), false)
+	if err == nil && len(leagues) > 0 {
+		return &pb.DeleteResponse{
+			Response: &common.Response{
+				Success:   false,
+				Message:   fmt.Sprintf("Cannot delete sport with %d leagues. Delete leagues first.", len(leagues)),
+				Code:      int32(common.ErrorCode_INVALID_ARGUMENT),
+				Timestamp: timestamppb.Now(),
+			},
+		}, nil
+	}
+
 	if err := s.sportRepo.Delete(uint(req.Id)); err != nil {
 		return &pb.DeleteResponse{
 			Response: &common.Response{Success: false, Message: err.Error(), Code: int32(common.ErrorCode_NOT_FOUND), Timestamp: timestamppb.Now()},
@@ -239,6 +253,32 @@ func (s *SportsService) UpdateLeague(ctx context.Context, req *pb.UpdateLeagueRe
 }
 
 func (s *SportsService) DeleteLeague(ctx context.Context, req *pb.DeleteLeagueRequest) (*pb.DeleteResponse, error) {
+	// Check if league has teams (safe delete)
+	teams, _, err := s.teamRepo.List(100, 0, uint(req.Id), false)
+	if err == nil && len(teams) > 0 {
+		return &pb.DeleteResponse{
+			Response: &common.Response{
+				Success:   false,
+				Message:   fmt.Sprintf("Cannot delete league with %d teams. Delete teams first.", len(teams)),
+				Code:      int32(common.ErrorCode_INVALID_ARGUMENT),
+				Timestamp: timestamppb.Now(),
+			},
+		}, nil
+	}
+
+	// Check if league has matches
+	matches, _, err := s.matchRepo.List(100, 0, uint(req.Id), 0, "")
+	if err == nil && len(matches) > 0 {
+		return &pb.DeleteResponse{
+			Response: &common.Response{
+				Success:   false,
+				Message:   fmt.Sprintf("Cannot delete league with %d matches. Delete matches first.", len(matches)),
+				Code:      int32(common.ErrorCode_INVALID_ARGUMENT),
+				Timestamp: timestamppb.Now(),
+			},
+		}, nil
+	}
+
 	if err := s.leagueRepo.Delete(uint(req.Id)); err != nil {
 		return &pb.DeleteResponse{
 			Response: &common.Response{Success: false, Message: err.Error(), Code: int32(common.ErrorCode_NOT_FOUND), Timestamp: timestamppb.Now()},
@@ -362,6 +402,19 @@ func (s *SportsService) UpdateTeam(ctx context.Context, req *pb.UpdateTeamReques
 }
 
 func (s *SportsService) DeleteTeam(ctx context.Context, req *pb.DeleteTeamRequest) (*pb.DeleteResponse, error) {
+	// Check if team has matches (safe delete)
+	matches, _, err := s.matchRepo.List(100, 0, 0, uint(req.Id), "")
+	if err == nil && len(matches) > 0 {
+		return &pb.DeleteResponse{
+			Response: &common.Response{
+				Success:   false,
+				Message:   fmt.Sprintf("Cannot delete team with %d matches. Delete matches first.", len(matches)),
+				Code:      int32(common.ErrorCode_INVALID_ARGUMENT),
+				Timestamp: timestamppb.Now(),
+			},
+		}, nil
+	}
+
 	if err := s.teamRepo.Delete(uint(req.Id)); err != nil {
 		return &pb.DeleteResponse{
 			Response: &common.Response{Success: false, Message: err.Error(), Code: int32(common.ErrorCode_NOT_FOUND), Timestamp: timestamppb.Now()},
