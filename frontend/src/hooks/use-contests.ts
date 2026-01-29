@@ -103,16 +103,45 @@ export const useDeleteContest = () => {
 
   return useMutation({
     mutationFn: (id: number) => contestService.deleteContest(id),
+    onMutate: async (deletedId) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: contestKeys.lists() })
+      
+      // Snapshot the previous value
+      const previousContests = queryClient.getQueriesData({ queryKey: contestKeys.lists() })
+      
+      // Optimistically update to remove the contest
+      queryClient.setQueriesData({ queryKey: contestKeys.lists() }, (old: any) => {
+        if (!old?.contests) return old
+        return {
+          ...old,
+          contests: old.contests.filter((c: Contest) => c.id !== deletedId),
+          pagination: {
+            ...old.pagination,
+            total: (old.pagination?.total || 0) - 1,
+          },
+        }
+      })
+      
+      return { previousContests }
+    },
     onSuccess: (_, deletedId) => {
-      // Remove the contest from the cache
+      // Remove the contest from the detail cache
       queryClient.removeQueries({ queryKey: contestKeys.detail(deletedId) })
       
-      // Invalidate lists to ensure consistency
+      // Refetch to ensure consistency
       queryClient.invalidateQueries({ queryKey: contestKeys.lists() })
       
       showToast('Contest deleted successfully!', 'success')
     },
-    onError: (error) => {
+    onError: (error, _, context) => {
+      // Rollback on error
+      if (context?.previousContests) {
+        context.previousContests.forEach(([queryKey, data]) => {
+          queryClient.setQueryData(queryKey, data)
+        })
+      }
+      
       console.error('Failed to delete contest:', error)
       showToast(`Failed to delete contest: ${error.message}`, 'error')
     },
