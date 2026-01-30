@@ -6,6 +6,7 @@ import (
 	"github.com/sports-prediction-contests/telegram-bot/config"
 	contestpb "github.com/sports-prediction-contests/shared/proto/contest"
 	notificationpb "github.com/sports-prediction-contests/shared/proto/notification"
+	predictionpb "github.com/sports-prediction-contests/shared/proto/prediction"
 	scoringpb "github.com/sports-prediction-contests/shared/proto/scoring"
 	userpb "github.com/sports-prediction-contests/shared/proto/user"
 	"google.golang.org/grpc"
@@ -17,6 +18,7 @@ type Clients struct {
 	Contest      contestpb.ContestServiceClient
 	Scoring      scoringpb.ScoringServiceClient
 	Notification notificationpb.NotificationServiceClient
+	Prediction   predictionpb.PredictionServiceClient
 	conns        []*grpc.ClientConn
 }
 
@@ -61,6 +63,14 @@ func New(cfg *config.Config) (*Clients, error) {
 	}
 	c.conns = append(c.conns, notificationConn)
 	c.Notification = notificationpb.NewNotificationServiceClient(notificationConn)
+
+	// Prediction service
+	predictionConn, err := grpc.Dial(cfg.PredictionServiceEndpoint, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to prediction service: %w", err)
+	}
+	c.conns = append(c.conns, predictionConn)
+	c.Prediction = predictionpb.NewPredictionServiceClient(predictionConn)
 
 	return c, nil
 }

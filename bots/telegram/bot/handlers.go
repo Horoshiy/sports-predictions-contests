@@ -18,31 +18,49 @@ import (
 )
 
 type Handlers struct {
-	api      *tgbotapi.BotAPI
-	clients  *clients.Clients
-	sessions map[int64]*UserSession
-	mu       sync.RWMutex // Protects sessions map
+	api               *tgbotapi.BotAPI
+	clients           *clients.Clients
+	sessions          map[int64]*UserSession
+	mu                sync.RWMutex // Protects sessions map
+	registrationLocks sync.Map     // Per-chat registration locks
+	sessionTTL        time.Duration
+	shutdownCh        chan struct{}
 }
 
 type UserSession struct {
-	UserID   uint32
-	Email    string
-	LinkedAt time.Time
+	UserID         uint32
+	Email          string
+	LinkedAt       time.Time
+	LastActivity   time.Time
+	// Navigation state
+	CurrentContest uint32
+	CurrentPage    int
 }
 
 func NewHandlers(api *tgbotapi.BotAPI, clients *clients.Clients) *Handlers {
-	return &Handlers{
-		api:      api,
-		clients:  clients,
-		sessions: make(map[int64]*UserSession),
+	h := &Handlers{
+		api:        api,
+		clients:    clients,
+		sessions:   make(map[int64]*UserSession),
+		sessionTTL: 24 * time.Hour,
+		shutdownCh: make(chan struct{}),
 	}
+
+	// Start session cleanup goroutine
+	go h.cleanupSessions()
+
+	return h
 }
 
-// getSession safely retrieves a session
+// getSession safely retrieves a session and updates LastActivity
 func (h *Handlers) getSession(chatID int64) *UserSession {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-	return h.sessions[chatID]
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	session := h.sessions[chatID]
+	if session != nil {
+		session.LastActivity = time.Now()
+	}
+	return session
 }
 
 // setSession safely stores a session
@@ -80,7 +98,9 @@ func (h *Handlers) HandleCallback(cb *tgbotapi.CallbackQuery) {
 	msgID := cb.Message.MessageID
 
 	// Acknowledge callback
-	h.api.Request(tgbotapi.NewCallback(cb.ID, ""))
+	if _, err := h.api.Request(tgbotapi.NewCallback(cb.ID, "")); err != nil {
+		log.Printf("[WARN] Failed to acknowledge callback %s: %v", cb.ID, err)
+	}
 
 	switch {
 	case data == "back_main":
@@ -107,11 +127,74 @@ func (h *Handlers) HandleCallback(cb *tgbotapi.CallbackQuery) {
 			return
 		}
 		h.handleLeaderboardCallback(chatID, msgID, uint32(id))
+	case strings.HasPrefix(data, "matches_"):
+		// Format: matches_contestID_page
+		parts := strings.Split(strings.TrimPrefix(data, "matches_"), "_")
+		if len(parts) < 1 {
+			log.Printf("[WARN] Invalid matches callback data: %s", data)
+			return
+		}
+		contestID, _ := strconv.ParseUint(parts[0], 10, 32)
+		page := 1
+		if len(parts) > 1 {
+			page, _ = strconv.Atoi(parts[1])
+		}
+		h.handleMatchList(chatID, msgID, uint32(contestID), page)
+	case strings.HasPrefix(data, "match_"):
+		// Format: match_matchID
+		id, _ := strconv.ParseUint(strings.TrimPrefix(data, "match_"), 10, 32)
+		h.handleMatchDetail(chatID, msgID, uint32(id))
+	case strings.HasPrefix(data, "p_"):
+		// Format: p_matchID_homeScore_awayScore
+		parts := strings.Split(strings.TrimPrefix(data, "p_"), "_")
+		if len(parts) < 3 {
+			log.Printf("[WARN] Invalid prediction callback data: %s", data)
+			return
+		}
+		matchID, _ := strconv.ParseUint(parts[0], 10, 32)
+		homeScore, _ := strconv.Atoi(parts[1])
+		awayScore, _ := strconv.Atoi(parts[2])
+		h.handlePredictionSubmit(chatID, msgID, uint32(matchID), homeScore, awayScore)
+	case strings.HasPrefix(data, "pany_"):
+		// Format: pany_matchID
+		id, _ := strconv.ParseUint(strings.TrimPrefix(data, "pany_"), 10, 32)
+		h.handleAnyOtherScore(chatID, msgID, uint32(id))
 	}
 }
 
 func (h *Handlers) handleStart(msg *tgbotapi.Message) {
-	h.sendMessage(msg.Chat.ID, MsgWelcome, MainMenuKeyboard())
+	session := h.getSession(msg.Chat.ID)
+
+	// If already registered, show menu
+	if session != nil && session.UserID > 0 {
+		h.sendMessage(msg.Chat.ID, MsgWelcome, MainMenuKeyboard())
+		return
+	}
+
+	// Acquire lock for this chat ID to prevent race conditions
+	lockInterface, _ := h.registrationLocks.LoadOrStore(msg.Chat.ID, &sync.Mutex{})
+	lock, ok := lockInterface.(*sync.Mutex)
+	if !ok {
+		log.Printf("[ERROR] Invalid lock type for chat %d", msg.Chat.ID)
+		h.sendMessage(msg.Chat.ID, MsgServiceError, nil)
+		return
+	}
+	lock.Lock()
+	defer func() {
+		lock.Unlock()
+		// Clean up lock after registration completes (one-time operation)
+		h.registrationLocks.Delete(msg.Chat.ID)
+	}()
+
+	// Check again after acquiring lock
+	session = h.getSession(msg.Chat.ID)
+	if session != nil && session.UserID > 0 {
+		h.sendMessage(msg.Chat.ID, MsgWelcome, MainMenuKeyboard())
+		return
+	}
+
+	// Auto-register via Telegram
+	h.registerViaTelegram(msg)
 }
 
 func (h *Handlers) handleHelp(msg *tgbotapi.Message) {
@@ -190,6 +273,13 @@ func (h *Handlers) handleContestDetail(chatID int64, msgID int, contestID uint32
 	if err != nil || resp == nil || resp.Response == nil || !resp.Response.Success {
 		h.editMessage(chatID, msgID, "Contest not found.", BackToMainKeyboard())
 		return
+	}
+
+	// Update session with selected contest
+	session := h.getSession(chatID)
+	if session != nil {
+		session.CurrentContest = contestID
+		h.setSession(chatID, session)
 	}
 
 	c := resp.Contest
@@ -355,12 +445,15 @@ func (h *Handlers) handleLink(msg *tgbotapi.Message, args string) {
 	}
 
 	// Store session (thread-safe)
+	now := time.Now()
 	h.setSession(msg.Chat.ID, &UserSession{
-		UserID:   loginResp.User.Id,
-		Email:    email,
-		LinkedAt: time.Now(),
+		UserID:       loginResp.User.Id,
+		Email:        email,
+		LinkedAt:     now,
+		LastActivity: now,
 	})
 
+	log.Printf("[INFO] Session created (chat=%d, user=%d)", msg.Chat.ID, loginResp.User.Id)
 	h.sendMessage(msg.Chat.ID, MsgLinkSuccess, MainMenuKeyboard())
 }
 
@@ -382,4 +475,37 @@ func (h *Handlers) editMessage(chatID int64, msgID int, text string, keyboard tg
 	if _, err := h.api.Send(edit); err != nil {
 		log.Printf("[ERROR] Failed to edit message: %v", err)
 	}
+}
+
+// cleanupSessions periodically removes expired sessions to prevent memory leak
+func (h *Handlers) cleanupSessions() {
+	ticker := time.NewTicker(1 * time.Hour)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			h.mu.Lock()
+			now := time.Now()
+			cleaned := 0
+			for chatID, session := range h.sessions {
+				if now.Sub(session.LastActivity) > h.sessionTTL {
+					delete(h.sessions, chatID)
+					cleaned++
+				}
+			}
+			h.mu.Unlock()
+			if cleaned > 0 {
+				log.Printf("[INFO] Cleaned up %d expired sessions", cleaned)
+			}
+		case <-h.shutdownCh:
+			log.Printf("[INFO] Session cleanup goroutine stopped")
+			return
+		}
+	}
+}
+
+// Shutdown gracefully stops the handlers and cleanup goroutines
+func (h *Handlers) Shutdown() {
+	close(h.shutdownCh)
 }

@@ -38,6 +38,9 @@ func ContestListKeyboard(contests []ContestInfo) tgbotapi.InlineKeyboardMarkup {
 func ContestDetailKeyboard(contestID uint32) tgbotapi.InlineKeyboardMarkup {
 	return tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(
+			tgbotapi.NewInlineKeyboardButtonData("⚽ Matches", fmt.Sprintf("matches_%d_1", contestID)),
+		),
+		tgbotapi.NewInlineKeyboardRow(
 			tgbotapi.NewInlineKeyboardButtonData("🏅 Leaderboard", fmt.Sprintf("leaderboard_%d", contestID)),
 		),
 		tgbotapi.NewInlineKeyboardRow(
