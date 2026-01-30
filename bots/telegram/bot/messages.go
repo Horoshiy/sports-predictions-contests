@@ -10,59 +10,63 @@ import (
 const (
 	MsgWelcome = `🏆 <b>Sports Prediction Contests</b>
 
-Welcome! Make predictions on sports events and compete with others.
+Welcome! You're now registered and ready to make predictions on sports events.
 
-<b>Commands:</b>
-/contests - View active contests
-/leaderboard - View leaderboard
-/mystats - Your statistics
-/link - Link your account
-/help - Show help
+<b>Quick Start:</b>
+• Use /contests to view active contests
+• Select a contest and browse matches
+• Make your predictions before matches start
+• Check /leaderboard to see rankings
+• View /mystats for your performance
 
-To make predictions, first link your account with /link command.`
+<b>Добро пожаловать!</b> Вы зарегистрированы и готовы делать прогнозы на спортивные события.`
 
-	MsgHelp = `📖 <b>Available Commands</b>
+	MsgHelp = `📖 <b>Available Commands | Доступные команды</b>
 
-/start - Start bot
-/contests - List active contests
-/leaderboard [id] - Contest leaderboard
-/mystats - Your prediction stats
-/link email password - Link Telegram to account
-/help - This message
+/start - Start bot and register | Начать и зарегистрироваться
+/contests - List active contests | Список активных конкурсов
+/leaderboard - Contest leaderboard | Таблица лидеров
+/mystats - Your prediction stats | Ваша статистика
+/link - Link existing web account | Привязать веб-аккаунт
+/help - This message | Эта справка
 
-<b>How to use:</b>
-1. Register at our website
-2. Use /link to connect your account
-3. Browse contests and make predictions!`
+<b>How to use | Как использовать:</b>
+1. Browse contests with /contests
+2. Select a contest to see matches
+3. Make predictions before match starts
+4. Compete with others on leaderboard!
 
-	MsgNoContests       = "📭 No active contests at the moment."
-	MsgContestList      = "🏆 <b>Active Contests</b>\n\n"
-	MsgLeaderboard      = "🏅 <b>Leaderboard</b>\n\n"
-	MsgEmptyLeaderboard = "No entries in leaderboard yet."
-	MsgNotLinked        = "⚠️ Account not linked. Use /link email password"
-	MsgLinkSuccess      = "✅ Account linked successfully!"
-	MsgLinkFailed       = "❌ Failed to link account: %s"
-	MsgLinkUsage        = "Usage: /link your@email.com password"
-	MsgServiceError     = "⚠️ Service temporarily unavailable. Try again later."
-	MsgUnknownCommand   = "Unknown command. Use /help for available commands."
-	MsgStats            = `📊 <b>Your Statistics</b>
+<b>Note:</b> Your account is automatically created when you start the bot. If you have an existing web account, use /link to connect it.`
+
+	MsgNoContests         = "📭 No active contests at the moment."
+	MsgContestList        = "🏆 <b>Active Contests</b>\n\n"
+	MsgLeaderboard        = "🏅 <b>Leaderboard</b>\n\n"
+	MsgEmptyLeaderboard   = "No entries in leaderboard yet."
+	MsgNotLinked          = "⚠️ Account not linked. Use /link email password"
+	MsgLinkSuccess        = "✅ Account linked successfully!"
+	MsgLinkFailed         = "❌ Failed to link account: %s"
+	MsgLinkUsage          = "Usage: /link your@email.com password"
+	MsgServiceError       = "⚠️ Service temporarily unavailable. Try again later."
+	MsgUnknownCommand     = "Unknown command. Use /help for available commands."
+	MsgRegistrationFailed = "❌ Failed to create account. Please try again later."
+	MsgStats              = `📊 <b>Your Statistics</b>
 
 Total Points: <b>%.1f</b>
 Current Streak: <b>%d</b> 🔥
 Max Streak: <b>%d</b>`
 
 	// Match and prediction messages
-	MsgMatchList            = "⚽ <b>Matches</b>\n\n"
-	MsgNoMatches            = "📭 No matches available."
-	MsgMatchDetail          = "⚽ <b>Match Details</b>\n\n"
-	MsgMatchNotFound        = "⚠️ Match not found."
-	MsgPredictionSuccess    = "✅ Prediction saved!"
-	MsgPredictionUpdated    = "✅ Prediction updated!"
-	MsgMatchStarted         = "⚠️ Match already started, cannot predict."
-	MsgSelectScore          = "Select score prediction:"
-	MsgOtherPredictions     = "\n\n👥 <b>Other Predictions:</b>\n"
-	MsgDetailedLeaderboard  = "🏅 <b>Detailed Leaderboard</b>\n\n"
-	MsgSelectContestFirst   = "⚠️ Please select a contest first."
+	MsgMatchList           = "⚽ <b>Matches</b>\n\n"
+	MsgNoMatches           = "📭 No matches available."
+	MsgMatchDetail         = "⚽ <b>Match Details</b>\n\n"
+	MsgMatchNotFound       = "⚠️ Match not found."
+	MsgPredictionSuccess   = "✅ Prediction saved!"
+	MsgPredictionUpdated   = "✅ Prediction updated!"
+	MsgMatchStarted        = "⚠️ Match already started, cannot predict."
+	MsgSelectScore         = "Select score prediction:"
+	MsgOtherPredictions    = "\n\n👥 <b>Other Predictions:</b>\n"
+	MsgDetailedLeaderboard = "🏅 <b>Detailed Leaderboard</b>\n\n"
+	MsgSelectContestFirst  = "⚠️ Please select a contest first."
 )
 
 // FormatContest formats a contest entry for display in the contest list.
@@ -110,18 +114,18 @@ func FormatMatch(id uint32, homeTeam, awayTeam string, eventDate time.Time, hasP
 // Shows match info, final score if completed, and list of other users' predictions.
 func FormatMatchWithPredictions(match *predictionpb.Event, predictions []*predictionpb.Prediction) string {
 	text := fmt.Sprintf("⚽ <b>%s vs %s</b>\n\n📅 %s\n", match.HomeTeam, match.AwayTeam, match.EventDate.AsTime().Format("Jan 02, 15:04"))
-	
+
 	if match.Status == "completed" && match.ResultData != "" {
 		text += fmt.Sprintf("🏁 Final Score: %s\n", match.ResultData)
 	}
-	
+
 	if len(predictions) > 0 {
 		text += MsgOtherPredictions
 		for _, pred := range predictions {
 			text += fmt.Sprintf("• User %d: %s\n", pred.UserId, pred.PredictionData)
 		}
 	}
-	
+
 	return text
 }
 
@@ -139,6 +143,6 @@ func FormatDetailedLeaderboardEntry(rank int, name string, points float64, exact
 	default:
 		medal = fmt.Sprintf("%d.", rank)
 	}
-	return fmt.Sprintf("%s %s\n💯 %.1f pts | 🎯 %d | ⚖️ %d | ✓ %d | ⚽ %d\n\n", 
+	return fmt.Sprintf("%s %s\n💯 %.1f pts | 🎯 %d | ⚖️ %d | ✓ %d | ⚽ %d\n\n",
 		medal, name, points, exactScores, goalDiffs, outcomes, teamGoals)
 }

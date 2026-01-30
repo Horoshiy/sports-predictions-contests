@@ -171,10 +171,10 @@ run_seeder() {
     
     if [ "$TEST_MODE" = true ]; then
         print_info "Running in test mode..."
-        go run ../../scripts/seed-data.go -test -size "$SIZE" -seed "$SEED"
+        go run ./cmd/seeder/main.go -test -size "$SIZE" -seed "$SEED"
     else
         print_info "Running data seeding..."
-        go run ../../scripts/seed-data.go -size "$SIZE" -seed "$SEED"
+        go run ./cmd/seeder/main.go -size "$SIZE" -seed "$SEED"
     fi
 
     cd ../..

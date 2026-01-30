@@ -16,7 +16,7 @@ RUN go mod download
 COPY challenge-service/ .
 
 # Build the application
-RUN CGO_ENABLED=0 GOOS=linux go build -o challenge-service ./cmd/main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags="-w -s" -o challenge-service ./cmd/main.go
 
 # Final stage
 FROM alpine:3.19

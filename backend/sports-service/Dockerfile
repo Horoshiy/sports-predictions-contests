@@ -11,7 +11,7 @@ RUN go mod download
 
 COPY sports-service/ .
 
-RUN CGO_ENABLED=0 GOOS=linux go build -o sports-service ./cmd/main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags="-w -s" -o sports-service ./cmd/main.go
 
 FROM alpine:3.19
 

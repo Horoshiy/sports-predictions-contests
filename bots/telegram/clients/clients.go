@@ -3,12 +3,12 @@ package clients
 import (
 	"fmt"
 
-	"github.com/sports-prediction-contests/telegram-bot/config"
 	contestpb "github.com/sports-prediction-contests/shared/proto/contest"
 	notificationpb "github.com/sports-prediction-contests/shared/proto/notification"
 	predictionpb "github.com/sports-prediction-contests/shared/proto/prediction"
 	scoringpb "github.com/sports-prediction-contests/shared/proto/scoring"
 	userpb "github.com/sports-prediction-contests/shared/proto/user"
+	"github.com/sports-prediction-contests/telegram-bot/config"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )

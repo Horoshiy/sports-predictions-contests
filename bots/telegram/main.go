@@ -18,6 +18,10 @@ func main() {
 		log.Fatal("TELEGRAM_BOT_TOKEN is required")
 	}
 
+	if cfg.TelegramPasswordSecret == "" {
+		log.Fatal("TELEGRAM_PASSWORD_SECRET is required for user registration")
+	}
+
 	grpcClients, err := clients.New(cfg)
 	if err != nil {
 		log.Fatalf("Failed to create gRPC clients: %v", err)

@@ -98,7 +98,6 @@ func (f *DataFactory) GenerateContests(count int, userIDs []uint, sportTypes []s
 		endDate := startDate.Add(time.Duration(f.faker.Number(7, 30)) * 24 * time.Hour)
 
 		contest := &Contest{
-			ID:                  uint(i + 1),
 			Title:               f.generateContestTitle(),
 			Description:         f.faker.Sentence(f.faker.Number(3, 8)),
 			SportType:           f.faker.RandomString(sportTypes),
@@ -154,7 +153,6 @@ func (f *DataFactory) GeneratePredictions(count int, userIDs []uint, contestIDs 
 		seen[key] = true
 
 		prediction := &Prediction{
-			ID:             uint(len(predictions) + 1),
 			UserID:         userID,
 			ContestID:      contestID,
 			EventID:        matchID, // EventID is the same as MatchID

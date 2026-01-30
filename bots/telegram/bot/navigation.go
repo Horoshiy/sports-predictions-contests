@@ -59,6 +59,7 @@ func PaginationButtons(state NavigationState, prefix string) []tgbotapi.InlineKe
 //   - page: 1-based page number (will be clamped to 1 if less)
 //   - itemsPerPage: number of items per page (will be clamped to 1 if less or zero)
 //   - totalItems: total number of items available (will be clamped to 0 if negative)
+//
 // Returns:
 //   - start: 0-based start index (inclusive)
 //   - end: 0-based end index (exclusive)

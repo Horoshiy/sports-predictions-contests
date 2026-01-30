@@ -46,11 +46,13 @@ docker-up: ## Start development environment with Docker
 
 docker-down: ## Stop development environment
 	@echo "Stopping development environment..."
+	@docker-compose --profile services down 2>/dev/null || true
 	@docker-compose down
 
 docker-services: ## Start all services with Docker
 	@echo "Starting all services..."
-	@docker-compose --profile services up -d
+	@docker-compose --profile services down 2>/dev/null || true
+	@docker-compose --profile services up -d --build
 
 clean: ## Clean build artifacts
 	@echo "Cleaning build artifacts..."
@@ -82,14 +84,17 @@ e2e-test-only: ## Run E2E tests (assumes services are running)
 
 seed-small: ## Seed database with small dataset (20 users, 8 contests)
 	@echo "Seeding database with small dataset..."
+	@docker exec -it sports-postgres psql -U sports_user -d sports_prediction -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public; GRANT ALL ON SCHEMA public TO sports_user; GRANT ALL ON SCHEMA public TO PUBLIC;" > /dev/null 2>&1 || true
 	@./scripts/seed-data.sh --size small
 
 seed-medium: ## Seed database with medium dataset (100 users, 25 contests)
 	@echo "Seeding database with medium dataset..."
+	@docker exec -it sports-postgres psql -U sports_user -d sports_prediction -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public; GRANT ALL ON SCHEMA public TO sports_user; GRANT ALL ON SCHEMA public TO PUBLIC;" > /dev/null 2>&1 || true
 	@./scripts/seed-data.sh --size medium
 
 seed-large: ## Seed database with large dataset (500 users, 50 contests)
 	@echo "Seeding database with large dataset..."
+	@docker exec -it sports-postgres psql -U sports_user -d sports_prediction -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public; GRANT ALL ON SCHEMA public TO sports_user; GRANT ALL ON SCHEMA public TO PUBLIC;" > /dev/null 2>&1 || true
 	@./scripts/seed-data.sh --size large
 
 seed-test: ## Test seeding configuration without adding data

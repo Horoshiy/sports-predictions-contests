@@ -12,16 +12,15 @@ import (
 
 // User represents a user in the system (from user-service)
 type User struct {
-	ID       uint   `gorm:"primaryKey" json:"id"`
+	gorm.Model
 	Email    string `gorm:"uniqueIndex;not null" json:"email"`
 	Password string `gorm:"not null" json:"-"`
 	Name     string `gorm:"not null" json:"name"`
-	gorm.Model
 }
 
 // Profile represents a user profile (from user-service)
 type Profile struct {
-	ID                uint   `gorm:"primaryKey" json:"id"`
+	gorm.Model
 	UserID            uint   `gorm:"uniqueIndex;not null" json:"user_id"`
 	Bio               string `gorm:"type:text" json:"bio"`
 	AvatarURL         string `gorm:"size:500" json:"avatar_url"`
@@ -31,12 +30,11 @@ type Profile struct {
 	LinkedInURL       string `gorm:"size:200" json:"linkedin_url"`
 	GitHubURL         string `gorm:"size:200" json:"github_url"`
 	ProfileVisibility string `gorm:"size:20;default:'public'" json:"profile_visibility"`
-	gorm.Model
 }
 
 // UserPreferences represents user preferences (from user-service)
 type UserPreferences struct {
-	ID                    uint   `gorm:"primaryKey" json:"id"`
+	gorm.Model
 	UserID                uint   `gorm:"uniqueIndex;not null" json:"user_id"`
 	Language              string `gorm:"size:10;default:'en'" json:"language"`
 	Timezone              string `gorm:"size:50;default:'UTC'" json:"timezone"`
@@ -44,12 +42,11 @@ type UserPreferences struct {
 	PushNotifications     bool   `gorm:"default:true" json:"push_notifications"`
 	TelegramNotifications bool   `gorm:"default:false" json:"telegram_notifications"`
 	Theme                 string `gorm:"size:20;default:'light'" json:"theme"`
-	gorm.Model
 }
 
 // Contest represents a sports prediction contest (from contest-service)
 type Contest struct {
-	ID                  uint      `gorm:"primaryKey" json:"id"`
+	gorm.Model
 	Title               string    `gorm:"not null" json:"title"`
 	Description         string    `json:"description"`
 	SportType           string    `gorm:"not null" json:"sport_type"`
@@ -61,12 +58,11 @@ type Contest struct {
 	MaxParticipants     uint      `gorm:"default:0" json:"max_participants"`
 	CurrentParticipants uint      `gorm:"default:0" json:"current_participants"`
 	CreatorID           uint      `gorm:"not null" json:"creator_id"`
-	gorm.Model
 }
 
 // Challenge represents a head-to-head challenge (from challenge-service)
 type Challenge struct {
-	ID              uint      `gorm:"primaryKey" json:"id"`
+	gorm.Model
 	ChallengerID    uint      `gorm:"not null;index" json:"challenger_id"`
 	OpponentID      uint      `gorm:"not null;index" json:"opponent_id"`
 	EventID         uint      `gorm:"not null;index" json:"event_id"`
@@ -78,35 +74,32 @@ type Challenge struct {
 	WinnerID        *uint     `json:"winner_id"`
 	ChallengerScore float64   `gorm:"default:0" json:"challenger_score"`
 	OpponentScore   float64   `gorm:"default:0" json:"opponent_score"`
-	gorm.Model
 }
 
 // ChallengeParticipant represents a participant in a challenge (from challenge-service)
 type ChallengeParticipant struct {
-	ID          uint      `gorm:"primaryKey" json:"id"`
+	gorm.Model
 	ChallengeID uint      `gorm:"not null;index" json:"challenge_id"`
 	UserID      uint      `gorm:"not null;index" json:"user_id"`
 	Role        string    `gorm:"not null" json:"role"`
 	Status      string    `gorm:"not null;default:'active'" json:"status"`
 	JoinedAt    time.Time `gorm:"not null;default:CURRENT_TIMESTAMP" json:"joined_at"`
-	gorm.Model
 }
 
 // Sport represents a sport type (from sports-service)
 type Sport struct {
-	ID          uint   `gorm:"primaryKey" json:"id"`
+	gorm.Model
 	Name        string `gorm:"not null;uniqueIndex" json:"name"`
 	Slug        string `gorm:"not null;uniqueIndex" json:"slug"`
 	Description string `json:"description"`
 	IconURL     string `json:"icon_url"`
 	ExternalID  string `gorm:"uniqueIndex;size:50" json:"external_id,omitempty"`
 	IsActive    bool   `gorm:"default:true" json:"is_active"`
-	gorm.Model
 }
 
 // League represents a sports league (from sports-service)
 type League struct {
-	ID         uint   `gorm:"primaryKey" json:"id"`
+	gorm.Model
 	SportID    uint   `gorm:"not null" json:"sport_id"`
 	Name       string `gorm:"not null" json:"name"`
 	Slug       string `gorm:"not null;uniqueIndex" json:"slug"`
@@ -114,12 +107,11 @@ type League struct {
 	Season     string `gorm:"size:50" json:"season"`
 	ExternalID string `gorm:"uniqueIndex;size:50" json:"external_id,omitempty"`
 	IsActive   bool   `gorm:"default:true" json:"is_active"`
-	gorm.Model
 }
 
 // Team represents a sports team (from sports-service)
 type Team struct {
-	ID         uint   `gorm:"primaryKey" json:"id"`
+	gorm.Model
 	SportID    uint   `gorm:"not null" json:"sport_id"`
 	Name       string `gorm:"not null" json:"name"`
 	Slug       string `gorm:"not null;uniqueIndex" json:"slug"`
@@ -128,12 +120,11 @@ type Team struct {
 	Country    string `gorm:"size:100" json:"country"`
 	ExternalID string `gorm:"uniqueIndex;size:50" json:"external_id,omitempty"`
 	IsActive   bool   `gorm:"default:true" json:"is_active"`
-	gorm.Model
 }
 
 // Match represents a sports match (from sports-service)
 type Match struct {
-	ID          uint      `gorm:"primaryKey" json:"id"`
+	gorm.Model
 	LeagueID    uint      `gorm:"not null" json:"league_id"`
 	HomeTeamID  uint      `gorm:"not null" json:"home_team_id"`
 	AwayTeamID  uint      `gorm:"not null" json:"away_team_id"`
@@ -143,12 +134,11 @@ type Match struct {
 	AwayScore   int       `gorm:"default:0" json:"away_score"`
 	ResultData  string    `gorm:"type:text" json:"result_data"`
 	ExternalID  string    `gorm:"uniqueIndex;size:50" json:"external_id,omitempty"`
-	gorm.Model
 }
 
 // Event represents a sports event for predictions (from prediction-service)
 type Event struct {
-	ID         uint      `gorm:"primaryKey" json:"id"`
+	gorm.Model
 	Title      string    `gorm:"not null" json:"title"`
 	SportType  string    `gorm:"not null;index" json:"sport_type"`
 	HomeTeam   string    `gorm:"not null" json:"home_team"`
@@ -156,12 +146,11 @@ type Event struct {
 	EventDate  time.Time `gorm:"not null;index" json:"event_date"`
 	Status     string    `gorm:"not null;default:'scheduled';index" json:"status"`
 	ResultData string    `gorm:"type:jsonb" json:"result_data"`
-	gorm.Model
 }
 
 // Prediction represents a user prediction (from prediction-service)
 type Prediction struct {
-	ID             uint      `gorm:"primaryKey" json:"id"`
+	gorm.Model
 	UserID         uint      `gorm:"not null" json:"user_id"`
 	ContestID      uint      `gorm:"not null" json:"contest_id"`
 	EventID        uint      `gorm:"not null" json:"event_id"`
@@ -171,47 +160,43 @@ type Prediction struct {
 	SubmittedAt    time.Time `gorm:"not null" json:"submitted_at"`
 	IsCorrect      *bool     `json:"is_correct,omitempty"`
 	Points         float64   `gorm:"default:0" json:"points"`
-	gorm.Model
 }
 
 // Score represents a user's score (from scoring-service)
 type Score struct {
-	ID              uint      `gorm:"primaryKey" json:"id"`
+	gorm.Model
 	UserID          uint      `gorm:"not null" json:"user_id"`
 	ContestID       uint      `gorm:"not null" json:"contest_id"`
 	PredictionID    uint      `gorm:"not null" json:"prediction_id"`
 	Points          float64   `gorm:"not null;default:0" json:"points"`
 	TimeCoefficient float64   `gorm:"not null;default:1.0" json:"time_coefficient"`
 	ScoredAt        time.Time `gorm:"not null" json:"scored_at"`
-	gorm.Model
 }
 
 // Leaderboard represents leaderboard entries (from scoring-service)
 type Leaderboard struct {
-	ID          uint    `gorm:"primaryKey" json:"id"`
+	gorm.Model
 	ContestID   uint    `gorm:"not null" json:"contest_id"`
 	UserID      uint    `gorm:"not null" json:"user_id"`
 	TotalPoints float64 `gorm:"not null;default:0" json:"total_points"`
 	Rank        int     `gorm:"not null;default:0" json:"rank"`
 	UpdatedAt   time.Time
-	gorm.Model
 }
 
 // UserStreak represents user prediction streaks (from scoring-service)
 type UserStreak struct {
-	ID                    uint  `gorm:"primaryKey" json:"id"`
+	gorm.Model
 	UserID                uint  `gorm:"not null" json:"user_id"`
 	ContestID             uint  `gorm:"not null" json:"contest_id"`
 	CurrentStreak         int   `gorm:"not null;default:0" json:"current_streak"`
 	MaxStreak             int   `gorm:"not null;default:0" json:"max_streak"`
 	LastPredictionID      uint  `json:"last_prediction_id,omitempty"`
 	LastPredictionCorrect *bool `json:"last_prediction_correct,omitempty"`
-	gorm.Model
 }
 
 // UserTeam represents team tournaments (from contest-service)
 type UserTeam struct {
-	ID             uint   `gorm:"primaryKey" json:"id"`
+	gorm.Model
 	Name           string `gorm:"not null" json:"name"`
 	Description    string `gorm:"type:text" json:"description"`
 	InviteCode     string `gorm:"uniqueIndex;not null" json:"invite_code"`
@@ -219,23 +204,21 @@ type UserTeam struct {
 	MaxMembers     int    `gorm:"default:10" json:"max_members"`
 	CurrentMembers int    `gorm:"default:0" json:"current_members"`
 	IsActive       bool   `gorm:"default:true" json:"is_active"`
-	gorm.Model
 }
 
 // UserTeamMember represents team membership (from contest-service)
 type UserTeamMember struct {
-	ID       uint      `gorm:"primaryKey" json:"id"`
+	gorm.Model
 	TeamID   uint      `gorm:"not null" json:"team_id"`
 	UserID   uint      `gorm:"not null" json:"user_id"`
 	Role     string    `gorm:"not null;default:'member'" json:"role"`
 	Status   string    `gorm:"not null;default:'active'" json:"status"`
 	JoinedAt time.Time `gorm:"default:CURRENT_TIMESTAMP" json:"joined_at"`
-	gorm.Model
 }
 
 // Notification represents user notifications (from notification-service)
 type Notification struct {
-	ID      uint       `gorm:"primaryKey" json:"id"`
+	gorm.Model
 	UserID  uint       `gorm:"not null" json:"user_id"`
 	Type    string     `gorm:"not null" json:"type"`
 	Title   string     `gorm:"not null" json:"title"`
@@ -245,23 +228,21 @@ type Notification struct {
 	IsRead  bool       `gorm:"default:false" json:"is_read"`
 	SentAt  *time.Time `json:"sent_at,omitempty"`
 	ReadAt  *time.Time `json:"read_at,omitempty"`
-	gorm.Model
 }
 
 // NotificationPreference represents user notification preferences (from notification-service)
 type NotificationPreference struct {
-	ID             uint   `gorm:"primaryKey" json:"id"`
+	gorm.Model
 	UserID         uint   `gorm:"not null" json:"user_id"`
 	Channel        string `gorm:"not null" json:"channel"`
 	Enabled        bool   `gorm:"default:true" json:"enabled"`
 	TelegramChatID *int64 `json:"telegram_chat_id,omitempty"`
 	Email          string `json:"email,omitempty"`
-	gorm.Model
 }
 
 // PropType represents prediction prop types (from sports-service)
 type PropType struct {
-	ID            uint     `gorm:"primaryKey" json:"id"`
+	gorm.Model
 	SportType     string   `gorm:"not null" json:"sport_type"`
 	Name          string   `gorm:"not null" json:"name"`
 	Slug          string   `gorm:"not null" json:"slug"`
@@ -273,7 +254,6 @@ type PropType struct {
 	MaxValue      *float64 `json:"max_value,omitempty"`
 	PointsCorrect float64  `gorm:"not null;default:2" json:"points_correct"`
 	IsActive      bool     `gorm:"default:true" json:"is_active"`
-	gorm.Model
 }
 
 // TableName methods to ensure correct table names

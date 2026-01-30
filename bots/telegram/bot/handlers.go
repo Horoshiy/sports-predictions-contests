@@ -10,16 +10,17 @@ import (
 	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-	"github.com/sports-prediction-contests/telegram-bot/clients"
 	contestpb "github.com/sports-prediction-contests/shared/proto/contest"
 	notificationpb "github.com/sports-prediction-contests/shared/proto/notification"
 	scoringpb "github.com/sports-prediction-contests/shared/proto/scoring"
 	userpb "github.com/sports-prediction-contests/shared/proto/user"
+	"github.com/sports-prediction-contests/telegram-bot/clients"
 )
 
 type Handlers struct {
 	api               *tgbotapi.BotAPI
 	clients           *clients.Clients
+	passwordSecret    []byte
 	sessions          map[int64]*UserSession
 	mu                sync.RWMutex // Protects sessions map
 	registrationLocks sync.Map     // Per-chat registration locks
@@ -28,22 +29,23 @@ type Handlers struct {
 }
 
 type UserSession struct {
-	UserID         uint32
-	Email          string
-	LinkedAt       time.Time
-	LastActivity   time.Time
+	UserID       uint32
+	Email        string
+	LinkedAt     time.Time
+	LastActivity time.Time
 	// Navigation state
 	CurrentContest uint32
 	CurrentPage    int
 }
 
-func NewHandlers(api *tgbotapi.BotAPI, clients *clients.Clients) *Handlers {
+func NewHandlers(api *tgbotapi.BotAPI, clients *clients.Clients, passwordSecret string) *Handlers {
 	h := &Handlers{
-		api:        api,
-		clients:    clients,
-		sessions:   make(map[int64]*UserSession),
-		sessionTTL: 24 * time.Hour,
-		shutdownCh: make(chan struct{}),
+		api:            api,
+		clients:        clients,
+		passwordSecret: []byte(passwordSecret),
+		sessions:       make(map[int64]*UserSession),
+		sessionTTL:     24 * time.Hour,
+		shutdownCh:     make(chan struct{}),
 	}
 
 	// Start session cleanup goroutine

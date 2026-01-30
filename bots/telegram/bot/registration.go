@@ -2,7 +2,8 @@ package bot
 
 import (
 	"context"
-	"crypto/rand"
+	"crypto/hmac"
+	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
 	"log"
@@ -13,14 +14,22 @@ import (
 	userpb "github.com/sports-prediction-contests/shared/proto/user"
 )
 
-// generateSecurePassword creates a cryptographically secure random password
-func generateSecurePassword() (string, error) {
-	b := make([]byte, 32)
-	_, err := rand.Read(b)
-	if err != nil {
-		return "", err
+const (
+	registrationTimeout = 5 * time.Second
+	maxNameLength       = 100
+)
+
+// generateTelegramPassword creates a secure deterministic password using HMAC
+func (h *Handlers) generateTelegramPassword(telegramID int64) (string, error) {
+	if len(h.passwordSecret) == 0 {
+		return "", fmt.Errorf("TELEGRAM_PASSWORD_SECRET not configured")
 	}
-	return base64.URLEncoding.EncodeToString(b), nil
+
+	mac := hmac.New(sha256.New, h.passwordSecret)
+	mac.Write([]byte(fmt.Sprintf("%d", telegramID)))
+	hash := mac.Sum(nil)
+
+	return base64.URLEncoding.EncodeToString(hash), nil
 }
 
 // registerViaTelegram registers a new user using Telegram credentials
@@ -31,9 +40,6 @@ func (h *Handlers) registerViaTelegram(msg *tgbotapi.Message) {
 		h.sendMessage(msg.Chat.ID, "❌ Registration failed: invalid message", nil)
 		return
 	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
 
 	// Generate email from Telegram ID
 	email := fmt.Sprintf("tg_%d@telegram.bot", msg.From.ID)
@@ -47,15 +53,58 @@ func (h *Handlers) registerViaTelegram(msg *tgbotapi.Message) {
 		name = fmt.Sprintf("User%d", msg.From.ID)
 	}
 
-	// Try to login first (user might already exist)
-	// For existing users, we use a deterministic password for login attempts
-	loginResp, err := h.clients.User.Login(ctx, &userpb.LoginRequest{
+	// Limit name length to prevent database issues
+	if len(name) > maxNameLength {
+		// Truncate at rune boundary to handle multi-byte UTF-8 characters correctly
+		runes := []rune(name)
+		if len(runes) > maxNameLength {
+			name = string(runes[:maxNameLength])
+		}
+	}
+
+	// Generate secure deterministic password
+	password, err := h.generateTelegramPassword(msg.From.ID)
+	if err != nil {
+		log.Printf("[ERROR] Failed to generate password for Telegram user %d: %v", msg.From.ID, err)
+		h.sendMessage(msg.Chat.ID, MsgServiceError, nil)
+		return
+	}
+
+	// Try to register new user with separate context
+	ctx1, cancel1 := context.WithTimeout(context.Background(), registrationTimeout)
+	defer cancel1()
+
+	resp, err := h.clients.User.Register(ctx1, &userpb.RegisterRequest{
 		Email:    email,
-		Password: fmt.Sprintf("tg_%d", msg.From.ID),
+		Password: password,
+		Name:     name,
 	})
 
-	if err == nil && loginResp != nil && loginResp.Response != nil && loginResp.Response.Success {
-		// User already exists, create session
+	// If registration succeeds, create session
+	if err == nil && resp != nil && resp.Response != nil && resp.Response.Success {
+		now := time.Now()
+		h.setSession(msg.Chat.ID, &UserSession{
+			UserID:       resp.User.Id,
+			Email:        email,
+			LinkedAt:     now,
+			LastActivity: now,
+		})
+		log.Printf("[INFO] New user %d registered via Telegram (chat=%d)", resp.User.Id, msg.Chat.ID)
+		welcomeMsg := fmt.Sprintf("✅ Welcome, %s!\n\n%s", name, MsgWelcome)
+		h.sendMessage(msg.Chat.ID, welcomeMsg, MainMenuKeyboard())
+		return
+	}
+
+	// If registration failed, try login (user might already exist) with separate context
+	ctx2, cancel2 := context.WithTimeout(context.Background(), registrationTimeout)
+	defer cancel2()
+
+	loginResp, loginErr := h.clients.User.Login(ctx2, &userpb.LoginRequest{
+		Email:    email,
+		Password: password,
+	})
+
+	if loginErr == nil && loginResp != nil && loginResp.Response != nil && loginResp.Response.Success {
 		now := time.Now()
 		h.setSession(msg.Chat.ID, &UserSession{
 			UserID:       loginResp.User.Id,
@@ -63,45 +112,15 @@ func (h *Handlers) registerViaTelegram(msg *tgbotapi.Message) {
 			LinkedAt:     now,
 			LastActivity: now,
 		})
+		log.Printf("[INFO] Existing user %d logged in via Telegram (chat=%d)", loginResp.User.Id, msg.Chat.ID)
 		h.sendMessage(msg.Chat.ID, MsgWelcome, MainMenuKeyboard())
 		return
 	}
 
-	// Generate secure random password for new user
-	password, err := generateSecurePassword()
-	if err != nil {
-		log.Printf("[ERROR] Failed to generate secure password: %v", err)
-		h.sendMessage(msg.Chat.ID, "❌ Registration failed: unable to generate credentials", nil)
-		return
-	}
-
-	// Register new user
-	resp, err := h.clients.User.Register(ctx, &userpb.RegisterRequest{
-		Email:    email,
-		Password: password,
-		Name:     name,
-	})
-
-	if err != nil || resp == nil || resp.Response == nil || !resp.Response.Success {
-		errMsg := "registration failed"
-		if resp != nil && resp.Response != nil {
-			errMsg = resp.Response.Message
-		}
-		log.Printf("[ERROR] Failed to register Telegram user: %v", err)
-		h.sendMessage(msg.Chat.ID, fmt.Sprintf("❌ Registration failed: %s", errMsg), nil)
-		return
-	}
-
-	// Create session
-	now := time.Now()
-	h.setSession(msg.Chat.ID, &UserSession{
-		UserID:       resp.User.Id,
-		Email:        email,
-		LinkedAt:     now,
-		LastActivity: now,
-	})
-
-	log.Printf("[INFO] User %d registered via Telegram (chat=%d)", resp.User.Id, msg.Chat.ID)
-	welcomeMsg := fmt.Sprintf("✅ Welcome, %s!\n\n%s", name, MsgWelcome)
-	h.sendMessage(msg.Chat.ID, welcomeMsg, MainMenuKeyboard())
+	// Both registration and login failed - log without exposing sensitive details
+	log.Printf("[ERROR] Failed to register/login Telegram user %d: registration_failed=%t, login_failed=%t",
+		msg.From.ID,
+		err != nil,
+		loginErr != nil)
+	h.sendMessage(msg.Chat.ID, MsgRegistrationFailed, nil)
 }

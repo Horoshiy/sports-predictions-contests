@@ -4,6 +4,7 @@ import "os"
 
 type Config struct {
 	TelegramBotToken            string
+	TelegramPasswordSecret      string
 	UserServiceEndpoint         string
 	ContestServiceEndpoint      string
 	PredictionServiceEndpoint   string
@@ -15,6 +16,7 @@ type Config struct {
 func Load() *Config {
 	return &Config{
 		TelegramBotToken:            getEnvOrDefault("TELEGRAM_BOT_TOKEN", ""),
+		TelegramPasswordSecret:      getEnvOrDefault("TELEGRAM_PASSWORD_SECRET", ""),
 		UserServiceEndpoint:         getEnvOrDefault("USER_SERVICE_ENDPOINT", "localhost:8084"),
 		ContestServiceEndpoint:      getEnvOrDefault("CONTEST_SERVICE_ENDPOINT", "localhost:8085"),
 		PredictionServiceEndpoint:   getEnvOrDefault("PREDICTION_SERVICE_ENDPOINT", "localhost:8086"),

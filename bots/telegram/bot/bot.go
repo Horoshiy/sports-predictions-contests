@@ -1,6 +1,7 @@
 package bot
 
 import (
+	"fmt"
 	"log"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -22,11 +23,65 @@ func New(cfg *config.Config, clients *clients.Clients) (*Bot, error) {
 
 	log.Printf("Authorized on account %s", api.Self.UserName)
 
-	return &Bot{
+	// Log password secret configuration status (without exposing the secret)
+	if cfg.TelegramPasswordSecret == "" {
+		log.Printf("[WARN] TELEGRAM_PASSWORD_SECRET not configured - user registration will fail")
+	} else {
+		log.Printf("[INFO] TELEGRAM_PASSWORD_SECRET configured (length: %d bytes)", len(cfg.TelegramPasswordSecret))
+	}
+
+	bot := &Bot{
 		api:      api,
-		handlers: NewHandlers(api, clients),
+		handlers: NewHandlers(api, clients, cfg.TelegramPasswordSecret),
 		stop:     make(chan struct{}),
-	}, nil
+	}
+
+	// Register commands with Telegram
+	if err := bot.registerCommands(); err != nil {
+		log.Printf("[WARN] Failed to register commands: %v", err)
+		// Don't fail bot startup if command registration fails
+	}
+
+	return bot, nil
+}
+
+// registerCommands registers bot commands with Telegram API
+func (b *Bot) registerCommands() error {
+	commands := []tgbotapi.BotCommand{
+		{
+			Command:     "start",
+			Description: "Start bot and create account | Начать работу и создать аккаунт",
+		},
+		{
+			Command:     "contests",
+			Description: "View active contests | Просмотр активных конкурсов",
+		},
+		{
+			Command:     "leaderboard",
+			Description: "View contest leaderboard | Таблица лидеров конкурса",
+		},
+		{
+			Command:     "mystats",
+			Description: "Your prediction statistics | Ваша статистика прогнозов",
+		},
+		{
+			Command:     "help",
+			Description: "Show help message | Показать справку",
+		},
+		{
+			Command:     "link",
+			Description: "Link existing account | Привязать существующий аккаунт",
+		},
+	}
+
+	cfg := tgbotapi.NewSetMyCommands(commands...)
+	_, err := b.api.Request(cfg)
+	if err != nil {
+		return fmt.Errorf("failed to register commands: %w", err)
+	}
+
+	log.Printf("[INFO] Successfully registered %d bot commands", len(commands))
+	return nil
 }
 
 func (b *Bot) Start() {

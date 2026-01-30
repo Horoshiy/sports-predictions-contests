@@ -47,7 +47,6 @@ func (g *SportsDataGenerator) GenerateSports(count int) ([]*Sport, error) {
 	for i := 0; i < count && i < len(sportsData); i++ {
 		data := sportsData[i]
 		sport := &Sport{
-			ID:          uint(i + 1),
 			Name:        data.name,
 			Slug:        g.slugify(data.name),
 			Description: data.description,
@@ -62,7 +61,6 @@ func (g *SportsDataGenerator) GenerateSports(count int) ([]*Sport, error) {
 	for i := len(sportsData); i < count; i++ {
 		sportName := g.faker.Word()
 		sport := &Sport{
-			ID:          uint(i + 1),
 			Name:        sportName,
 			Slug:        g.slugify(sportName),
 			Description: fmt.Sprintf("Competitive %s sport", strings.ToLower(sportName)),
@@ -114,7 +112,6 @@ func (g *SportsDataGenerator) GenerateLeagues(count int, sports []*Sport) ([]*Le
 		}
 
 		league := &League{
-			ID:         uint(i + 1),
 			SportID:    sport.ID,
 			Name:       leagueName,
 			Slug:       g.slugify(leagueName),
@@ -153,7 +150,6 @@ func (g *SportsDataGenerator) GenerateTeams(count int, sports []*Sport) ([]*Team
 		shortName := strings.ToUpper(city[:minInt(3, len(city))] + mascot[:minInt(3, len(mascot))])
 
 		team := &Team{
-			ID:         uint(i + 1),
 			SportID:    sport.ID,
 			Name:       teamName,
 			Slug:       g.slugify(teamName),
@@ -224,7 +220,6 @@ func (g *SportsDataGenerator) GenerateMatches(count int, leagues []*League, team
 		}
 
 		match := &Match{
-			ID:          uint(i + 1),
 			LeagueID:    league.ID,
 			HomeTeamID:  homeTeam.ID,
 			AwayTeamID:  awayTeam.ID,

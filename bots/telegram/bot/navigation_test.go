@@ -86,7 +86,7 @@ func TestPaginationButtonsDivisionByZero(t *testing.T) {
 					t.Errorf("PaginationButtons panicked with state %+v: %v", tt.state, r)
 				}
 			}()
-			
+
 			buttons := PaginationButtons(tt.state, "test")
 			if len(buttons) == 0 {
 				t.Error("PaginationButtons returned empty slice")

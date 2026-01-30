@@ -27,7 +27,7 @@ type Coordinator struct {
 func NewCoordinator(config *Config) (*Coordinator, error) {
 	// Connect to database
 	db, err := gorm.Open(postgres.Open(config.DatabaseURL), &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Silent), // Reduce log noise during seeding
+		Logger: logger.Default.LogMode(logger.Info), // Enable detailed logging for debugging
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
@@ -50,7 +50,7 @@ func NewCoordinator(config *Config) (*Coordinator, error) {
 
 	// Auto-migrate all tables
 	log.Println("Running database migrations...")
-	if err := db.AutoMigrate(
+	models := []interface{}{
 		&User{},
 		&Profile{},
 		&UserPreferences{},
@@ -61,6 +61,7 @@ func NewCoordinator(config *Config) (*Coordinator, error) {
 		&League{},
 		&Team{},
 		&Match{},
+		&Event{},
 		&Prediction{},
 		&Score{},
 		&Leaderboard{},
@@ -70,8 +71,12 @@ func NewCoordinator(config *Config) (*Coordinator, error) {
 		&UserTeamMember{},
 		&Notification{},
 		&NotificationPreference{},
-	); err != nil {
-		return nil, fmt.Errorf("failed to run migrations: %w", err)
+	}
+	
+	for _, model := range models {
+		if err := db.AutoMigrate(model); err != nil {
+			return nil, fmt.Errorf("failed to migrate %T: %w", model, err)
+		}
 	}
 	log.Println("Database migrations completed successfully")
 
@@ -487,7 +492,6 @@ func (c *Coordinator) seedEvents(tx *gorm.DB, matches []*Match, teams []*Team, s
 		}
 		
 		events[i] = &Event{
-			ID:         match.ID, // Use same ID as match
 			Title:      fmt.Sprintf("%s vs %s", homeTeam.Name, awayTeam.Name),
 			SportType:  sport.Name,
 			HomeTeam:   homeTeam.Name,
@@ -776,7 +780,6 @@ func (c *Coordinator) seedUserTeams(tx *gorm.DB, count int, users []*User) ([]*U
 		captain := users[c.factory.faker.Number(0, len(users)-1)]
 
 		team := &UserTeam{
-			ID:             uint(i + 1),
 			Name:           c.generateTeamName(),
 			Description:    c.factory.faker.Sentence(3),
 			InviteCode:     c.factory.faker.LetterN(8),
