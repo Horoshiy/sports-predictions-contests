@@ -95,9 +95,14 @@ export const MatchList: React.FC<MatchListProps> = ({ onCreateMatch, onEditMatch
       title: 'Score',
       key: 'score',
       width: 80,
-      render: (_, match) => match.status === 'finished' || match.status === 'live'
-        ? `${match.homeScore} - ${match.awayScore}`
-        : '-',
+      render: (_, match) => {
+        if (match.status === 'finished' || match.status === 'live') {
+          const homeScore = match.homeScore ?? '-'
+          const awayScore = match.awayScore ?? '-'
+          return `${homeScore} - ${awayScore}`
+        }
+        return '-'
+      },
     },
     {
       title: 'Actions',

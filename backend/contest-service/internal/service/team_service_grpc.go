@@ -163,8 +163,14 @@ func (s *TeamServiceGRPC) DeleteTeam(ctx context.Context, req *pb.DeleteTeamRequ
 }
 
 func (s *TeamServiceGRPC) ListTeams(ctx context.Context, req *pb.ListTeamsRequest) (*pb.ListTeamsResponse, error) {
-	page := int(req.Pagination.Page)
-	limit := int(req.Pagination.Limit)
+	page := 1
+	limit := 20
+	
+	// Handle nil pagination
+	if req.Pagination != nil {
+		page = int(req.Pagination.Page)
+		limit = int(req.Pagination.Limit)
+	}
 	
 	// Defensive validation
 	if limit <= 0 {

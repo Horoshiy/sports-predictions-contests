@@ -17,13 +17,13 @@ interface MatchFormProps {
 
 export const MatchForm: React.FC<MatchFormProps> = ({ open, onClose, onSubmit, match, loading = false }) => {
   const isEditing = !!match
-  const { data: leaguesData } = useLeagues({ pagination: { page: 1, limit: 100 }, activeOnly: true })
-  const { data: teamsData } = useTeams({ pagination: { page: 1, limit: 200 }, activeOnly: true })
+  const { data: leaguesData, isLoading: leaguesLoading } = useLeagues({ pagination: { page: 1, limit: 100 }, activeOnly: true })
+  const { data: teamsData, isLoading: teamsLoading } = useTeams({ pagination: { page: 1, limit: 200 }, activeOnly: true })
 
   const defaultValues = React.useMemo(() => ({
-    leagueId: match?.leagueId || 0,
-    homeTeamId: match?.homeTeamId || 0,
-    awayTeamId: match?.awayTeamId || 0,
+    leagueId: match?.leagueId || undefined,
+    homeTeamId: match?.homeTeamId || undefined,
+    awayTeamId: match?.awayTeamId || undefined,
     scheduledAt: match?.scheduledAt ? new Date(match.scheduledAt) : new Date(),
     status: match?.status || 'scheduled',
     homeScore: match?.homeScore || 0,
@@ -47,9 +47,9 @@ export const MatchForm: React.FC<MatchFormProps> = ({ open, onClose, onSubmit, m
 
   const prevLeagueId = React.useRef(selectedLeagueId)
   React.useEffect(() => {
-    if (!isEditing && prevLeagueId.current !== selectedLeagueId && prevLeagueId.current !== 0) {
-      setValue('homeTeamId', 0)
-      setValue('awayTeamId', 0)
+    if (!isEditing && prevLeagueId.current !== selectedLeagueId && prevLeagueId.current !== 0 && prevLeagueId.current !== undefined) {
+      setValue('homeTeamId', undefined)
+      setValue('awayTeamId', undefined)
     }
     prevLeagueId.current = selectedLeagueId
   }, [selectedLeagueId, isEditing, setValue])
@@ -79,7 +79,7 @@ export const MatchForm: React.FC<MatchFormProps> = ({ open, onClose, onSubmit, m
       <Form layout="vertical">
         <Controller name="leagueId" control={control} render={({ field }) => (
           <Form.Item label="League" required validateStatus={errors.leagueId ? 'error' : ''} help={errors.leagueId?.message}>
-            <Select {...field} disabled={loading}>
+            <Select {...field} disabled={loading} placeholder="Select a league" loading={leaguesLoading} showSearch optionFilterProp="children">
               {leaguesData?.leagues?.map(l => <Select.Option key={l.id} value={l.id}>{l.name}</Select.Option>)}
             </Select>
           </Form.Item>
@@ -88,14 +88,14 @@ export const MatchForm: React.FC<MatchFormProps> = ({ open, onClose, onSubmit, m
           <Input.Group compact>
             <Controller name="homeTeamId" control={control} render={({ field }) => (
               <Form.Item validateStatus={errors.homeTeamId ? 'error' : ''} help={errors.homeTeamId?.message} style={{ display: 'inline-block', width: 'calc(50% - 4px)' }}>
-                <Select {...field} placeholder="Home Team" disabled={loading || !selectedLeagueId}>
+                <Select {...field} placeholder="Home Team" disabled={loading || !selectedLeagueId} loading={teamsLoading} showSearch optionFilterProp="children">
                   {filteredTeams.map(t => <Select.Option key={t.id} value={t.id}>{t.name}</Select.Option>)}
                 </Select>
               </Form.Item>
             )} />
             <Controller name="awayTeamId" control={control} render={({ field }) => (
               <Form.Item validateStatus={errors.awayTeamId ? 'error' : ''} help={errors.awayTeamId?.message} style={{ display: 'inline-block', width: 'calc(50% - 4px)', marginLeft: 8 }}>
-                <Select {...field} placeholder="Away Team" disabled={loading || !selectedLeagueId}>
+                <Select {...field} placeholder="Away Team" disabled={loading || !selectedLeagueId} loading={teamsLoading} showSearch optionFilterProp="children">
                   {filteredTeams.map(t => <Select.Option key={t.id} value={t.id}>{t.name}</Select.Option>)}
                 </Select>
               </Form.Item>

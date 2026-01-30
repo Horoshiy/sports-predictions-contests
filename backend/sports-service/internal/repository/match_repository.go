@@ -54,7 +54,7 @@ func (r *MatchRepository) Update(match *models.Match) error {
 	if match.ID == 0 {
 		return errors.New("match ID cannot be zero")
 	}
-	result := r.db.Save(match)
+	result := r.db.Omit("League", "HomeTeam", "AwayTeam").Model(match).Select("*").Updates(match)
 	if result.RowsAffected == 0 {
 		return errors.New("match not found")
 	}

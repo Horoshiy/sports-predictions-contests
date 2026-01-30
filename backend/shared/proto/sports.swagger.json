@@ -1,0 +1,1485 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "sports.proto",
+    "version": "version not set"
+  },
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/v1/leagues": {
+      "get": {
+        "operationId": "SportsService_ListLeagues",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/sportsListLeaguesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "pagination.page",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pagination.limit",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pagination.sort_by",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "pagination.sort_order",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "sport_id",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "active_only",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          }
+        ],
+        "tags": [
+          "SportsService"
+        ]
+      },
+      "post": {
+        "summary": "League management",
+        "operationId": "SportsService_CreateLeague",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/sportsLeagueResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/sportsCreateLeagueRequest"
+            }
+          }
+        ],
+        "tags": [
+          "SportsService"
+        ]
+      }
+    },
+    "/v1/leagues/{id}": {
+      "get": {
+        "operationId": "SportsService_GetLeague",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/sportsLeagueResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "SportsService"
+        ]
+      },
+      "delete": {
+        "operationId": "SportsService_DeleteLeague",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/sportsDeleteResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "SportsService"
+        ]
+      },
+      "put": {
+        "operationId": "SportsService_UpdateLeague",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/sportsLeagueResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/sportsUpdateLeagueRequest"
+            }
+          }
+        ],
+        "tags": [
+          "SportsService"
+        ]
+      }
+    },
+    "/v1/matches": {
+      "get": {
+        "operationId": "SportsService_ListMatches",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/sportsListMatchesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "pagination.page",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pagination.limit",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pagination.sort_by",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "pagination.sort_order",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "league_id",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "team_id",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "SportsService"
+        ]
+      },
+      "post": {
+        "summary": "Match management",
+        "operationId": "SportsService_CreateMatch",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/sportsMatchResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/sportsCreateMatchRequest"
+            }
+          }
+        ],
+        "tags": [
+          "SportsService"
+        ]
+      }
+    },
+    "/v1/matches/{id}": {
+      "get": {
+        "operationId": "SportsService_GetMatch",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/sportsMatchResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "SportsService"
+        ]
+      },
+      "delete": {
+        "operationId": "SportsService_DeleteMatch",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/sportsDeleteResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "SportsService"
+        ]
+      },
+      "put": {
+        "operationId": "SportsService_UpdateMatch",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/sportsMatchResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/sportsUpdateMatchRequest"
+            }
+          }
+        ],
+        "tags": [
+          "SportsService"
+        ]
+      }
+    },
+    "/v1/sports": {
+      "get": {
+        "operationId": "SportsService_ListSports",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/sportsListSportsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "pagination.page",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pagination.limit",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pagination.sort_by",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "pagination.sort_order",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "active_only",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          }
+        ],
+        "tags": [
+          "SportsService"
+        ]
+      },
+      "post": {
+        "summary": "Sport management",
+        "operationId": "SportsService_CreateSport",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/sportsSportResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/sportsCreateSportRequest"
+            }
+          }
+        ],
+        "tags": [
+          "SportsService"
+        ]
+      }
+    },
+    "/v1/sports/health": {
+      "get": {
+        "summary": "Health check",
+        "operationId": "SportsService_Check",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/commonResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "SportsService"
+        ]
+      }
+    },
+    "/v1/sports/sync": {
+      "post": {
+        "summary": "Sync operations",
+        "operationId": "SportsService_TriggerSync",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/sportsSyncResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/sportsSyncRequest"
+            }
+          }
+        ],
+        "tags": [
+          "SportsService"
+        ]
+      }
+    },
+    "/v1/sports/sync/status": {
+      "get": {
+        "operationId": "SportsService_GetSyncStatus",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/sportsSyncStatusResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "SportsService"
+        ]
+      }
+    },
+    "/v1/sports/teams": {
+      "get": {
+        "operationId": "SportsService_ListTeams",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/sportsListTeamsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "pagination.page",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pagination.limit",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "pagination.sort_by",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "pagination.sort_order",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "sport_id",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "active_only",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          }
+        ],
+        "tags": [
+          "SportsService"
+        ]
+      },
+      "post": {
+        "summary": "Team management",
+        "operationId": "SportsService_CreateTeam",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/sportsTeamResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/sportsCreateTeamRequest"
+            }
+          }
+        ],
+        "tags": [
+          "SportsService"
+        ]
+      }
+    },
+    "/v1/sports/teams/{id}": {
+      "get": {
+        "operationId": "SportsService_GetTeam",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/sportsTeamResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "SportsService"
+        ]
+      },
+      "delete": {
+        "operationId": "SportsService_DeleteTeam",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/sportsDeleteResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "SportsService"
+        ]
+      },
+      "put": {
+        "operationId": "SportsService_UpdateTeam",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/sportsTeamResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/sportsUpdateTeamRequest"
+            }
+          }
+        ],
+        "tags": [
+          "SportsService"
+        ]
+      }
+    },
+    "/v1/sports/{id}": {
+      "get": {
+        "operationId": "SportsService_GetSport",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/sportsSportResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "SportsService"
+        ]
+      },
+      "delete": {
+        "operationId": "SportsService_DeleteSport",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/sportsDeleteResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          }
+        ],
+        "tags": [
+          "SportsService"
+        ]
+      },
+      "put": {
+        "operationId": "SportsService_UpdateSport",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/sportsSportResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int64"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/sportsUpdateSportRequest"
+            }
+          }
+        ],
+        "tags": [
+          "SportsService"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "commonPaginationRequest": {
+      "type": "object",
+      "properties": {
+        "page": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "limit": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "sort_by": {
+          "type": "string"
+        },
+        "sort_order": {
+          "type": "string"
+        }
+      },
+      "title": "Pagination request"
+    },
+    "commonPaginationResponse": {
+      "type": "object",
+      "properties": {
+        "page": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "limit": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "total": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "total_pages": {
+          "type": "integer",
+          "format": "int32"
+        }
+      },
+      "title": "Pagination response"
+    },
+    "commonResponse": {
+      "type": "object",
+      "properties": {
+        "success": {
+          "type": "boolean"
+        },
+        "message": {
+          "type": "string"
+        },
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "title": "Common response wrapper"
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "type_url": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string",
+          "format": "byte"
+        }
+      }
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "sportsCreateLeagueRequest": {
+      "type": "object",
+      "properties": {
+        "sport_id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "name": {
+          "type": "string"
+        },
+        "slug": {
+          "type": "string"
+        },
+        "country": {
+          "type": "string"
+        },
+        "season": {
+          "type": "string"
+        }
+      },
+      "title": "League requests"
+    },
+    "sportsCreateMatchRequest": {
+      "type": "object",
+      "properties": {
+        "league_id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "home_team_id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "away_team_id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "scheduled_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "title": "Match requests"
+    },
+    "sportsCreateSportRequest": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "slug": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "icon_url": {
+          "type": "string"
+        }
+      },
+      "title": "Sport requests"
+    },
+    "sportsCreateTeamRequest": {
+      "type": "object",
+      "properties": {
+        "sport_id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "name": {
+          "type": "string"
+        },
+        "slug": {
+          "type": "string"
+        },
+        "short_name": {
+          "type": "string"
+        },
+        "logo_url": {
+          "type": "string"
+        },
+        "country": {
+          "type": "string"
+        }
+      },
+      "title": "Team requests"
+    },
+    "sportsDeleteResponse": {
+      "type": "object",
+      "properties": {
+        "response": {
+          "$ref": "#/definitions/commonResponse"
+        }
+      }
+    },
+    "sportsLeague": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "sport_id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "name": {
+          "type": "string"
+        },
+        "slug": {
+          "type": "string"
+        },
+        "country": {
+          "type": "string"
+        },
+        "season": {
+          "type": "string"
+        },
+        "is_active": {
+          "type": "boolean"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "title": "League represents a sports league/competition"
+    },
+    "sportsLeagueResponse": {
+      "type": "object",
+      "properties": {
+        "response": {
+          "$ref": "#/definitions/commonResponse"
+        },
+        "league": {
+          "$ref": "#/definitions/sportsLeague"
+        }
+      }
+    },
+    "sportsListLeaguesResponse": {
+      "type": "object",
+      "properties": {
+        "response": {
+          "$ref": "#/definitions/commonResponse"
+        },
+        "leagues": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/sportsLeague"
+          }
+        },
+        "pagination": {
+          "$ref": "#/definitions/commonPaginationResponse"
+        }
+      }
+    },
+    "sportsListMatchesResponse": {
+      "type": "object",
+      "properties": {
+        "response": {
+          "$ref": "#/definitions/commonResponse"
+        },
+        "matches": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/sportsMatch"
+          }
+        },
+        "pagination": {
+          "$ref": "#/definitions/commonPaginationResponse"
+        }
+      }
+    },
+    "sportsListSportsResponse": {
+      "type": "object",
+      "properties": {
+        "response": {
+          "$ref": "#/definitions/commonResponse"
+        },
+        "sports": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/sportsSport"
+          }
+        },
+        "pagination": {
+          "$ref": "#/definitions/commonPaginationResponse"
+        }
+      }
+    },
+    "sportsListTeamsResponse": {
+      "type": "object",
+      "properties": {
+        "response": {
+          "$ref": "#/definitions/commonResponse"
+        },
+        "teams": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/sportsTeam"
+          }
+        },
+        "pagination": {
+          "$ref": "#/definitions/commonPaginationResponse"
+        }
+      }
+    },
+    "sportsMatch": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "league_id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "home_team_id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "away_team_id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "scheduled_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "status": {
+          "type": "string"
+        },
+        "home_score": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "away_score": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "result_data": {
+          "type": "string"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "title": "Match represents a sports match/event"
+    },
+    "sportsMatchResponse": {
+      "type": "object",
+      "properties": {
+        "response": {
+          "$ref": "#/definitions/commonResponse"
+        },
+        "match": {
+          "$ref": "#/definitions/sportsMatch"
+        }
+      }
+    },
+    "sportsSport": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "name": {
+          "type": "string"
+        },
+        "slug": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "icon_url": {
+          "type": "string"
+        },
+        "is_active": {
+          "type": "boolean"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "title": "Sport represents a type of sport"
+    },
+    "sportsSportResponse": {
+      "type": "object",
+      "properties": {
+        "response": {
+          "$ref": "#/definitions/commonResponse"
+        },
+        "sport": {
+          "$ref": "#/definitions/sportsSport"
+        }
+      },
+      "title": "Responses"
+    },
+    "sportsSyncRequest": {
+      "type": "object",
+      "properties": {
+        "entity_type": {
+          "type": "string"
+        },
+        "parent_id": {
+          "type": "integer",
+          "format": "int64"
+        }
+      },
+      "title": "Sync messages"
+    },
+    "sportsSyncResponse": {
+      "type": "object",
+      "properties": {
+        "response": {
+          "$ref": "#/definitions/commonResponse"
+        },
+        "synced_count": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "entity_type": {
+          "type": "string"
+        }
+      }
+    },
+    "sportsSyncStatusResponse": {
+      "type": "object",
+      "properties": {
+        "response": {
+          "$ref": "#/definitions/commonResponse"
+        },
+        "sync_enabled": {
+          "type": "boolean"
+        },
+        "last_sync_at": {
+          "type": "string"
+        },
+        "sync_interval_mins": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "sportsTeam": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "sport_id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "name": {
+          "type": "string"
+        },
+        "slug": {
+          "type": "string"
+        },
+        "short_name": {
+          "type": "string"
+        },
+        "logo_url": {
+          "type": "string"
+        },
+        "country": {
+          "type": "string"
+        },
+        "is_active": {
+          "type": "boolean"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "title": "Team represents a sports team"
+    },
+    "sportsTeamResponse": {
+      "type": "object",
+      "properties": {
+        "response": {
+          "$ref": "#/definitions/commonResponse"
+        },
+        "team": {
+          "$ref": "#/definitions/sportsTeam"
+        }
+      }
+    },
+    "sportsUpdateLeagueRequest": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "sport_id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "name": {
+          "type": "string"
+        },
+        "slug": {
+          "type": "string"
+        },
+        "country": {
+          "type": "string"
+        },
+        "season": {
+          "type": "string"
+        },
+        "is_active": {
+          "type": "boolean"
+        }
+      }
+    },
+    "sportsUpdateMatchRequest": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "league_id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "home_team_id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "away_team_id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "scheduled_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "status": {
+          "type": "string"
+        },
+        "home_score": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "away_score": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "result_data": {
+          "type": "string"
+        }
+      }
+    },
+    "sportsUpdateSportRequest": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "name": {
+          "type": "string"
+        },
+        "slug": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "icon_url": {
+          "type": "string"
+        },
+        "is_active": {
+          "type": "boolean"
+        }
+      }
+    },
+    "sportsUpdateTeamRequest": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "sport_id": {
+          "type": "integer",
+          "format": "int64"
+        },
+        "name": {
+          "type": "string"
+        },
+        "slug": {
+          "type": "string"
+        },
+        "short_name": {
+          "type": "string"
+        },
+        "logo_url": {
+          "type": "string"
+        },
+        "country": {
+          "type": "string"
+        },
+        "is_active": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

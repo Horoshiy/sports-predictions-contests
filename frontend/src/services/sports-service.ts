@@ -83,22 +83,22 @@ class SportsService {
 
   // Teams
   async createTeam(request: CreateTeamRequest): Promise<Team> {
-    const response = await grpcClient.post<TeamResponse>('/v1/teams', request)
+    const response = await grpcClient.post<TeamResponse>('/v1/sports/teams', request)
     return response.team
   }
 
   async getTeam(id: number): Promise<Team> {
-    const response = await grpcClient.get<TeamResponse>(`/v1/teams/${id}`)
+    const response = await grpcClient.get<TeamResponse>(`/v1/sports/teams/${id}`)
     return response.team
   }
 
   async updateTeam(request: UpdateTeamRequest): Promise<Team> {
-    const response = await grpcClient.put<TeamResponse>(`/v1/teams/${request.id}`, request)
+    const response = await grpcClient.put<TeamResponse>(`/v1/sports/teams/${request.id}`, request)
     return response.team
   }
 
   async deleteTeam(id: number): Promise<void> {
-    await grpcClient.delete<DeleteResponse>(`/v1/teams/${id}`)
+    await grpcClient.delete<DeleteResponse>(`/v1/sports/teams/${id}`)
   }
 
   async listTeams(request: ListTeamsRequest = {}): Promise<{ teams: Team[]; pagination: PaginationResponse }> {
@@ -109,7 +109,7 @@ class SportsService {
     }
     if (request.sportId) params.append('sport_id', request.sportId.toString())
     if (request.activeOnly) params.append('active_only', 'true')
-    const url = params.toString() ? `/v1/teams?${params}` : '/v1/teams'
+    const url = params.toString() ? `/v1/sports/teams?${params}` : '/v1/sports/teams'
     const response = await grpcClient.get<ListTeamsResponse>(url)
     return { teams: response.teams || [], pagination: response.pagination || defaultPagination }
   }

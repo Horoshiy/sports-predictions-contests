@@ -19,7 +19,7 @@ export const TeamForm: React.FC<TeamFormProps> = ({ open, onClose, onSubmit, tea
   const { data: sportsData } = useSports({ pagination: { page: 1, limit: 100 }, activeOnly: true })
 
   const defaultValues = React.useMemo(() => ({
-    sportId: team?.sportId || 0,
+    sportId: team?.sportId || undefined,
     name: team?.name || '',
     slug: team?.slug || '',
     shortName: team?.shortName || '',
@@ -67,7 +67,7 @@ export const TeamForm: React.FC<TeamFormProps> = ({ open, onClose, onSubmit, tea
       <Form layout="vertical">
         <Controller name="sportId" control={control} render={({ field }) => (
           <Form.Item label="Sport" required validateStatus={errors.sportId ? 'error' : ''} help={errors.sportId?.message}>
-            <Select {...field} disabled={loading}>
+            <Select {...field} disabled={loading} placeholder="Select a sport">
               {sportsData?.sports?.map(s => <Select.Option key={s.id} value={s.id}>{s.name}</Select.Option>)}
             </Select>
           </Form.Item>

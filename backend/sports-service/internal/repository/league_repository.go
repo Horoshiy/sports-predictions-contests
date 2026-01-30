@@ -54,7 +54,7 @@ func (r *LeagueRepository) Update(league *models.League) error {
 	if league.ID == 0 {
 		return errors.New("league ID cannot be zero")
 	}
-	result := r.db.Save(league)
+	result := r.db.Omit("Sport").Model(league).Select("*").Updates(league)
 	if result.RowsAffected == 0 {
 		return errors.New("league not found")
 	}

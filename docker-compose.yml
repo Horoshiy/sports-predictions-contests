@@ -48,6 +48,7 @@ services:
       - SPORTS_SERVICE_ENDPOINT=sports-service:8088
       - NOTIFICATION_SERVICE_ENDPOINT=notification-service:8089
       - CHALLENGE_SERVICE_ENDPOINT=challenge-service:8090
+      - TEAM_SERVICE_ENDPOINT=contest-service:8085
       - JWT_SECRET=${JWT_SECRET:-changeme_insecure_default}
       - CORS_ALLOWED_ORIGINS=*
       - LOG_LEVEL=info
