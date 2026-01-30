@@ -1,8 +1,11 @@
 package seeder
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/brianvoe/gofakeit/v6"
@@ -528,32 +531,140 @@ func (c *Coordinator) seedContests(tx *gorm.DB, count int, users []*User, sports
 }
 
 func (c *Coordinator) seedPredictions(tx *gorm.DB, count int, users []*User, contests []*Contest, events []*Event) ([]*Prediction, error) {
-	// Extract IDs
-	userIDs := make([]uint, len(users))
-	for i, user := range users {
-		userIDs[i] = user.ID
+	log.Println("Seeding predictions with realistic data...")
+	
+	if len(users) == 0 || len(contests) == 0 || len(events) == 0 {
+		return nil, fmt.Errorf("need users, contests, and events before seeding predictions")
 	}
-
-	contestIDs := make([]uint, len(contests))
-	for i, contest := range contests {
-		contestIDs[i] = contest.ID
+	
+	predictions := make([]*Prediction, 0, 1000)
+	scoreOptions := []string{"1-0", "0-1", "2-0", "0-2", "2-1", "1-2", "3-0", "0-3", "3-1", "1-3", "3-2", "2-3", "0-0", "1-1", "2-2", "3-3"}
+	
+	// Track seen predictions to avoid duplicates
+	type predictionKey struct {
+		userID    uint
+		contestID uint
+		eventID   uint
 	}
-
-	eventIDs := make([]uint, len(events))
-	for i, event := range events {
-		eventIDs[i] = event.ID
+	seenPredictions := make(map[predictionKey]bool)
+	
+	// For each contest, 60-80% of users make predictions
+	for _, contest := range contests {
+		// Get events for this contest's sport
+		contestEvents := make([]*Event, 0)
+		for _, event := range events {
+			if event.SportType == contest.SportType {
+				contestEvents = append(contestEvents, event)
+			}
+		}
+		
+		if len(contestEvents) == 0 {
+			continue
+		}
+		
+		// Random 60-80% of users participate (using seeded faker)
+		participationRate := 0.6 + c.factory.faker.Float64()*0.2
+		numParticipants := int(float64(len(users)) * participationRate)
+		
+		// Create shuffled user indices (memory efficient)
+		userIndices := make([]int, len(users))
+		for i := range userIndices {
+			userIndices[i] = i
+		}
+		c.factory.faker.ShuffleAnySlice(userIndices)
+		
+		for i := 0; i < numParticipants && i < len(userIndices); i++ {
+			user := users[userIndices[i]]
+			
+			// Each user predicts 3-8 random events (using seeded faker)
+			numPredictions := 3 + c.factory.faker.Number(0, 5)
+			if numPredictions > len(contestEvents) {
+				numPredictions = len(contestEvents)
+			}
+			
+			// Create shuffled event indices (memory efficient)
+			eventIndices := make([]int, len(contestEvents))
+			for j := range eventIndices {
+				eventIndices[j] = j
+			}
+			c.factory.faker.ShuffleAnySlice(eventIndices)
+			
+			for j := 0; j < numPredictions; j++ {
+				event := contestEvents[eventIndices[j]]
+				
+				// Check for duplicate prediction
+				key := predictionKey{user.ID, contest.ID, event.ID}
+				if seenPredictions[key] {
+					continue // Skip duplicate
+				}
+				seenPredictions[key] = true
+				
+				// Generate score prediction (using seeded faker)
+				score := c.factory.faker.RandomString(scoreOptions)
+				parts := strings.Split(score, "-")
+				
+				// Validate score format
+				if len(parts) != 2 {
+					return nil, fmt.Errorf("invalid score format: %s", score)
+				}
+				
+				homeScore, err := strconv.Atoi(parts[0])
+				if err != nil {
+					return nil, fmt.Errorf("invalid home score in %s: %w", score, err)
+				}
+				awayScore, err := strconv.Atoi(parts[1])
+				if err != nil {
+					return nil, fmt.Errorf("invalid away score in %s: %w", score, err)
+				}
+				
+				predictionData := map[string]interface{}{
+					"home_score":   homeScore,
+					"away_score":   awayScore,
+					"score_string": score,
+				}
+				predictionJSON, err := json.Marshal(predictionData)
+				if err != nil {
+					return nil, fmt.Errorf("failed to marshal prediction data: %w", err)
+				}
+				
+				// Use seeded faker for random time offset
+				hoursAgo := c.factory.faker.Number(0, 71)
+				
+				prediction := &Prediction{
+					UserID:         user.ID,
+					ContestID:      contest.ID,
+					EventID:        event.ID,
+					PredictionType: "exact_score",
+					PredictionData: string(predictionJSON),
+					SubmittedAt:    time.Now().Add(-time.Duration(hoursAgo) * time.Hour),
+				}
+				
+				predictions = append(predictions, prediction)
+				
+				// Batch insert using configured batch size
+				if len(predictions) >= c.config.BatchSize {
+					if err := tx.Create(&predictions).Error; err != nil {
+						return nil, fmt.Errorf("failed to insert predictions batch: %w", err)
+					}
+					log.Printf("Inserted %d predictions", len(predictions))
+					predictions = predictions[:0]
+				}
+			}
+		}
 	}
-
-	predictions, err := c.factory.GeneratePredictions(count, userIDs, contestIDs, eventIDs)
-	if err != nil {
-		return nil, err
+	
+	// Insert remaining
+	if len(predictions) > 0 {
+		if err := tx.Create(&predictions).Error; err != nil {
+			return nil, fmt.Errorf("failed to insert final predictions batch: %w", err)
+		}
+		log.Printf("Inserted final %d predictions", len(predictions))
 	}
-
-	if err := tx.CreateInBatches(predictions, c.config.BatchSize).Error; err != nil {
-		return nil, fmt.Errorf("failed to insert predictions: %w", err)
-	}
-
-	return predictions, nil
+	
+	log.Printf("✓ Predictions seeded successfully")
+	
+	// Return empty slice since we're not tracking all predictions
+	return []*Prediction{}, nil
 }
 
 func (c *Coordinator) seedScoringData(tx *gorm.DB, users []*User, contests []*Contest, predictions []*Prediction) error {

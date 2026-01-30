@@ -54,6 +54,7 @@ type Contest struct {
 	Description         string    `json:"description"`
 	SportType           string    `gorm:"not null" json:"sport_type"`
 	Rules               string    `gorm:"type:text" json:"rules"`
+	PredictionSchema    []byte    `gorm:"type:jsonb" json:"prediction_schema"`
 	Status              string    `gorm:"not null;default:'draft'" json:"status"`
 	StartDate           time.Time `gorm:"not null" json:"start_date"`
 	EndDate             time.Time `gorm:"not null" json:"end_date"`

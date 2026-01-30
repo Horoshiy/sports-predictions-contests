@@ -24,6 +24,7 @@ message Contest {
   uint32 creator_id = 11;
   google.protobuf.Timestamp created_at = 12;
   google.protobuf.Timestamp updated_at = 13;
+  string prediction_schema = 14; // JSON string for prediction schema configuration
 }
 
 // Participant represents a contest participant

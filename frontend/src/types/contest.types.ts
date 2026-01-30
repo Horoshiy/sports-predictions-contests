@@ -1,11 +1,18 @@
 // Contest types matching backend proto definitions
 
+export interface PredictionSchema {
+  type: string
+  options?: string[]
+  allow_custom?: boolean
+}
+
 export interface Contest {
   id: number
   title: string
   description: string
   sportType: string
   rules: string // JSON string for flexible rule configuration
+  predictionSchema?: PredictionSchema
   status: 'draft' | 'active' | 'completed' | 'cancelled'
   startDate: string // ISO string
   endDate: string // ISO string

@@ -110,11 +110,22 @@ func (f *DataFactory) GenerateContests(count int, userIDs []uint, sportTypes []s
 			CurrentParticipants: uint(f.faker.Number(0, 500)),
 			CreatorID:           f.faker.RandomUint(userIDs),
 		}
+		
+		// Add prediction schema to all contests
+		schemaJSON := f.GenerateDefaultPredictionSchema()
+		contest.PredictionSchema = []byte(schemaJSON)
+		
 		contests[i] = contest
 	}
 
 	log.Printf("Successfully generated %d contests", count)
 	return contests, nil
+}
+
+// GenerateDefaultPredictionSchema returns the default exact score prediction schema as JSON string
+func (f *DataFactory) GenerateDefaultPredictionSchema() string {
+	// Return hardcoded schema for exact score predictions
+	return `{"type":"exact_score","options":["1-0","0-1","2-0","0-2","2-1","1-2","3-0","0-3","3-1","1-3","3-2","2-3","0-0","1-1","2-2","3-3"],"allow_custom":true}`
 }
 
 // GeneratePredictions creates fake predictions
