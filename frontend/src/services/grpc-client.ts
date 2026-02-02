@@ -5,7 +5,7 @@ class GrpcClient {
 
   constructor() {
     // Use Vite proxy in development, environment variable in production
-    this.baseUrl = import.meta.env.DEV ? '' : (import.meta.env.VITE_API_URL || 'http://localhost:8080')
+    this.baseUrl = import.meta.env.VITE_API_URL || ''
   }
 
   getBaseUrl(): string {

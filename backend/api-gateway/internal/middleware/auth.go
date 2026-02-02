@@ -13,8 +13,12 @@ import (
 func JWTMiddleware(secret []byte) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// Skip authentication for login/register endpoints and health checks
-			if r.URL.Path == "/health" || strings.HasPrefix(r.URL.Path, "/v1/auth/") {
+			// Skip authentication for login/register endpoints, health checks, and public endpoints
+			if r.URL.Path == "/health" || 
+				strings.HasPrefix(r.URL.Path, "/v1/auth/") ||
+				strings.HasPrefix(r.URL.Path, "/v1/events") ||
+				strings.HasPrefix(r.URL.Path, "/v1/sports") ||
+				strings.HasPrefix(r.URL.Path, "/v1/contests") {
 				next.ServeHTTP(w, r)
 				return
 			}

@@ -8,7 +8,7 @@ import (
 	"syscall"
 
 	"github.com/sports-prediction-contests/contest-service/internal/config"
-	"github.com/sports-prediction-contests/contest-service/internal/models"
+	// "github.com/sports-prediction-contests/contest-service/internal/models"
 	"github.com/sports-prediction-contests/contest-service/internal/repository"
 	"github.com/sports-prediction-contests/contest-service/internal/service"
 	"github.com/sports-prediction-contests/shared/auth"
@@ -31,17 +31,17 @@ func main() {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 
-	// Auto-migrate database schema
-	if err := db.AutoMigrate(
-		&models.Contest{},
-		&models.Participant{},
-		&models.Team{},
-		&models.TeamMember{},
-		&models.TeamContestEntry{},
-	); err != nil {
-		log.Fatalf("Failed to migrate database: %v", err)
-	}
-	log.Printf("[INFO] Database migration completed successfully")
+	// Auto-migrate database schema (disabled - tables already exist)
+	// if err := db.AutoMigrate(
+	// 	&models.Contest{},
+	// 	&models.Participant{},
+	// 	&models.Team{},
+	// 	&models.TeamMember{},
+	// 	&models.TeamContestEntry{},
+	// ); err != nil {
+	// 	log.Fatalf("Failed to migrate database: %v", err)
+	// }
+	log.Printf("[INFO] Database migration skipped - tables exist")
 
 	// Initialize repositories
 	contestRepo := repository.NewContestRepository(db)

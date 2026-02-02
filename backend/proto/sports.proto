@@ -63,6 +63,20 @@ message Match {
   google.protobuf.Timestamp updated_at = 11;
 }
 
+// Event represents a user-friendly view of a sports event
+message Event {
+  uint32 id = 1;
+  string title = 2;
+  string sport_type = 3;
+  string home_team = 4;
+  string away_team = 5;
+  google.protobuf.Timestamp event_date = 6;
+  string status = 7; // scheduled, live, completed, cancelled
+  string result_data = 8;
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp updated_at = 10;
+}
+
 // Sport requests
 message CreateSportRequest {
   string name = 1;
@@ -196,6 +210,17 @@ message ListMatchesRequest {
   string status = 4;
 }
 
+// Event requests
+message GetEventRequest {
+  uint32 id = 1;
+}
+
+message ListEventsRequest {
+  common.PaginationRequest pagination = 1;
+  string sport_type = 2;
+  string status = 3;
+}
+
 // Responses
 message SportResponse {
   common.Response response = 1;
@@ -238,6 +263,17 @@ message MatchResponse {
 message ListMatchesResponse {
   common.Response response = 1;
   repeated Match matches = 2;
+  common.PaginationResponse pagination = 3;
+}
+
+message EventResponse {
+  common.Response response = 1;
+  Event event = 2;
+}
+
+message ListEventsResponse {
+  common.Response response = 1;
+  repeated Event events = 2;
   common.PaginationResponse pagination = 3;
 }
 
@@ -381,6 +417,18 @@ service SportsService {
   rpc ListMatches(ListMatchesRequest) returns (ListMatchesResponse) {
     option (google.api.http) = {
       get: "/v1/matches"
+    };
+  }
+
+  // Event management (user-friendly view)
+  rpc GetEvent(GetEventRequest) returns (EventResponse) {
+    option (google.api.http) = {
+      get: "/v1/events/{id}"
+    };
+  }
+  rpc ListEvents(ListEventsRequest) returns (ListEventsResponse) {
+    option (google.api.http) = {
+      get: "/v1/events"
     };
   }
 

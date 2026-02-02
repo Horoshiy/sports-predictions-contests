@@ -55,13 +55,51 @@ func NewHandlers(api *tgbotapi.BotAPI, clients *clients.Clients, passwordSecret 
 }
 
 // getSession safely retrieves a session and updates LastActivity
+// If session doesn't exist, tries to restore it by logging in
 func (h *Handlers) getSession(chatID int64) *UserSession {
 	h.mu.Lock()
-	defer h.mu.Unlock()
 	session := h.sessions[chatID]
 	if session != nil {
 		session.LastActivity = time.Now()
+		h.mu.Unlock()
+		return session
 	}
+	h.mu.Unlock()
+
+	// Try to restore session by logging in with Telegram credentials
+	return h.tryRestoreSession(chatID)
+}
+
+// tryRestoreSession attempts to restore a session by logging in
+func (h *Handlers) tryRestoreSession(chatID int64) *UserSession {
+	email := fmt.Sprintf("tg_%d@telegram.bot", chatID)
+	
+	password, err := h.generateTelegramPassword(chatID)
+	if err != nil {
+		return nil
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	loginResp, err := h.clients.User.Login(ctx, &userpb.LoginRequest{
+		Email:    email,
+		Password: password,
+	})
+
+	if err != nil || loginResp == nil || loginResp.Response == nil || !loginResp.Response.Success {
+		return nil
+	}
+
+	now := time.Now()
+	session := &UserSession{
+		UserID:       loginResp.User.Id,
+		Email:        email,
+		LinkedAt:     now,
+		LastActivity: now,
+	}
+	h.setSession(chatID, session)
+	log.Printf("[INFO] Session restored for chat %d (user %d)", chatID, session.UserID)
 	return session
 }
 

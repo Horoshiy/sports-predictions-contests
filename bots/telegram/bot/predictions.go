@@ -5,10 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strconv"
 	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	predictionpb "github.com/sports-prediction-contests/shared/proto/prediction"
+	"google.golang.org/grpc/metadata"
 )
 
 const (
@@ -187,6 +189,9 @@ func (h *Handlers) handlePredictionSubmit(chatID int64, msgID int, matchID uint3
 		return
 	}
 
+	// Add user_id to gRPC metadata for bot authentication
+	ctx = metadata.AppendToOutgoingContext(ctx, "x-user-id", strconv.FormatUint(uint64(session.UserID), 10))
+
 	resp, err := h.clients.Prediction.SubmitPrediction(ctx, &predictionpb.SubmitPredictionRequest{
 		ContestId:      contestID,
 		EventId:        matchID,
@@ -203,7 +208,7 @@ func (h *Handlers) handlePredictionSubmit(chatID int64, msgID int, matchID uint3
 		return
 	}
 
-	// Success message
+	// Success message - score prediction
 	log.Printf("[INFO] Prediction submitted (user=%d, contest=%d, match=%d, score=%d-%d)", session.UserID, contestID, matchID, homeScore, awayScore)
 	successMsg := fmt.Sprintf("%s\n\nPrediction: %d-%d", MsgPredictionSuccess, homeScore, awayScore)
 
@@ -280,6 +285,9 @@ func (h *Handlers) handleAnyOtherScore(chatID int64, msgID int, matchID uint32) 
 		return
 	}
 
+	// Add user_id to gRPC metadata for bot authentication
+	ctx = metadata.AppendToOutgoingContext(ctx, "x-user-id", strconv.FormatUint(uint64(session.UserID), 10))
+
 	resp, err := h.clients.Prediction.SubmitPrediction(ctx, &predictionpb.SubmitPredictionRequest{
 		ContestId:      contestID,
 		EventId:        matchID,
@@ -296,7 +304,7 @@ func (h *Handlers) handleAnyOtherScore(chatID int64, msgID int, matchID uint32) 
 		return
 	}
 
-	// Success message
+	// Success message - any other score
 	successMsg := fmt.Sprintf("%s\n\nPrediction: Any Other Score 🎲", MsgPredictionSuccess)
 
 	keyboard := tgbotapi.NewInlineKeyboardMarkup(

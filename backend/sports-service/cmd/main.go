@@ -30,7 +30,7 @@ func main() {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 
-	if err := db.AutoMigrate(&models.Sport{}, &models.League{}, &models.Team{}, &models.Match{}); err != nil {
+	if err := db.AutoMigrate(&models.Sport{}, &models.League{}, &models.Team{}, &models.Match{}, &models.Event{}); err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)
 	}
 
@@ -38,8 +38,9 @@ func main() {
 	leagueRepo := repository.NewLeagueRepository(db)
 	teamRepo := repository.NewTeamRepository(db)
 	matchRepo := repository.NewMatchRepository(db)
+	eventRepo := repository.NewEventRepository(db)
 
-	sportsService := service.NewSportsService(sportRepo, leagueRepo, teamRepo, matchRepo)
+	sportsService := service.NewSportsService(sportRepo, leagueRepo, teamRepo, matchRepo, eventRepo)
 
 	// Initialize sync worker if enabled
 	var syncWorker *sync.SyncWorker

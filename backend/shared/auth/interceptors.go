@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"strconv"
 	"strings"
 
 	"google.golang.org/grpc"
@@ -13,10 +14,16 @@ import (
 // JWTUnaryInterceptor creates a gRPC unary interceptor for JWT authentication
 func JWTUnaryInterceptor(secret []byte) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
-		// Skip authentication for login/register endpoints
+		// Skip authentication for login/register endpoints and public read endpoints
 		if strings.Contains(info.FullMethod, "Login") || 
 		   strings.Contains(info.FullMethod, "Register") ||
-		   strings.Contains(info.FullMethod, "Health") {
+		   strings.Contains(info.FullMethod, "Health") ||
+		   strings.Contains(info.FullMethod, "ListEvents") ||
+		   strings.Contains(info.FullMethod, "GetEvent") ||
+		   strings.Contains(info.FullMethod, "ListSports") ||
+		   strings.Contains(info.FullMethod, "GetSport") ||
+		   strings.Contains(info.FullMethod, "ListContests") ||
+		   strings.Contains(info.FullMethod, "GetContest") {
 			return handler(ctx, req)
 		}
 
@@ -24,6 +31,16 @@ func JWTUnaryInterceptor(secret []byte) grpc.UnaryServerInterceptor {
 		md, ok := metadata.FromIncomingContext(ctx)
 		if !ok {
 			return nil, status.Error(codes.Unauthenticated, "missing metadata")
+		}
+
+		// Check for x-user-id header (for internal services like Telegram bot)
+		if userIDHeader := md.Get("x-user-id"); len(userIDHeader) > 0 {
+			userID, err := strconv.ParseUint(userIDHeader[0], 10, 32)
+			if err == nil && userID > 0 {
+				ctx = context.WithValue(ctx, "user_id", uint(userID))
+				ctx = context.WithValue(ctx, "email", "")
+				return handler(ctx, req)
+			}
 		}
 
 		// Get authorization header

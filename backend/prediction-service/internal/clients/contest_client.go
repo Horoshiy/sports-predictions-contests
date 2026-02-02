@@ -54,6 +54,7 @@ func (c *ContestClient) GetContest(ctx context.Context, contestID uint32) (*cont
 }
 
 // ValidateContestParticipation checks if a user is a participant in a contest
+// If not a participant, automatically joins the contest
 func (c *ContestClient) ValidateContestParticipation(ctx context.Context, contestID uint32, userID uint32) error {
 	// Get contest details to validate it exists and is active
 	contest, err := c.GetContest(ctx, contestID)
@@ -72,10 +73,32 @@ func (c *ContestClient) ValidateContestParticipation(ctx context.Context, contes
 		return fmt.Errorf("failed to verify participation")
 	}
 
+	// Auto-join if not a participant
 	if !isParticipant {
-		return fmt.Errorf("user is not a participant in this contest")
+		if err := c.JoinContest(ctx, contestID, userID); err != nil {
+			return fmt.Errorf("failed to join contest: %w", err)
+		}
 	}
 	
+	return nil
+}
+
+// JoinContest adds a user as a participant in a contest
+// UserID is extracted from JWT context by contest-service
+func (c *ContestClient) JoinContest(ctx context.Context, contestID uint32, userID uint32) error {
+	req := &contestpb.JoinContestRequest{
+		ContestId: contestID,
+	}
+
+	resp, err := c.client.JoinContest(ctx, req)
+	if err != nil {
+		return fmt.Errorf("failed to join contest: %w", err)
+	}
+
+	if !resp.Response.Success {
+		return fmt.Errorf("join contest failed: %s", resp.Response.Message)
+	}
+
 	return nil
 }
 

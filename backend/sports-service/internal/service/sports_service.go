@@ -21,6 +21,7 @@ type SportsService struct {
 	leagueRepo   repository.LeagueRepositoryInterface
 	teamRepo     repository.TeamRepositoryInterface
 	matchRepo    repository.MatchRepositoryInterface
+	eventRepo    repository.EventRepositoryInterface
 	syncWorker   *sync.SyncWorker
 	syncEnabled  bool
 	syncInterval int
@@ -31,12 +32,14 @@ func NewSportsService(
 	leagueRepo repository.LeagueRepositoryInterface,
 	teamRepo repository.TeamRepositoryInterface,
 	matchRepo repository.MatchRepositoryInterface,
+	eventRepo repository.EventRepositoryInterface,
 ) *SportsService {
 	return &SportsService{
 		sportRepo:  sportRepo,
 		leagueRepo: leagueRepo,
 		teamRepo:   teamRepo,
 		matchRepo:  matchRepo,
+		eventRepo:  eventRepo,
 	}
 }
 
@@ -729,4 +732,78 @@ func (s *SportsService) GetSyncStatus(ctx context.Context, req *pb.SyncStatusReq
 		LastSyncAt:       lastSyncAt,
 		SyncIntervalMins: int32(s.syncInterval),
 	}, nil
+}
+
+// GetEvent returns a single event by ID
+func (s *SportsService) GetEvent(ctx context.Context, req *pb.GetEventRequest) (*pb.EventResponse, error) {
+	event, err := s.eventRepo.GetByID(uint(req.Id))
+	if err != nil {
+		return &pb.EventResponse{
+			Response: &common.Response{Success: false, Message: err.Error(), Code: int32(common.ErrorCode_NOT_FOUND), Timestamp: timestamppb.Now()},
+		}, nil
+	}
+
+	return &pb.EventResponse{
+		Response: &common.Response{Success: true, Message: "Event retrieved successfully", Code: 0, Timestamp: timestamppb.Now()},
+		Event:    s.eventToProto(event),
+	}, nil
+}
+
+// ListEvents returns a list of events
+func (s *SportsService) ListEvents(ctx context.Context, req *pb.ListEventsRequest) (*pb.ListEventsResponse, error) {
+	if req.Pagination == nil {
+		req.Pagination = &common.PaginationRequest{Page: 1, Limit: 10}
+	}
+	limit := int(req.Pagination.Limit)
+	if limit <= 0 {
+		limit = 10
+		req.Pagination.Limit = 10
+	}
+	page := int(req.Pagination.Page)
+	if page <= 0 {
+		page = 1
+		req.Pagination.Page = 1
+	}
+	offset := (page - 1) * limit
+
+	// List events with optional filters
+	events, total, err := s.eventRepo.List(limit, offset, req.SportType, req.Status)
+	if err != nil {
+		return &pb.ListEventsResponse{
+			Response: &common.Response{Success: false, Message: err.Error(), Code: int32(common.ErrorCode_INTERNAL_ERROR), Timestamp: timestamppb.Now()},
+		}, nil
+	}
+
+	// Convert to proto
+	pbEvents := make([]*pb.Event, len(events))
+	for i, event := range events {
+		pbEvents[i] = s.eventToProto(event)
+	}
+
+	totalPages := int32(total) / req.Pagination.Limit
+	if int32(total)%req.Pagination.Limit > 0 {
+		totalPages++
+	}
+
+	return &pb.ListEventsResponse{
+		Response:   &common.Response{Success: true, Message: "Events retrieved successfully", Code: 0, Timestamp: timestamppb.Now()},
+		Events:     pbEvents,
+		Pagination: &common.PaginationResponse{Page: req.Pagination.Page, Limit: req.Pagination.Limit, Total: int32(total), TotalPages: totalPages},
+	}, nil
+}
+
+// eventToProto converts an Event model to an Event proto
+func (s *SportsService) eventToProto(event *models.Event) *pb.Event {
+	return &pb.Event{
+		Id:         uint32(event.ID),
+		Title:      event.Title,
+		SportType:  event.SportType,
+		HomeTeam:   event.HomeTeam,
+		AwayTeam:   event.AwayTeam,
+		EventDate:  timestamppb.New(event.EventDate),
+		Status:     event.Status,
+		ResultData: event.ResultData,
+		CreatedAt:  timestamppb.New(event.CreatedAt),
+		UpdatedAt:  timestamppb.New(event.UpdatedAt),
+	}
 }

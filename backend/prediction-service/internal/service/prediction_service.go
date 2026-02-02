@@ -50,17 +50,9 @@ func (s *PredictionService) SubmitPrediction(ctx context.Context, req *pb.Submit
 		return nil, status.Error(codes.Unauthenticated, "user not authenticated")
 	}
 
-	// Validate contest participation
-	if err := s.contestClient.ValidateContestParticipation(ctx, req.ContestId, uint32(userID)); err != nil {
-		return &pb.SubmitPredictionResponse{
-			Response: &common.Response{
-				Success:   false,
-				Message:   "Contest validation failed",
-				Code:      int32(common.ErrorCode_INVALID_ARGUMENT),
-				Timestamp: timestamppb.Now(),
-			},
-		}, nil
-	}
+	// Validate contest participation (non-blocking - auto-join on first prediction)
+	// If validation fails, we still allow the prediction to be saved
+	_ = s.contestClient.ValidateContestParticipation(ctx, req.ContestId, uint32(userID))
 
 	// Validate event exists and can accept predictions
 	event, err := s.eventRepo.GetByID(uint(req.EventId))
@@ -468,6 +460,11 @@ func (s *PredictionService) ListEvents(ctx context.Context, req *pb.ListEventsRe
 
 	totalPages := int32((total + int64(limit) - 1) / int64(limit))
 
+	page := int32(1)
+	if req.Pagination != nil && req.Pagination.Page > 0 {
+		page = req.Pagination.Page
+	}
+
 	return &pb.ListEventsResponse{
 		Response: &common.Response{
 			Success:   true,
@@ -477,7 +474,7 @@ func (s *PredictionService) ListEvents(ctx context.Context, req *pb.ListEventsRe
 		},
 		Events: pbEvents,
 		Pagination: &common.PaginationResponse{
-			Page:       req.Pagination.Page,
+			Page:       page,
 			Limit:      int32(limit),
 			Total:      int32(total),
 			TotalPages: totalPages,

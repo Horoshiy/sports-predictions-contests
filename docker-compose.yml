@@ -13,10 +13,9 @@ services:
       POSTGRES_USER: sports_user
       POSTGRES_PASSWORD: ${DB_PASSWORD:-sports_password}
     ports:
-      - "5432:5432"
+      - "5434:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
     networks:
       - sports-network
 
@@ -24,7 +23,7 @@ services:
     image: redis:7-alpine
     container_name: sports-redis
     ports:
-      - "6379:6379"
+      - "6380:6379"
     volumes:
       - redis_data:/data
     networks:
@@ -266,6 +265,7 @@ services:
     restart: unless-stopped
     environment:
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - TELEGRAM_PASSWORD_SECRET=${TELEGRAM_PASSWORD_SECRET}
       - USER_SERVICE_ENDPOINT=user-service:8084
       - CONTEST_SERVICE_ENDPOINT=contest-service:8085
       - PREDICTION_SERVICE_ENDPOINT=prediction-service:8086
@@ -289,7 +289,7 @@ services:
       dockerfile: Dockerfile
     container_name: sports-frontend
     ports:
-      - "3000:80"
+      - "3002:80"
     environment:
       - REACT_APP_API_URL=http://api-gateway:8080
     depends_on:

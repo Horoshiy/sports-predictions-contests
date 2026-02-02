@@ -42,7 +42,7 @@ Welcome! You're now registered and ready to make predictions on sports events.
 	MsgContestList        = "🏆 <b>Active Contests</b>\n\n"
 	MsgLeaderboard        = "🏅 <b>Leaderboard</b>\n\n"
 	MsgEmptyLeaderboard   = "No entries in leaderboard yet."
-	MsgNotLinked          = "⚠️ Account not linked. Use /link email password"
+	MsgNotLinked          = "⚠️ Сессия истекла. Нажмите /start для авторизации"
 	MsgLinkSuccess        = "✅ Account linked successfully!"
 	MsgLinkFailed         = "❌ Failed to link account: %s"
 	MsgLinkUsage          = "Usage: /link your@email.com password"
