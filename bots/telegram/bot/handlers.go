@@ -571,12 +571,11 @@ func (h *Handlers) handleRiskyToggle(chatID int64, msgID int, matchID uint32, ev
 		return
 	}
 
-	// Get contest rules from contest-service
+	// Get contest and fetch risky events from API
 	contestID := session.CurrentContest
-	rulesJSON := h.getContestRules(contestID)
 	
-	events := getRiskyEvents(rulesJSON)
-	maxSel := getMaxSelections(rulesJSON)
+	// Fetch events from API (with caching)
+	events, maxSel, _ := h.fetchMatchRiskyEvents(matchID, contestID)
 	
 	// Initialize risky selections map if needed
 	if session.RiskySelections == nil {
@@ -652,9 +651,8 @@ func (h *Handlers) handleRiskySubmit(chatID int64, msgID int, matchID uint32) {
 		delete(session.RiskySelections, matchID)
 	}
 	
-	// Success message
-	rulesJSON := h.getContestRules(contestID)
-	events := getRiskyEvents(rulesJSON)
+	// Success message - fetch events for formatting
+	events, _, _ := h.fetchMatchRiskyEvents(matchID, contestID)
 	selectionNames := formatRiskyPrediction(selections, events)
 	
 	text := fmt.Sprintf("✅ <b>Рисковый прогноз принят!</b>\n\nВыбранные события:\n%s\n\nУдачи! 🍀", selectionNames)

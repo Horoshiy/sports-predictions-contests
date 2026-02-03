@@ -1,11 +1,16 @@
 package bot
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"strings"
+	"sync"
+	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	predictionpb "github.com/sports-prediction-contests/shared/proto/prediction"
 )
 
 // NOTE: Types below are duplicated from backend/shared/scoring/rules.go
@@ -33,18 +38,128 @@ type ContestRules struct {
 	Risky  *RiskyScoringRules `json:"risky,omitempty"`
 }
 
-// Default risky events
-var defaultRiskyEvents = []RiskyEvent{
+// Fallback risky events (used if API fails)
+var fallbackRiskyEvents = []RiskyEvent{
 	{Slug: "penalty", Name: "⚽ Пенальти", NameEn: "Penalty", Points: 3},
 	{Slug: "red_card", Name: "🟥 Удаление", NameEn: "Red card", Points: 4},
 	{Slug: "own_goal", Name: "🔙 Автогол", NameEn: "Own goal", Points: 5},
 	{Slug: "hat_trick", Name: "🎩 Хет-трик", NameEn: "Hat-trick", Points: 6},
 	{Slug: "clean_sheet_home", Name: "🏠 Хозяева на ноль", NameEn: "Home clean sheet", Points: 2},
-	{Slug: "clean_sheet_away", Name: "✈️ Гости на ноль", NameEn: "Away clean sheet", Points: 3},
-	{Slug: "both_teams_score", Name: "⚽⚽ Обе забьют", NameEn: "Both teams score", Points: 2},
-	{Slug: "over_3_goals", Name: "📈 Больше 3 голов", NameEn: "Over 3.5 goals", Points: 2},
-	{Slug: "first_half_draw", Name: "🤝 Ничья в 1-м тайме", NameEn: "First half draw", Points: 2},
-	{Slug: "comeback", Name: "🔄 Камбэк", NameEn: "Comeback", Points: 7},
+}
+
+// RiskyEventsCache caches API responses for risky events
+type RiskyEventsCache struct {
+	mu             sync.RWMutex
+	globalEvents   []RiskyEvent
+	globalExpiry   time.Time
+	matchEvents    map[string]matchEventsCacheEntry // key: "eventId:contestId"
+	cacheDuration  time.Duration
+}
+
+type matchEventsCacheEntry struct {
+	events        []RiskyEvent
+	maxSelections int
+	expiry        time.Time
+}
+
+var riskyEventsCache = &RiskyEventsCache{
+	matchEvents:   make(map[string]matchEventsCacheEntry),
+	cacheDuration: 5 * time.Minute,
+}
+
+// fetchGlobalRiskyEvents fetches all risky event types from API
+func (h *Handlers) fetchGlobalRiskyEvents() ([]RiskyEvent, error) {
+	riskyEventsCache.mu.RLock()
+	if time.Now().Before(riskyEventsCache.globalExpiry) && len(riskyEventsCache.globalEvents) > 0 {
+		events := riskyEventsCache.globalEvents
+		riskyEventsCache.mu.RUnlock()
+		return events, nil
+	}
+	riskyEventsCache.mu.RUnlock()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	resp, err := h.clients.Prediction.ListRiskyEventTypes(ctx, &predictionpb.ListRiskyEventTypesRequest{
+		IncludeInactive: false, // Only fetch active events
+	})
+	if err != nil {
+		log.Printf("[WARN] Failed to fetch risky events from API: %v", err)
+		return fallbackRiskyEvents, err
+	}
+
+	events := make([]RiskyEvent, 0, len(resp.EventTypes))
+	for _, e := range resp.EventTypes {
+		events = append(events, RiskyEvent{
+			Slug:   e.Slug,
+			Name:   fmt.Sprintf("%s %s", e.Icon, e.Name),
+			NameEn: e.NameEn,
+			Points: e.DefaultPoints,
+		})
+	}
+
+	// Update cache
+	riskyEventsCache.mu.Lock()
+	riskyEventsCache.globalEvents = events
+	riskyEventsCache.globalExpiry = time.Now().Add(riskyEventsCache.cacheDuration)
+	riskyEventsCache.mu.Unlock()
+
+	return events, nil
+}
+
+// fetchMatchRiskyEvents fetches risky events for a specific match (with contest overrides)
+func (h *Handlers) fetchMatchRiskyEvents(eventID, contestID uint32) ([]RiskyEvent, int, error) {
+	cacheKey := fmt.Sprintf("%d:%d", eventID, contestID)
+
+	riskyEventsCache.mu.RLock()
+	if entry, ok := riskyEventsCache.matchEvents[cacheKey]; ok && time.Now().Before(entry.expiry) {
+		riskyEventsCache.mu.RUnlock()
+		return entry.events, entry.maxSelections, nil
+	}
+	riskyEventsCache.mu.RUnlock()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	resp, err := h.clients.Prediction.GetMatchRiskyEvents(ctx, &predictionpb.GetMatchRiskyEventsRequest{
+		EventId:   eventID,
+		ContestId: contestID,
+	})
+	if err != nil {
+		log.Printf("[WARN] Failed to fetch match risky events from API: %v", err)
+		// Fall back to global events
+		globalEvents, _ := h.fetchGlobalRiskyEvents()
+		return globalEvents, 5, err
+	}
+
+	events := make([]RiskyEvent, 0, len(resp.Events))
+	for _, e := range resp.Events {
+		if !e.IsEnabled {
+			continue // Skip disabled events
+		}
+		events = append(events, RiskyEvent{
+			Slug:   e.Slug,
+			Name:   fmt.Sprintf("%s %s", e.Icon, e.Name),
+			NameEn: e.NameEn,
+			Points: e.Points,
+		})
+	}
+
+	maxSelections := int(resp.MaxSelections)
+	if maxSelections == 0 {
+		maxSelections = 5
+	}
+
+	// Update cache
+	riskyEventsCache.mu.Lock()
+	riskyEventsCache.matchEvents[cacheKey] = matchEventsCacheEntry{
+		events:        events,
+		maxSelections: maxSelections,
+		expiry:        time.Now().Add(riskyEventsCache.cacheDuration),
+	}
+	riskyEventsCache.mu.Unlock()
+
+	return events, maxSelections, nil
 }
 
 // parseContestRules parses contest rules JSON
@@ -68,13 +183,13 @@ func isRiskyContest(rulesJSON string) bool {
 	return rules.Type == "risky"
 }
 
-// getRiskyEvents returns risky events for a contest
+// getRiskyEvents returns risky events for a contest (fallback when API not available)
 func getRiskyEvents(rulesJSON string) []RiskyEvent {
 	rules := parseContestRules(rulesJSON)
 	if rules.Risky != nil && len(rules.Risky.Events) > 0 {
 		return rules.Risky.Events
 	}
-	return defaultRiskyEvents
+	return fallbackRiskyEvents
 }
 
 // getMaxSelections returns max selections for risky contest
