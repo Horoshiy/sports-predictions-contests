@@ -2,6 +2,7 @@ package repository
 
 import (
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/sports-prediction-contests/prediction-service/internal/models"
@@ -181,17 +182,20 @@ func (r *EventRepository) AddEventsToContest(contestID uint, eventIDs []uint) er
 		return nil
 	}
 
-	// Use raw SQL for bulk insert with ON CONFLICT DO NOTHING
-	for _, eventID := range eventIDs {
-		err := r.db.Exec(
-			"INSERT INTO contest_events (contest_id, event_id) VALUES (?, ?) ON CONFLICT DO NOTHING",
-			contestID, eventID,
-		).Error
-		if err != nil {
-			return err
-		}
+	// Build bulk insert query for better performance
+	valueStrings := make([]string, len(eventIDs))
+	valueArgs := make([]interface{}, 0, len(eventIDs)*2)
+	
+	for i, eventID := range eventIDs {
+		valueStrings[i] = "(?, ?)"
+		valueArgs = append(valueArgs, contestID, eventID)
 	}
-	return nil
+
+	query := "INSERT INTO contest_events (contest_id, event_id) VALUES " +
+		strings.Join(valueStrings, ", ") +
+		" ON CONFLICT DO NOTHING"
+
+	return r.db.Exec(query, valueArgs...).Error
 }
 
 // RemoveEventsFromContest removes events from a contest

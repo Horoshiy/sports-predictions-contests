@@ -32,6 +32,7 @@ export const EventSelector: React.FC<EventSelectorProps> = ({
 }) => {
   const [events, setEvents] = useState<Event[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [searchText, setSearchText] = useState('')
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null] | null>(null)
 
@@ -42,13 +43,20 @@ export const EventSelector: React.FC<EventSelectorProps> = ({
   const fetchEvents = async () => {
     try {
       setLoading(true)
+      setError(null)
       const response = await fetch('/api/v1/events?limit=500&status=scheduled')
+      if (!response.ok) {
+        throw new Error(`HTTP error: ${response.status}`)
+      }
       const data = await response.json()
       if (data.events) {
         setEvents(data.events)
+      } else {
+        setEvents([])
       }
-    } catch (error) {
-      console.error('Failed to fetch events:', error)
+    } catch (err) {
+      console.error('Failed to fetch events:', err)
+      setError('Не удалось загрузить матчи. Попробуйте обновить страницу.')
     } finally {
       setLoading(false)
     }
@@ -159,6 +167,16 @@ export const EventSelector: React.FC<EventSelectorProps> = ({
             placeholder={['От', 'До']}
           />
         </Space>
+        
+        {error && (
+          <Alert
+            type="error"
+            message={error}
+            showIcon
+            closable
+            onClose={() => setError(null)}
+          />
+        )}
         
         <Alert
           type={isValidSelection ? 'success' : 'warning'}

@@ -26,30 +26,18 @@ type CalculationResult struct {
 	Details map[string]interface{}
 }
 
-// CalculateStandard calculates points for a standard prediction
-func (c *Calculator) CalculateStandard(prediction, result ScoreData, isAnyOther bool) CalculationResult {
+// calculateWithScoring is the shared logic for standard scoring calculation
+// Used by both CalculateStandard and CalculateTotalizator
+func (c *Calculator) calculateWithScoring(prediction, result ScoreData, isAnyOther bool, scoring *StandardScoringRules, contestType string) CalculationResult {
 	details := map[string]interface{}{
-		"type":            "standard",
+		"type":            contestType,
 		"predicted_score": fmt.Sprintf("%d:%d", prediction.HomeScore, prediction.AwayScore),
 		"actual_score":    fmt.Sprintf("%d:%d", result.HomeScore, result.AwayScore),
 		"is_any_other":    isAnyOther,
 	}
 
-	// Nil safety check
-	if c.rules == nil {
-		details["error"] = "nil rules"
-		return CalculationResult{Points: 0, Details: details}
-	}
-
-	scoring := c.rules.Standard
-	if scoring == nil {
-		defaultRules := DefaultStandardRules()
-		scoring = &defaultRules
-	}
-
 	// Handle "any other" prediction
 	if isAnyOther {
-		// Check if result is NOT one of the common scores (0:0 to 4:4)
 		isOther := c.isOtherScore(result.HomeScore, result.AwayScore)
 		details["result_is_other"] = isOther
 		if isOther {
@@ -82,7 +70,6 @@ func (c *Calculator) CalculateStandard(prediction, result ScoreData, isAnyOther 
 
 	// Correct outcome with one team's goals correct
 	if predictedOutcome == actualOutcome {
-		// Check if home or away goals match
 		homeGoalsMatch := prediction.HomeScore == result.HomeScore
 		awayGoalsMatch := prediction.AwayScore == result.AwayScore
 
@@ -94,7 +81,6 @@ func (c *Calculator) CalculateStandard(prediction, result ScoreData, isAnyOther 
 			return CalculationResult{Points: points, Details: details}
 		}
 
-		// Just correct outcome
 		details["match_type"] = "correct_outcome"
 		return CalculationResult{Points: scoring.CorrectOutcome, Details: details}
 	}
@@ -103,23 +89,36 @@ func (c *Calculator) CalculateStandard(prediction, result ScoreData, isAnyOther 
 	return CalculationResult{Points: 0, Details: details}
 }
 
+// CalculateStandard calculates points for a standard prediction
+func (c *Calculator) CalculateStandard(prediction, result ScoreData, isAnyOther bool) CalculationResult {
+	// Nil safety check
+	if c.rules == nil {
+		return CalculationResult{
+			Points:  0,
+			Details: map[string]interface{}{"error": "nil rules", "type": "standard"},
+		}
+	}
+
+	scoring := c.rules.Standard
+	if scoring == nil {
+		defaultRules := DefaultStandardRules()
+		scoring = &defaultRules
+	}
+
+	return c.calculateWithScoring(prediction, result, isAnyOther, scoring, "standard")
+}
+
 // CalculateTotalizator calculates points for a totalizator prediction
 // Uses the same logic as standard but gets scoring from Totalizator rules
 func (c *Calculator) CalculateTotalizator(prediction, result ScoreData, isAnyOther bool) CalculationResult {
-	details := map[string]interface{}{
-		"type":            "totalizator",
-		"predicted_score": fmt.Sprintf("%d:%d", prediction.HomeScore, prediction.AwayScore),
-		"actual_score":    fmt.Sprintf("%d:%d", result.HomeScore, result.AwayScore),
-		"is_any_other":    isAnyOther,
-	}
-
 	// Nil safety check
 	if c.rules == nil {
-		details["error"] = "nil rules"
-		return CalculationResult{Points: 0, Details: details}
+		return CalculationResult{
+			Points:  0,
+			Details: map[string]interface{}{"error": "nil rules", "type": "totalizator"},
+		}
 	}
 
-	// Get scoring rules from Totalizator
 	var scoring *StandardScoringRules
 	if c.rules.Totalizator != nil {
 		scoring = &c.rules.Totalizator.Scoring
@@ -128,57 +127,7 @@ func (c *Calculator) CalculateTotalizator(prediction, result ScoreData, isAnyOth
 		scoring = &defaultRules
 	}
 
-	// Handle "any other" prediction
-	if isAnyOther {
-		isOther := c.isOtherScore(result.HomeScore, result.AwayScore)
-		details["result_is_other"] = isOther
-		if isOther {
-			details["match_type"] = "any_other_correct"
-			return CalculationResult{Points: scoring.AnyOther, Details: details}
-		}
-		details["match_type"] = "any_other_incorrect"
-		return CalculationResult{Points: 0, Details: details}
-	}
-
-	// Exact match
-	if prediction.HomeScore == result.HomeScore && prediction.AwayScore == result.AwayScore {
-		details["match_type"] = "exact_score"
-		return CalculationResult{Points: scoring.ExactScore, Details: details}
-	}
-
-	// Calculate outcomes
-	predictedOutcome := c.determineOutcome(prediction.HomeScore, prediction.AwayScore)
-	actualOutcome := c.determineOutcome(result.HomeScore, result.AwayScore)
-	details["predicted_outcome"] = predictedOutcome
-	details["actual_outcome"] = actualOutcome
-
-	// Goal difference match
-	predictedDiff := prediction.HomeScore - prediction.AwayScore
-	actualDiff := result.HomeScore - result.AwayScore
-	if predictedDiff == actualDiff {
-		details["match_type"] = "goal_difference"
-		return CalculationResult{Points: scoring.GoalDifference, Details: details}
-	}
-
-	// Correct outcome with one team's goals correct
-	if predictedOutcome == actualOutcome {
-		homeGoalsMatch := prediction.HomeScore == result.HomeScore
-		awayGoalsMatch := prediction.AwayScore == result.AwayScore
-
-		if homeGoalsMatch || awayGoalsMatch {
-			details["match_type"] = "outcome_plus_team_goals"
-			details["home_goals_match"] = homeGoalsMatch
-			details["away_goals_match"] = awayGoalsMatch
-			points := scoring.CorrectOutcome + scoring.OutcomePlusTeamGoals
-			return CalculationResult{Points: points, Details: details}
-		}
-
-		details["match_type"] = "correct_outcome"
-		return CalculationResult{Points: scoring.CorrectOutcome, Details: details}
-	}
-
-	details["match_type"] = "none"
-	return CalculationResult{Points: 0, Details: details}
+	return c.calculateWithScoring(prediction, result, isAnyOther, scoring, "totalizator")
 }
 
 // CalculateRisky calculates points for risky predictions
