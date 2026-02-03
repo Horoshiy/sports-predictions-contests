@@ -39,6 +39,8 @@ type UserSession struct {
 	// Navigation state
 	CurrentContest uint32
 	CurrentPage    int
+	// Risky predictions state (matchID -> selected event slugs)
+	RiskySelections map[uint32][]string
 }
 
 func NewHandlers(api *tgbotapi.BotAPI, clients *clients.Clients, passwordSecret string) *Handlers {
@@ -561,9 +563,6 @@ func (h *Handlers) cleanupSessions() {
 	}
 }
 
-// Risky prediction state stored per user
-var riskySelections = make(map[string][]string) // key: "chatID_matchID" -> selected slugs
-
 // handleRiskyToggle toggles a risky event selection
 func (h *Handlers) handleRiskyToggle(chatID int64, msgID int, matchID uint32, eventSlug string) {
 	session := h.getSession(chatID)
@@ -579,13 +578,17 @@ func (h *Handlers) handleRiskyToggle(chatID int64, msgID int, matchID uint32, ev
 	events := getRiskyEvents(rulesJSON)
 	maxSel := getMaxSelections(rulesJSON)
 	
+	// Initialize risky selections map if needed
+	if session.RiskySelections == nil {
+		session.RiskySelections = make(map[uint32][]string)
+	}
+	
 	// Get or create selections for this match
-	key := fmt.Sprintf("%d_%d", chatID, matchID)
-	selections := riskySelections[key]
+	selections := session.RiskySelections[matchID]
 	
 	// Toggle selection
 	selections = toggleSelection(selections, eventSlug, maxSel)
-	riskySelections[key] = selections
+	session.RiskySelections[matchID] = selections
 	
 	// Update keyboard
 	keyboard := RiskyEventsKeyboard(matchID, selections, events, maxSel)
@@ -602,8 +605,11 @@ func (h *Handlers) handleRiskySubmit(chatID int64, msgID int, matchID uint32) {
 		return
 	}
 
-	key := fmt.Sprintf("%d_%d", chatID, matchID)
-	selections := riskySelections[key]
+	// Get selections from session
+	var selections []string
+	if session.RiskySelections != nil {
+		selections = session.RiskySelections[matchID]
+	}
 	
 	if len(selections) == 0 {
 		h.editMessage(chatID, msgID, "⚠️ Выбери хотя бы одно событие", BackToMainKeyboard())
@@ -641,8 +647,10 @@ func (h *Handlers) handleRiskySubmit(chatID int64, msgID int, matchID uint32) {
 		return
 	}
 	
-	// Clear selections
-	delete(riskySelections, key)
+	// Clear selections from session
+	if session.RiskySelections != nil {
+		delete(session.RiskySelections, matchID)
+	}
 	
 	// Success message
 	rulesJSON := ""
