@@ -59,21 +59,25 @@ func (r *RelayRepository) SetTeamAssignments(contestID, teamID, captainID uint, 
 			return err
 		}
 
-		// Create new assignments
-		for _, input := range assignments {
-			assignment := models.RelayEventAssignment{
+		// Skip if no assignments
+		if len(assignments) == 0 {
+			return nil
+		}
+
+		// Build slice of assignment models for bulk insert
+		assignmentModels := make([]models.RelayEventAssignment, len(assignments))
+		for i, input := range assignments {
+			assignmentModels[i] = models.RelayEventAssignment{
 				ContestID:  contestID,
 				TeamID:     teamID,
 				UserID:     input.UserID,
 				EventID:    input.EventID,
 				AssignedBy: captainID,
 			}
-			if err := tx.Create(&assignment).Error; err != nil {
-				return err
-			}
 		}
 
-		return nil
+		// Bulk insert (batch size 100)
+		return tx.CreateInBatches(assignmentModels, 100).Error
 	})
 }
 
@@ -108,12 +112,17 @@ func (r *RelayRepository) GetUserAssignmentsForTeam(contestID, teamID, userID ui
 }
 
 // ValidateUserCanPredict checks if user is assigned to predict this event
+// If teamID is 0, checks across all teams the user might be in
 func (r *RelayRepository) ValidateUserCanPredict(contestID, teamID, userID, eventID uint) (bool, error) {
 	var count int64
-	err := r.db.Model(&models.RelayEventAssignment{}).
-		Where("contest_id = ? AND team_id = ? AND user_id = ? AND event_id = ?",
-			contestID, teamID, userID, eventID).
-		Count(&count).Error
+	query := r.db.Model(&models.RelayEventAssignment{}).
+		Where("contest_id = ? AND user_id = ? AND event_id = ?", contestID, userID, eventID)
+	
+	if teamID > 0 {
+		query = query.Where("team_id = ?", teamID)
+	}
+	
+	err := query.Count(&count).Error
 	return count > 0, err
 }
 

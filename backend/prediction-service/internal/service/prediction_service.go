@@ -28,6 +28,7 @@ type PredictionService struct {
 	riskyEventRepo   *repository.RiskyEventRepository
 	relayRepo        repository.RelayRepositoryInterface
 	contestClient    *clients.ContestClient
+	teamClient       *clients.TeamClient
 }
 
 // NewPredictionService creates a new PredictionService instance
@@ -38,6 +39,7 @@ func NewPredictionService(
 	riskyEventRepo *repository.RiskyEventRepository,
 	relayRepo repository.RelayRepositoryInterface,
 	contestClient *clients.ContestClient,
+	teamClient *clients.TeamClient,
 ) *PredictionService {
 	return &PredictionService{
 		predictionRepo:   predictionRepo,
@@ -46,6 +48,7 @@ func NewPredictionService(
 		riskyEventRepo:   riskyEventRepo,
 		relayRepo:        relayRepo,
 		contestClient:    contestClient,
+		teamClient:       teamClient,
 	}
 }
 
@@ -60,6 +63,38 @@ func (s *PredictionService) SubmitPrediction(ctx context.Context, req *pb.Submit
 	// Validate contest participation (non-blocking - auto-join on first prediction)
 	// If validation fails, we still allow the prediction to be saved
 	_ = s.contestClient.ValidateContestParticipation(ctx, req.ContestId, uint32(userID))
+
+	// Check if contest is relay type - user can only predict assigned events
+	contest, err := s.contestClient.GetContest(ctx, req.ContestId)
+	if err == nil && contest != nil {
+		contestType := parseContestType(contest.Rules)
+		if contestType == "relay" {
+			// For relay contests, validate user is assigned to this event
+			canPredict, err := s.relayRepo.ValidateUserCanPredict(
+				uint(req.ContestId), 0, uint(userID), uint(req.EventId),
+			)
+			if err != nil {
+				return &pb.SubmitPredictionResponse{
+					Response: &common.Response{
+						Success:   false,
+						Message:   "Failed to validate relay assignment",
+						Code:      int32(common.ErrorCode_INTERNAL_ERROR),
+						Timestamp: timestamppb.Now(),
+					},
+				}, nil
+			}
+			if !canPredict {
+				return &pb.SubmitPredictionResponse{
+					Response: &common.Response{
+						Success:   false,
+						Message:   "This event is not assigned to you in this relay contest",
+						Code:      int32(common.ErrorCode_PERMISSION_DENIED),
+						Timestamp: timestamppb.Now(),
+					},
+				}, nil
+			}
+		}
+	}
 
 	// Validate event exists and can accept predictions
 	event, err := s.eventRepo.GetByID(uint(req.EventId))
@@ -1086,6 +1121,23 @@ func parseMaxSelections(rulesJSON string) int {
 	return 5
 }
 
+// Helper: parse contest type from rules JSON
+func parseContestType(rulesJSON string) string {
+	if rulesJSON == "" {
+		return "standard"
+	}
+	var rules struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal([]byte(rulesJSON), &rules); err != nil {
+		return "standard"
+	}
+	if rules.Type == "" {
+		return "standard"
+	}
+	return rules.Type
+}
+
 // SetContestEvents sets the events for a contest (replaces existing)
 func (s *PredictionService) SetContestEvents(ctx context.Context, req *pb.SetContestEventsRequest) (*pb.SetContestEventsResponse, error) {
 	if req.ContestId == 0 {
@@ -1163,8 +1215,8 @@ func (s *PredictionService) SetRelayAssignments(ctx context.Context, req *pb.Set
 		}, nil
 	}
 
-	// Get captain ID from context (the user making the request)
-	captainID, ok := auth.GetUserIDFromContext(ctx)
+	// Get user ID from context (the user making the request)
+	userID, ok := auth.GetUserIDFromContext(ctx)
 	if !ok {
 		return &pb.SetRelayAssignmentsResponse{
 			Response: &common.Response{
@@ -1174,8 +1226,24 @@ func (s *PredictionService) SetRelayAssignments(ctx context.Context, req *pb.Set
 		}, nil
 	}
 
-	// TODO: Verify that captainID is actually the captain of teamID
-	// This requires calling contest-service or checking user_team_members table
+	// Verify that user is actually the captain of this team
+	isCaptain, err := s.teamClient.IsTeamCaptain(ctx, uint32(req.TeamId), uint64(userID))
+	if err != nil {
+		return &pb.SetRelayAssignmentsResponse{
+			Response: &common.Response{
+				Success: false,
+				Message: "failed to verify captain status: " + err.Error(),
+			},
+		}, nil
+	}
+	if !isCaptain {
+		return &pb.SetRelayAssignmentsResponse{
+			Response: &common.Response{
+				Success: false,
+				Message: "only team captain can assign events",
+			},
+		}, nil
+	}
 
 	// Convert proto assignments to repository input
 	assignments := make([]repository.RelayAssignmentInput, len(req.Assignments))
@@ -1187,7 +1255,7 @@ func (s *PredictionService) SetRelayAssignments(ctx context.Context, req *pb.Set
 	}
 
 	// Set assignments
-	err := s.relayRepo.SetTeamAssignments(uint(req.ContestId), uint(req.TeamId), uint(captainID), assignments)
+	err = s.relayRepo.SetTeamAssignments(uint(req.ContestId), uint(req.TeamId), uint(userID), assignments)
 	if err != nil {
 		return &pb.SetRelayAssignmentsResponse{
 			Response: &common.Response{

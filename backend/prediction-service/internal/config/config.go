@@ -19,6 +19,7 @@ type Config struct {
 
 	// Service endpoints
 	ContestServiceEndpoint string
+	TeamServiceEndpoint    string
 
 	// Logging configuration
 	LogLevel string
@@ -31,6 +32,7 @@ func Load() *Config {
 		JWTSecret:              getEnvOrDefault("JWT_SECRET", "your_jwt_secret_key_here"),
 		DatabaseURL:            getEnvOrDefault("DATABASE_URL", "postgres://sports_user:sports_password@localhost:5432/sports_prediction?sslmode=disable"),
 		ContestServiceEndpoint: getEnvOrDefault("CONTEST_SERVICE_ENDPOINT", "contest-service:8085"),
+		TeamServiceEndpoint:    getEnvOrDefault("TEAM_SERVICE_ENDPOINT", getEnvOrDefault("CONTEST_SERVICE_ENDPOINT", "contest-service:8085")),
 		LogLevel:               getEnvOrDefault("LOG_LEVEL", "info"),
 	}
 }

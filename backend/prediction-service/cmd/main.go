@@ -51,6 +51,13 @@ func main() {
 	}
 	defer contestClient.Close()
 
+	// Initialize team client
+	teamClient, err := clients.NewTeamClient(cfg.TeamServiceEndpoint)
+	if err != nil {
+		log.Fatalf("Failed to create team client: %v", err)
+	}
+	defer teamClient.Close()
+
 	// Initialize repositories
 	predictionRepo := repository.NewPredictionRepository(db)
 	eventRepo := repository.NewEventRepository(db)
@@ -59,7 +66,7 @@ func main() {
 	relayRepo := repository.NewRelayRepository(db)
 
 	// Initialize services
-	predictionService := service.NewPredictionService(predictionRepo, eventRepo, propTypeRepo, riskyEventRepo, relayRepo, contestClient)
+	predictionService := service.NewPredictionService(predictionRepo, eventRepo, propTypeRepo, riskyEventRepo, relayRepo, contestClient, teamClient)
 
 	// Create gRPC server with JWT interceptor
 	server := grpc.NewServer(
