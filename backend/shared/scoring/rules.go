@@ -9,8 +9,9 @@ import (
 type ContestType string
 
 const (
-	ContestTypeStandard ContestType = "standard"
-	ContestTypeRisky    ContestType = "risky"
+	ContestTypeStandard    ContestType = "standard"
+	ContestTypeRisky       ContestType = "risky"
+	ContestTypeTotalizator ContestType = "totalizator"
 )
 
 // StandardScoringRules defines points for standard contest
@@ -37,11 +38,19 @@ type RiskyScoringRules struct {
 	Events        []RiskyEvent `json:"events,omitempty"`
 }
 
+// TotalizatorRules defines rules for totalizator contest
+// Admin manually selects matches from different leagues
+type TotalizatorRules struct {
+	EventCount int                  `json:"event_count"` // number of matches (default 15)
+	Scoring    StandardScoringRules `json:"scoring"`     // scoring rules for all matches
+}
+
 // ContestRules combines all rule types
 type ContestRules struct {
-	Type     ContestType           `json:"type"`
-	Standard *StandardScoringRules `json:"scoring,omitempty"`
-	Risky    *RiskyScoringRules    `json:"risky,omitempty"`
+	Type        ContestType           `json:"type"`
+	Standard    *StandardScoringRules `json:"scoring,omitempty"`
+	Risky       *RiskyScoringRules    `json:"risky,omitempty"`
+	Totalizator *TotalizatorRules     `json:"totalizator,omitempty"`
 }
 
 // DefaultStandardRules returns default scoring for standard contests
@@ -79,6 +88,14 @@ func DefaultRiskyEvents() []RiskyEvent {
 	}
 }
 
+// DefaultTotalizatorRules returns default totalizator rules
+func DefaultTotalizatorRules() TotalizatorRules {
+	return TotalizatorRules{
+		EventCount: 15,
+		Scoring:    DefaultStandardRules(),
+	}
+}
+
 // ParseRules parses JSON rules string into ContestRules
 func ParseRules(rulesJSON string) (*ContestRules, error) {
 	if rulesJSON == "" {
@@ -110,6 +127,11 @@ func ParseRules(rulesJSON string) (*ContestRules, error) {
 		rules.Risky = &defaultRisky
 	}
 
+	if rules.Type == ContestTypeTotalizator && rules.Totalizator == nil {
+		defaultTotalizator := DefaultTotalizatorRules()
+		rules.Totalizator = &defaultTotalizator
+	}
+
 	return &rules, nil
 }
 
@@ -124,8 +146,8 @@ func (r *ContestRules) ToJSON() (string, error) {
 
 // Validate checks if rules are valid
 func (r *ContestRules) Validate() error {
-	if r.Type != ContestTypeStandard && r.Type != ContestTypeRisky {
-		return errors.New("invalid contest type: must be 'standard' or 'risky'")
+	if r.Type != ContestTypeStandard && r.Type != ContestTypeRisky && r.Type != ContestTypeTotalizator {
+		return errors.New("invalid contest type: must be 'standard', 'risky', or 'totalizator'")
 	}
 
 	if r.Type == ContestTypeStandard {
@@ -147,6 +169,19 @@ func (r *ContestRules) Validate() error {
 		}
 		if len(r.Risky.Events) == 0 {
 			return errors.New("risky contest must have at least one event")
+		}
+	}
+
+	if r.Type == ContestTypeTotalizator {
+		if r.Totalizator == nil {
+			return errors.New("totalizator rules required for totalizator contest")
+		}
+		if r.Totalizator.EventCount < 5 || r.Totalizator.EventCount > 30 {
+			return errors.New("event_count must be between 5 and 30")
+		}
+		if r.Totalizator.Scoring.ExactScore < 0 || r.Totalizator.Scoring.GoalDifference < 0 ||
+			r.Totalizator.Scoring.CorrectOutcome < 0 || r.Totalizator.Scoring.AnyOther < 0 {
+			return errors.New("scoring points cannot be negative")
 		}
 	}
 

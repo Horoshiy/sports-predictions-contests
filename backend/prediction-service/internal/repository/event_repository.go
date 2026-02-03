@@ -19,6 +19,11 @@ type EventRepositoryInterface interface {
 	GetBySportType(sportType string) ([]*models.Event, error)
 	GetByDateRange(startDate, endDate time.Time) ([]*models.Event, error)
 	GetUpcoming(limit int) ([]*models.Event, error)
+	// Contest-Event management
+	AddEventsToContest(contestID uint, eventIDs []uint) error
+	RemoveEventsFromContest(contestID uint, eventIDs []uint) error
+	SetContestEvents(contestID uint, eventIDs []uint) error
+	GetContestEventCount(contestID uint) (int64, error)
 }
 
 // EventRepository implements EventRepositoryInterface
@@ -168,4 +173,63 @@ func (r *EventRepository) GetUpcoming(limit int) ([]*models.Event, error) {
 	
 	err := query.Find(&events).Error
 	return events, err
+}
+
+// AddEventsToContest adds events to a contest (many-to-many relationship)
+func (r *EventRepository) AddEventsToContest(contestID uint, eventIDs []uint) error {
+	if len(eventIDs) == 0 {
+		return nil
+	}
+
+	// Use raw SQL for bulk insert with ON CONFLICT DO NOTHING
+	for _, eventID := range eventIDs {
+		err := r.db.Exec(
+			"INSERT INTO contest_events (contest_id, event_id) VALUES (?, ?) ON CONFLICT DO NOTHING",
+			contestID, eventID,
+		).Error
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// RemoveEventsFromContest removes events from a contest
+func (r *EventRepository) RemoveEventsFromContest(contestID uint, eventIDs []uint) error {
+	if len(eventIDs) == 0 {
+		return nil
+	}
+
+	return r.db.Exec(
+		"DELETE FROM contest_events WHERE contest_id = ? AND event_id IN ?",
+		contestID, eventIDs,
+	).Error
+}
+
+// SetContestEvents replaces all events for a contest (removes old, adds new)
+func (r *EventRepository) SetContestEvents(contestID uint, eventIDs []uint) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		// Remove all existing events for this contest
+		if err := tx.Exec("DELETE FROM contest_events WHERE contest_id = ?", contestID).Error; err != nil {
+			return err
+		}
+
+		// Add new events
+		for _, eventID := range eventIDs {
+			if err := tx.Exec(
+				"INSERT INTO contest_events (contest_id, event_id) VALUES (?, ?)",
+				contestID, eventID,
+			).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
+// GetContestEventCount returns the number of events in a contest
+func (r *EventRepository) GetContestEventCount(contestID uint) (int64, error) {
+	var count int64
+	err := r.db.Raw("SELECT COUNT(*) FROM contest_events WHERE contest_id = ?", contestID).Scan(&count).Error
+	return count, err
 }

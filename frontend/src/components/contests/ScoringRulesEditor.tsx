@@ -1,8 +1,8 @@
 import React from 'react'
 import { Card, Form, InputNumber, Radio, Space, Typography, Divider, List, Switch } from 'antd'
-import { TrophyOutlined, ThunderboltOutlined } from '@ant-design/icons'
+import { TrophyOutlined, ThunderboltOutlined, DollarOutlined } from '@ant-design/icons'
 
-const { Title, Text } = Typography
+const { Text } = Typography
 
 // Types for scoring rules
 export interface StandardScoringRules {
@@ -26,10 +26,16 @@ export interface RiskyScoringRules {
   events: RiskyEvent[]
 }
 
+export interface TotalizatorRules {
+  event_count: number
+  scoring: StandardScoringRules
+}
+
 export interface ContestRules {
-  type: 'standard' | 'risky'
+  type: 'standard' | 'risky' | 'totalizator'
   scoring?: StandardScoringRules
   risky?: RiskyScoringRules
+  totalizator?: TotalizatorRules
 }
 
 interface ScoringRulesEditorProps {
@@ -69,14 +75,19 @@ export const ScoringRulesEditor: React.FC<ScoringRulesEditorProps> = ({
     scoring: { ...defaultStandardRules },
   }
 
-  const handleTypeChange = (type: 'standard' | 'risky') => {
+  const handleTypeChange = (type: 'standard' | 'risky' | 'totalizator') => {
     const newRules: ContestRules = { type }
     if (type === 'standard') {
       newRules.scoring = rules.scoring || { ...defaultStandardRules }
-    } else {
+    } else if (type === 'risky') {
       newRules.risky = rules.risky || {
         max_selections: 5,
         events: defaultRiskyEvents.map(e => ({ ...e })),
+      }
+    } else if (type === 'totalizator') {
+      newRules.totalizator = rules.totalizator || {
+        event_count: 15,
+        scoring: { ...defaultStandardRules },
       }
     }
     onChange?.(newRules)
@@ -101,6 +112,17 @@ export const ScoringRulesEditor: React.FC<ScoringRulesEditorProps> = ({
     onChange?.({ ...rules, risky: { ...rules.risky, events: newEvents } })
   }
 
+  const handleTotalizatorEventCountChange = (val: number | null) => {
+    if (rules.type !== 'totalizator' || !rules.totalizator) return
+    onChange?.({ ...rules, totalizator: { ...rules.totalizator, event_count: val || 15 } })
+  }
+
+  const handleTotalizatorScoringChange = (field: keyof StandardScoringRules, val: number | null) => {
+    if (rules.type !== 'totalizator' || !rules.totalizator) return
+    const newScoring = { ...rules.totalizator.scoring, [field]: val || 0 }
+    onChange?.({ ...rules, totalizator: { ...rules.totalizator, scoring: newScoring } })
+  }
+
   return (
     <Card title="Правила подсчёта очков" size="small">
       <Form layout="vertical">
@@ -116,6 +138,9 @@ export const ScoringRulesEditor: React.FC<ScoringRulesEditorProps> = ({
             </Radio.Button>
             <Radio.Button value="risky">
               <ThunderboltOutlined /> Рисковый
+            </Radio.Button>
+            <Radio.Button value="totalizator">
+              <DollarOutlined /> Тотализатор
             </Radio.Button>
           </Radio.Group>
         </Form.Item>
@@ -219,6 +244,74 @@ export const ScoringRulesEditor: React.FC<ScoringRulesEditorProps> = ({
                 </List.Item>
               )}
             />
+          </>
+        )}
+
+        {rules.type === 'totalizator' && rules.totalizator && (
+          <>
+            <Divider orientation="left">Настройки тотализатора</Divider>
+            <Text type="secondary" style={{ display: 'block', marginBottom: 12 }}>
+              Выбери матчи из разных лиг. Очки считаются как в обычном конкурсе.
+            </Text>
+            
+            <Form.Item label="Количество матчей">
+              <InputNumber
+                min={5}
+                max={30}
+                value={rules.totalizator.event_count}
+                onChange={handleTotalizatorEventCountChange}
+                addonAfter="матчей"
+              />
+            </Form.Item>
+
+            <Divider orientation="left">Очки за прогноз</Divider>
+            <Space direction="vertical" style={{ width: '100%' }}>
+              <Form.Item label="Точный счёт" style={{ marginBottom: 8 }}>
+                <InputNumber
+                  min={0}
+                  max={100}
+                  value={rules.totalizator.scoring.exact_score}
+                  onChange={(v) => handleTotalizatorScoringChange('exact_score', v)}
+                  addonAfter="очков"
+                />
+              </Form.Item>
+              <Form.Item label="Разница мячей" style={{ marginBottom: 8 }}>
+                <InputNumber
+                  min={0}
+                  max={100}
+                  value={rules.totalizator.scoring.goal_difference}
+                  onChange={(v) => handleTotalizatorScoringChange('goal_difference', v)}
+                  addonAfter="очков"
+                />
+              </Form.Item>
+              <Form.Item label="Верный исход" style={{ marginBottom: 8 }}>
+                <InputNumber
+                  min={0}
+                  max={100}
+                  value={rules.totalizator.scoring.correct_outcome}
+                  onChange={(v) => handleTotalizatorScoringChange('correct_outcome', v)}
+                  addonAfter="очков"
+                />
+              </Form.Item>
+              <Form.Item label="Исход + голы команды (бонус)" style={{ marginBottom: 8 }}>
+                <InputNumber
+                  min={0}
+                  max={100}
+                  value={rules.totalizator.scoring.outcome_plus_team_goals}
+                  onChange={(v) => handleTotalizatorScoringChange('outcome_plus_team_goals', v)}
+                  addonAfter="очков"
+                />
+              </Form.Item>
+              <Form.Item label='Прогноз "Другой счёт"' style={{ marginBottom: 8 }}>
+                <InputNumber
+                  min={0}
+                  max={100}
+                  value={rules.totalizator.scoring.any_other}
+                  onChange={(v) => handleTotalizatorScoringChange('any_other', v)}
+                  addonAfter="очков"
+                />
+              </Form.Item>
+            </Space>
           </>
         )}
       </Form>

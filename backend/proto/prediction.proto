@@ -305,6 +305,26 @@ message UpdateEventResponse {
   Event event = 2;
 }
 
+// Contest-Event management messages
+message SetContestEventsRequest {
+  uint64 contest_id = 1;
+  repeated uint64 event_ids = 2;
+}
+
+message SetContestEventsResponse {
+  common.Response response = 1;
+  int32 event_count = 2;
+}
+
+message GetContestEventCountRequest {
+  uint64 contest_id = 1;
+}
+
+message GetContestEventCountResponse {
+  common.Response response = 1;
+  int32 event_count = 2;
+}
+
 // Prediction Service
 service PredictionService {
   // Prediction management
@@ -357,6 +377,19 @@ service PredictionService {
     option (google.api.http) = {
       put: "/v1/events/{id}"
       body: "*"
+    };
+  }
+  
+  // Contest-Event management
+  rpc SetContestEvents(SetContestEventsRequest) returns (SetContestEventsResponse) {
+    option (google.api.http) = {
+      post: "/v1/contests/{contest_id}/events"
+      body: "*"
+    };
+  }
+  rpc GetContestEventCount(GetContestEventCountRequest) returns (GetContestEventCountResponse) {
+    option (google.api.http) = {
+      get: "/v1/contests/{contest_id}/events/count"
     };
   }
   

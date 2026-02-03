@@ -1082,3 +1082,69 @@ func parseMaxSelections(rulesJSON string) int {
 	}
 	return 5
 }
+
+// SetContestEvents sets the events for a contest (replaces existing)
+func (s *PredictionService) SetContestEvents(ctx context.Context, req *pb.SetContestEventsRequest) (*pb.SetContestEventsResponse, error) {
+	if req.ContestId == 0 {
+		return &pb.SetContestEventsResponse{
+			Response: &common.Response{
+				Success: false,
+				Message: "contest_id is required",
+			},
+		}, nil
+	}
+
+	// Convert uint64 to uint
+	eventIDs := make([]uint, len(req.EventIds))
+	for i, id := range req.EventIds {
+		eventIDs[i] = uint(id)
+	}
+
+	// Set events for the contest
+	err := s.eventRepo.SetContestEvents(uint(req.ContestId), eventIDs)
+	if err != nil {
+		return &pb.SetContestEventsResponse{
+			Response: &common.Response{
+				Success: false,
+				Message: err.Error(),
+			},
+		}, nil
+	}
+
+	return &pb.SetContestEventsResponse{
+		Response: &common.Response{
+			Success: true,
+			Message: "Events set successfully",
+		},
+		EventCount: int32(len(eventIDs)),
+	}, nil
+}
+
+// GetContestEventCount returns the number of events in a contest
+func (s *PredictionService) GetContestEventCount(ctx context.Context, req *pb.GetContestEventCountRequest) (*pb.GetContestEventCountResponse, error) {
+	if req.ContestId == 0 {
+		return &pb.GetContestEventCountResponse{
+			Response: &common.Response{
+				Success: false,
+				Message: "contest_id is required",
+			},
+		}, nil
+	}
+
+	count, err := s.eventRepo.GetContestEventCount(uint(req.ContestId))
+	if err != nil {
+		return &pb.GetContestEventCountResponse{
+			Response: &common.Response{
+				Success: false,
+				Message: err.Error(),
+			},
+		}, nil
+	}
+
+	return &pb.GetContestEventCountResponse{
+		Response: &common.Response{
+			Success: true,
+		},
+		EventCount: int32(count),
+	}, nil
+}

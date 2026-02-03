@@ -1,16 +1,17 @@
-import React from 'react'
-import { Modal, Form, Input, Select, Button, DatePicker, InputNumber, Collapse } from 'antd'
+import React, { useState, useEffect } from 'react'
+import { Modal, Form, Input, Select, Button, DatePicker, InputNumber, Collapse, message } from 'antd'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { contestSchema, type ContestFormData } from '../../utils/validation'
 import type { Contest } from '../../types/contest.types'
 import { ScoringRulesEditor, type ContestRules } from './ScoringRulesEditor'
+import { EventSelector } from './EventSelector'
 import dayjs from 'dayjs'
 
 interface ContestFormProps {
   open: boolean
   onClose: () => void
-  onSubmit: (data: ContestFormData) => void
+  onSubmit: (data: ContestFormData, eventIds?: number[]) => void
   contest?: Contest | null
   loading?: boolean
 }
@@ -36,6 +37,11 @@ export const ContestForm: React.FC<ContestFormProps> = ({
   loading = false,
 }) => {
   const isEditing = !!contest
+  const [selectedEventIds, setSelectedEventIds] = useState<number[]>([])
+  const [contestType, setContestType] = useState<string>('standard')
+  
+  // Track totalizator event_count from rules
+  const [totalizatorEventCount, setTotalizatorEventCount] = useState<number>(15)
 
   const defaultValues = React.useMemo(() => {
     const now = new Date()
@@ -80,7 +86,20 @@ export const ContestForm: React.FC<ContestFormProps> = ({
       onCancel={handleClose}
       footer={[
         <Button key="cancel" onClick={handleClose} disabled={loading}>Cancel</Button>,
-        <Button key="submit" type="primary" onClick={handleSubmit(onSubmit)} disabled={loading || !isValid} loading={loading}>
+        <Button 
+          key="submit" 
+          type="primary" 
+          onClick={handleSubmit((data) => {
+            // Pass event IDs for totalizator
+            if (contestType === 'totalizator') {
+              onSubmit(data, selectedEventIds)
+            } else {
+              onSubmit(data)
+            }
+          })} 
+          disabled={loading || !isValid || (contestType === 'totalizator' && selectedEventIds.length < 5)} 
+          loading={loading}
+        >
           {isEditing ? 'Update' : 'Create'}
         </Button>,
       ]}
@@ -115,6 +134,17 @@ export const ContestForm: React.FC<ContestFormProps> = ({
             // Invalid JSON, will use default
           }
           
+          // Track contest type for showing EventSelector
+          const currentType = rulesValue?.type || 'standard'
+          if (currentType !== contestType) {
+            setContestType(currentType)
+          }
+          
+          // Track totalizator event_count
+          if (rulesValue?.type === 'totalizator' && rulesValue.totalizator?.event_count !== totalizatorEventCount) {
+            setTotalizatorEventCount(rulesValue.totalizator?.event_count || 15)
+          }
+          
           return (
             <Form.Item validateStatus={errors.rules ? 'error' : ''} help={errors.rules?.message}>
               <Collapse
@@ -124,7 +154,13 @@ export const ContestForm: React.FC<ContestFormProps> = ({
                   children: (
                     <ScoringRulesEditor
                       value={rulesValue}
-                      onChange={(newRules) => field.onChange(JSON.stringify(newRules))}
+                      onChange={(newRules) => {
+                        field.onChange(JSON.stringify(newRules))
+                        setContestType(newRules.type)
+                        if (newRules.type === 'totalizator' && newRules.totalizator) {
+                          setTotalizatorEventCount(newRules.totalizator.event_count)
+                        }
+                      }}
                     />
                   ),
                 }]}
@@ -133,6 +169,18 @@ export const ContestForm: React.FC<ContestFormProps> = ({
             </Form.Item>
           )
         }} />
+        
+        {/* Event Selector for Totalizator */}
+        {contestType === 'totalizator' && (
+          <Form.Item label="Выбор матчей для тотализатора" required>
+            <EventSelector
+              value={selectedEventIds}
+              onChange={setSelectedEventIds}
+              maxEvents={totalizatorEventCount}
+              minEvents={Math.min(5, totalizatorEventCount)}
+            />
+          </Form.Item>
+        )}
         <Form.Item label="Contest Period" required>
           <Input.Group compact>
             <Controller name="startDate" control={control} render={({ field }) => (

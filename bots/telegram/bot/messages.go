@@ -76,7 +76,12 @@ func FormatContest(id uint32, title, sportType, status string) string {
 	if status == "active" {
 		emoji = "🟢"
 	}
-	return fmt.Sprintf("%s <b>%s</b>\nSport: %s | ID: %d\n", emoji, title, sportType, id)
+	// Handle Totalizator (mixed sport type)
+	displaySport := sportType
+	if sportType == "" || sportType == "mixed" || sportType == "totalizator" {
+		displaySport = "🎰 Тотализатор"
+	}
+	return fmt.Sprintf("%s <b>%s</b>\nТип: %s | ID: %d\n", emoji, title, displaySport, id)
 }
 
 // FormatLeaderboardEntry formats a single leaderboard entry with rank, name, points, and streak.
