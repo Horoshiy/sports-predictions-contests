@@ -95,6 +95,115 @@ message GetPotentialCoefficientResponse {
   double hours_until_event = 4;
 }
 
+// Risky Event Types
+message RiskyEventType {
+  uint32 id = 1;
+  string slug = 2;
+  string name = 3;
+  string name_en = 4;
+  string description = 5;
+  double default_points = 6;
+  string sport_type = 7;
+  string category = 8;
+  string icon = 9;
+  int32 sort_order = 10;
+  bool is_active = 11;
+}
+
+message ListRiskyEventTypesRequest {
+  string sport_type = 1;
+  bool include_inactive = 2;  // admin only
+}
+
+message ListRiskyEventTypesResponse {
+  common.Response response = 1;
+  repeated RiskyEventType event_types = 2;
+}
+
+message CreateRiskyEventTypeRequest {
+  string slug = 1;
+  string name = 2;
+  string name_en = 3;
+  string description = 4;
+  double default_points = 5;
+  string sport_type = 6;
+  string category = 7;
+  string icon = 8;
+  int32 sort_order = 9;
+}
+
+message CreateRiskyEventTypeResponse {
+  common.Response response = 1;
+  RiskyEventType event_type = 2;
+}
+
+message UpdateRiskyEventTypeRequest {
+  uint32 id = 1;
+  string name = 2;
+  string name_en = 3;
+  string description = 4;
+  double default_points = 5;
+  string category = 6;
+  string icon = 7;
+  int32 sort_order = 8;
+  bool is_active = 9;
+}
+
+message UpdateRiskyEventTypeResponse {
+  common.Response response = 1;
+  RiskyEventType event_type = 2;
+}
+
+message DeleteRiskyEventTypeRequest {
+  uint32 id = 1;
+}
+
+// Match Risky Events (per-match overrides)
+message MatchRiskyEvent {
+  uint32 risky_event_type_id = 1;
+  string slug = 2;
+  string name = 3;
+  string name_en = 4;
+  string icon = 5;
+  string category = 6;
+  double points = 7;         // Final points with overrides applied
+  bool is_enabled = 8;
+  optional bool outcome = 9; // nil=pending, true=happened, false=didn't
+  bool is_overridden = 10;   // True if points differ from default
+}
+
+message GetMatchRiskyEventsRequest {
+  uint32 event_id = 1;
+  uint32 contest_id = 2;     // For contest-level overrides
+}
+
+message GetMatchRiskyEventsResponse {
+  common.Response response = 1;
+  repeated MatchRiskyEvent events = 2;
+  int32 max_selections = 3;
+}
+
+message SetMatchRiskyEventOverrideRequest {
+  uint32 event_id = 1;
+  uint32 risky_event_type_id = 2;
+  double points = 3;
+  bool is_enabled = 4;
+}
+
+message SetMatchRiskyEventOverrideResponse {
+  common.Response response = 1;
+}
+
+message SetMatchRiskyEventOutcomeRequest {
+  uint32 event_id = 1;
+  uint32 risky_event_type_id = 2;
+  bool happened = 3;
+}
+
+message SetMatchRiskyEventOutcomeResponse {
+  common.Response response = 1;
+}
+
 // Request messages
 message SubmitPredictionRequest {
   uint32 contest_id = 1;
@@ -274,6 +383,49 @@ service PredictionService {
   rpc Check(google.protobuf.Empty) returns (common.Response) {
     option (google.api.http) = {
       get: "/v1/predictions/health"
+    };
+  }
+  
+  // Risky Event Types (global)
+  rpc ListRiskyEventTypes(ListRiskyEventTypesRequest) returns (ListRiskyEventTypesResponse) {
+    option (google.api.http) = {
+      get: "/v1/risky-event-types"
+    };
+  }
+  rpc CreateRiskyEventType(CreateRiskyEventTypeRequest) returns (CreateRiskyEventTypeResponse) {
+    option (google.api.http) = {
+      post: "/v1/risky-event-types"
+      body: "*"
+    };
+  }
+  rpc UpdateRiskyEventType(UpdateRiskyEventTypeRequest) returns (UpdateRiskyEventTypeResponse) {
+    option (google.api.http) = {
+      put: "/v1/risky-event-types/{id}"
+      body: "*"
+    };
+  }
+  rpc DeleteRiskyEventType(DeleteRiskyEventTypeRequest) returns (common.Response) {
+    option (google.api.http) = {
+      delete: "/v1/risky-event-types/{id}"
+    };
+  }
+  
+  // Match Risky Events (per-match)
+  rpc GetMatchRiskyEvents(GetMatchRiskyEventsRequest) returns (GetMatchRiskyEventsResponse) {
+    option (google.api.http) = {
+      get: "/v1/events/{event_id}/risky-events"
+    };
+  }
+  rpc SetMatchRiskyEventOverride(SetMatchRiskyEventOverrideRequest) returns (SetMatchRiskyEventOverrideResponse) {
+    option (google.api.http) = {
+      post: "/v1/events/{event_id}/risky-events/{risky_event_type_id}"
+      body: "*"
+    };
+  }
+  rpc SetMatchRiskyEventOutcome(SetMatchRiskyEventOutcomeRequest) returns (SetMatchRiskyEventOutcomeResponse) {
+    option (google.api.http) = {
+      put: "/v1/events/{event_id}/risky-events/{risky_event_type_id}/outcome"
+      body: "*"
     };
   }
 }

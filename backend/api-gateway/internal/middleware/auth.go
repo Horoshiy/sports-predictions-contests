@@ -18,7 +18,8 @@ func JWTMiddleware(secret []byte) func(http.Handler) http.Handler {
 				strings.HasPrefix(r.URL.Path, "/v1/auth/") ||
 				strings.HasPrefix(r.URL.Path, "/v1/events") ||
 				strings.HasPrefix(r.URL.Path, "/v1/sports") ||
-				strings.HasPrefix(r.URL.Path, "/v1/contests") {
+				strings.HasPrefix(r.URL.Path, "/v1/contests") ||
+				strings.HasPrefix(r.URL.Path, "/v1/risky-event-types") {
 				next.ServeHTTP(w, r)
 				return
 			}

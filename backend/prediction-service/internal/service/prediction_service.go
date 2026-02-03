@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 	"time"
 
@@ -21,10 +22,11 @@ import (
 // PredictionService implements the gRPC PredictionService
 type PredictionService struct {
 	pb.UnimplementedPredictionServiceServer
-	predictionRepo repository.PredictionRepositoryInterface
-	eventRepo      repository.EventRepositoryInterface
-	propTypeRepo   *repository.PropTypeRepository
-	contestClient  *clients.ContestClient
+	predictionRepo   repository.PredictionRepositoryInterface
+	eventRepo        repository.EventRepositoryInterface
+	propTypeRepo     *repository.PropTypeRepository
+	riskyEventRepo   *repository.RiskyEventRepository
+	contestClient    *clients.ContestClient
 }
 
 // NewPredictionService creates a new PredictionService instance
@@ -32,13 +34,15 @@ func NewPredictionService(
 	predictionRepo repository.PredictionRepositoryInterface,
 	eventRepo repository.EventRepositoryInterface,
 	propTypeRepo *repository.PropTypeRepository,
+	riskyEventRepo *repository.RiskyEventRepository,
 	contestClient *clients.ContestClient,
 ) *PredictionService {
 	return &PredictionService{
-		predictionRepo: predictionRepo,
-		eventRepo:      eventRepo,
-		propTypeRepo:   propTypeRepo,
-		contestClient:  contestClient,
+		predictionRepo:   predictionRepo,
+		eventRepo:        eventRepo,
+		propTypeRepo:     propTypeRepo,
+		riskyEventRepo:   riskyEventRepo,
+		contestClient:    contestClient,
 	}
 }
 
@@ -754,4 +758,327 @@ func (s *PredictionService) GetPotentialCoefficient(ctx context.Context, req *pb
 		Tier:            result.Tier,
 		HoursUntilEvent: hoursUntilEvent,
 	}, nil
+}
+
+// ============= Risky Event Types =============
+
+// ListRiskyEventTypes returns all risky event types
+func (s *PredictionService) ListRiskyEventTypes(ctx context.Context, req *pb.ListRiskyEventTypesRequest) (*pb.ListRiskyEventTypesResponse, error) {
+	var eventTypes []models.RiskyEventType
+	var err error
+
+	if req.IncludeInactive {
+		eventTypes, err = s.riskyEventRepo.ListAllEventTypes(req.SportType)
+	} else {
+		eventTypes, err = s.riskyEventRepo.ListActiveEventTypes(req.SportType)
+	}
+
+	if err != nil {
+		return &pb.ListRiskyEventTypesResponse{
+			Response: &common.Response{
+				Success:   false,
+				Message:   "Failed to list risky event types",
+				Code:      int32(common.ErrorCode_INTERNAL_ERROR),
+				Timestamp: timestamppb.Now(),
+			},
+		}, nil
+	}
+
+	protoTypes := make([]*pb.RiskyEventType, len(eventTypes))
+	for i, et := range eventTypes {
+		protoTypes[i] = s.riskyEventTypeToProto(&et)
+	}
+
+	return &pb.ListRiskyEventTypesResponse{
+		Response: &common.Response{
+			Success:   true,
+			Message:   "Risky event types listed",
+			Code:      0,
+			Timestamp: timestamppb.Now(),
+		},
+		EventTypes: protoTypes,
+	}, nil
+}
+
+// CreateRiskyEventType creates a new risky event type (admin only)
+func (s *PredictionService) CreateRiskyEventType(ctx context.Context, req *pb.CreateRiskyEventTypeRequest) (*pb.CreateRiskyEventTypeResponse, error) {
+	// TODO: Add admin role check
+
+	et := &models.RiskyEventType{
+		Slug:          req.Slug,
+		Name:          req.Name,
+		NameEn:        req.NameEn,
+		Description:   req.Description,
+		DefaultPoints: req.DefaultPoints,
+		SportType:     req.SportType,
+		Category:      req.Category,
+		Icon:          req.Icon,
+		SortOrder:     int(req.SortOrder),
+		IsActive:      true,
+	}
+
+	if et.SportType == "" {
+		et.SportType = "football"
+	}
+	if et.Category == "" {
+		et.Category = "general"
+	}
+
+	if err := s.riskyEventRepo.CreateEventType(et); err != nil {
+		return &pb.CreateRiskyEventTypeResponse{
+			Response: &common.Response{
+				Success:   false,
+				Message:   "Failed to create risky event type: " + err.Error(),
+				Code:      int32(common.ErrorCode_INTERNAL_ERROR),
+				Timestamp: timestamppb.Now(),
+			},
+		}, nil
+	}
+
+	return &pb.CreateRiskyEventTypeResponse{
+		Response: &common.Response{
+			Success:   true,
+			Message:   "Risky event type created",
+			Code:      0,
+			Timestamp: timestamppb.Now(),
+		},
+		EventType: s.riskyEventTypeToProto(et),
+	}, nil
+}
+
+// UpdateRiskyEventType updates an existing risky event type (admin only)
+func (s *PredictionService) UpdateRiskyEventType(ctx context.Context, req *pb.UpdateRiskyEventTypeRequest) (*pb.UpdateRiskyEventTypeResponse, error) {
+	// TODO: Add admin role check
+
+	et, err := s.riskyEventRepo.GetEventType(uint(req.Id))
+	if err != nil {
+		return &pb.UpdateRiskyEventTypeResponse{
+			Response: &common.Response{
+				Success:   false,
+				Message:   "Risky event type not found",
+				Code:      int32(common.ErrorCode_NOT_FOUND),
+				Timestamp: timestamppb.Now(),
+			},
+		}, nil
+	}
+
+	// Update fields
+	if req.Name != "" {
+		et.Name = req.Name
+	}
+	if req.NameEn != "" {
+		et.NameEn = req.NameEn
+	}
+	if req.Description != "" {
+		et.Description = req.Description
+	}
+	if req.DefaultPoints > 0 {
+		et.DefaultPoints = req.DefaultPoints
+	}
+	if req.Category != "" {
+		et.Category = req.Category
+	}
+	if req.Icon != "" {
+		et.Icon = req.Icon
+	}
+	et.SortOrder = int(req.SortOrder)
+	et.IsActive = req.IsActive
+
+	if err := s.riskyEventRepo.UpdateEventType(et); err != nil {
+		return &pb.UpdateRiskyEventTypeResponse{
+			Response: &common.Response{
+				Success:   false,
+				Message:   "Failed to update risky event type",
+				Code:      int32(common.ErrorCode_INTERNAL_ERROR),
+				Timestamp: timestamppb.Now(),
+			},
+		}, nil
+	}
+
+	return &pb.UpdateRiskyEventTypeResponse{
+		Response: &common.Response{
+			Success:   true,
+			Message:   "Risky event type updated",
+			Code:      0,
+			Timestamp: timestamppb.Now(),
+		},
+		EventType: s.riskyEventTypeToProto(et),
+	}, nil
+}
+
+// DeleteRiskyEventType soft-deletes a risky event type (admin only)
+func (s *PredictionService) DeleteRiskyEventType(ctx context.Context, req *pb.DeleteRiskyEventTypeRequest) (*common.Response, error) {
+	// TODO: Add admin role check
+
+	if err := s.riskyEventRepo.DeleteEventType(uint(req.Id)); err != nil {
+		return &common.Response{
+			Success:   false,
+			Message:   "Failed to delete risky event type",
+			Code:      int32(common.ErrorCode_INTERNAL_ERROR),
+			Timestamp: timestamppb.Now(),
+		}, nil
+	}
+
+	return &common.Response{
+		Success:   true,
+		Message:   "Risky event type deleted",
+		Code:      0,
+		Timestamp: timestamppb.Now(),
+	}, nil
+}
+
+// ============= Match Risky Events =============
+
+// GetMatchRiskyEvents returns risky events for a specific match with overrides applied
+func (s *PredictionService) GetMatchRiskyEvents(ctx context.Context, req *pb.GetMatchRiskyEventsRequest) (*pb.GetMatchRiskyEventsResponse, error) {
+	// Get contest rules if contest_id provided
+	var contestRulesJSON string
+	maxSelections := 5 // default
+
+	if req.ContestId > 0 {
+		contest, err := s.contestClient.GetContest(ctx, req.ContestId)
+		if err == nil && contest != nil {
+			contestRulesJSON = contest.Rules
+			// Parse max_selections from rules
+			maxSelections = parseMaxSelections(contestRulesJSON)
+		}
+	}
+
+	events, err := s.riskyEventRepo.GetMatchRiskyEvents(uint(req.EventId), contestRulesJSON)
+	if err != nil {
+		return &pb.GetMatchRiskyEventsResponse{
+			Response: &common.Response{
+				Success:   false,
+				Message:   "Failed to get match risky events",
+				Code:      int32(common.ErrorCode_INTERNAL_ERROR),
+				Timestamp: timestamppb.Now(),
+			},
+		}, nil
+	}
+
+	protoEvents := make([]*pb.MatchRiskyEvent, len(events))
+	for i, e := range events {
+		protoEvents[i] = &pb.MatchRiskyEvent{
+			RiskyEventTypeId: uint32(e.RiskyEventTypeID),
+			Slug:             e.Slug,
+			Name:             e.Name,
+			NameEn:           e.NameEn,
+			Icon:             e.Icon,
+			Category:         e.Category,
+			Points:           e.Points,
+			IsEnabled:        e.IsEnabled,
+			IsOverridden:     e.IsOverridden,
+		}
+		if e.Outcome != nil {
+			protoEvents[i].Outcome = e.Outcome
+		}
+	}
+
+	return &pb.GetMatchRiskyEventsResponse{
+		Response: &common.Response{
+			Success:   true,
+			Message:   "Match risky events retrieved",
+			Code:      0,
+			Timestamp: timestamppb.Now(),
+		},
+		Events:        protoEvents,
+		MaxSelections: int32(maxSelections),
+	}, nil
+}
+
+// SetMatchRiskyEventOverride sets a point override for a match (admin only)
+func (s *PredictionService) SetMatchRiskyEventOverride(ctx context.Context, req *pb.SetMatchRiskyEventOverrideRequest) (*pb.SetMatchRiskyEventOverrideResponse, error) {
+	// TODO: Add admin role check
+
+	err := s.riskyEventRepo.SetMatchEventOverride(
+		uint(req.EventId),
+		uint(req.RiskyEventTypeId),
+		req.Points,
+		req.IsEnabled,
+	)
+	if err != nil {
+		return &pb.SetMatchRiskyEventOverrideResponse{
+			Response: &common.Response{
+				Success:   false,
+				Message:   "Failed to set override: " + err.Error(),
+				Code:      int32(common.ErrorCode_INTERNAL_ERROR),
+				Timestamp: timestamppb.Now(),
+			},
+		}, nil
+	}
+
+	return &pb.SetMatchRiskyEventOverrideResponse{
+		Response: &common.Response{
+			Success:   true,
+			Message:   "Override set",
+			Code:      0,
+			Timestamp: timestamppb.Now(),
+		},
+	}, nil
+}
+
+// SetMatchRiskyEventOutcome records the outcome of a risky event after match
+func (s *PredictionService) SetMatchRiskyEventOutcome(ctx context.Context, req *pb.SetMatchRiskyEventOutcomeRequest) (*pb.SetMatchRiskyEventOutcomeResponse, error) {
+	// TODO: Add admin role check
+
+	err := s.riskyEventRepo.SetMatchEventOutcome(
+		uint(req.EventId),
+		uint(req.RiskyEventTypeId),
+		req.Happened,
+	)
+	if err != nil {
+		return &pb.SetMatchRiskyEventOutcomeResponse{
+			Response: &common.Response{
+				Success:   false,
+				Message:   "Failed to set outcome: " + err.Error(),
+				Code:      int32(common.ErrorCode_INTERNAL_ERROR),
+				Timestamp: timestamppb.Now(),
+			},
+		}, nil
+	}
+
+	return &pb.SetMatchRiskyEventOutcomeResponse{
+		Response: &common.Response{
+			Success:   true,
+			Message:   "Outcome recorded",
+			Code:      0,
+			Timestamp: timestamppb.Now(),
+		},
+	}, nil
+}
+
+// Helper: convert RiskyEventType to proto
+func (s *PredictionService) riskyEventTypeToProto(et *models.RiskyEventType) *pb.RiskyEventType {
+	return &pb.RiskyEventType{
+		Id:            uint32(et.ID),
+		Slug:          et.Slug,
+		Name:          et.Name,
+		NameEn:        et.NameEn,
+		Description:   et.Description,
+		DefaultPoints: et.DefaultPoints,
+		SportType:     et.SportType,
+		Category:      et.Category,
+		Icon:          et.Icon,
+		SortOrder:     int32(et.SortOrder),
+		IsActive:      et.IsActive,
+	}
+}
+
+// Helper: parse max_selections from contest rules JSON
+func parseMaxSelections(rulesJSON string) int {
+	if rulesJSON == "" {
+		return 5
+	}
+	var rules struct {
+		Risky *struct {
+			MaxSelections int `json:"max_selections"`
+		} `json:"risky"`
+	}
+	if err := json.Unmarshal([]byte(rulesJSON), &rules); err != nil {
+		return 5
+	}
+	if rules.Risky != nil && rules.Risky.MaxSelections > 0 {
+		return rules.Risky.MaxSelections
+	}
+	return 5
 }

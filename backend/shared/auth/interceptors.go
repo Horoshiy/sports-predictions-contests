@@ -24,7 +24,9 @@ func JWTUnaryInterceptor(secret []byte) grpc.UnaryServerInterceptor {
 		   strings.Contains(info.FullMethod, "GetSport") ||
 		   strings.Contains(info.FullMethod, "ListContests") ||
 		   strings.Contains(info.FullMethod, "GetContest") ||
-		   strings.Contains(info.FullMethod, "GetLeaderboard") {
+		   strings.Contains(info.FullMethod, "GetLeaderboard") ||
+		   strings.Contains(info.FullMethod, "ListRiskyEventTypes") ||
+		   strings.Contains(info.FullMethod, "GetMatchRiskyEvents") {
 			return handler(ctx, req)
 		}
 
