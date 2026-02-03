@@ -14,12 +14,19 @@ func JWTMiddleware(secret []byte) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// Skip authentication for login/register endpoints, health checks, and public endpoints
+			// Support both /v1/... and /api/v1/... paths (Caddy proxy may add /api prefix)
+			path := r.URL.Path
 			if r.URL.Path == "/health" || 
-				strings.HasPrefix(r.URL.Path, "/v1/auth/") ||
-				strings.HasPrefix(r.URL.Path, "/v1/events") ||
-				strings.HasPrefix(r.URL.Path, "/v1/sports") ||
-				strings.HasPrefix(r.URL.Path, "/v1/contests") ||
-				strings.HasPrefix(r.URL.Path, "/v1/risky-event-types") {
+				strings.HasPrefix(path, "/v1/auth/") ||
+				strings.HasPrefix(path, "/api/v1/auth/") ||
+				strings.HasPrefix(path, "/v1/events") ||
+				strings.HasPrefix(path, "/api/v1/events") ||
+				strings.HasPrefix(path, "/v1/sports") ||
+				strings.HasPrefix(path, "/api/v1/sports") ||
+				strings.HasPrefix(path, "/v1/contests") ||
+				strings.HasPrefix(path, "/api/v1/contests") ||
+				strings.HasPrefix(path, "/v1/risky-event-types") ||
+				strings.HasPrefix(path, "/api/v1/risky-event-types") {
 				next.ServeHTTP(w, r)
 				return
 			}
