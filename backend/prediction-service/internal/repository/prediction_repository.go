@@ -77,7 +77,11 @@ func (r *PredictionRepository) Update(prediction *models.Prediction) error {
 		return errors.New("prediction cannot be nil")
 	}
 
-	return r.db.Save(prediction).Error
+	// Use raw SQL update to avoid GORM trying to save related Event
+	return r.db.Exec(
+		"UPDATE predictions SET prediction_data = ?, submitted_at = ?, updated_at = NOW() WHERE id = ?",
+		prediction.PredictionData, prediction.SubmittedAt, prediction.ID,
+	).Error
 }
 
 // Delete deletes a prediction by ID

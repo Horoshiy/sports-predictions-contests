@@ -34,6 +34,7 @@ func (h *Handlers) handleMatchList(chatID int64, msgID int, contestID uint32, pa
 	resp, err := h.clients.Prediction.ListEvents(ctx, &predictionpb.ListEventsRequest{
 		SportType: "",
 		Status:    "scheduled",
+		ContestId: contestID,
 	})
 
 	if err != nil || resp == nil {
@@ -45,6 +46,29 @@ func (h *Handlers) handleMatchList(chatID int64, msgID int, contestID uint32, pa
 	if len(resp.Events) == 0 {
 		h.editMessage(chatID, msgID, MsgNoMatches, BackToMainKeyboard())
 		return
+	}
+
+	// Get user's predictions for this contest
+	userPredictions := make(map[uint32]string) // eventId -> "X:Y" or "other"
+	predCtx := metadata.AppendToOutgoingContext(ctx, "x-user-id", strconv.FormatUint(uint64(session.UserID), 10))
+	predResp, err := h.clients.Prediction.GetUserPredictions(predCtx, &predictionpb.GetUserPredictionsRequest{
+		ContestId: contestID,
+	})
+	if err == nil && predResp != nil && predResp.Predictions != nil {
+		for _, pred := range predResp.Predictions {
+			var predData struct {
+				Type      string `json:"type"`
+				HomeScore *int   `json:"home_score"`
+				AwayScore *int   `json:"away_score"`
+			}
+			if json.Unmarshal([]byte(pred.PredictionData), &predData) == nil {
+				if predData.Type == "any_other" {
+					userPredictions[pred.EventId] = "other"
+				} else if predData.HomeScore != nil && predData.AwayScore != nil {
+					userPredictions[pred.EventId] = fmt.Sprintf("%d:%d", *predData.HomeScore, *predData.AwayScore)
+				}
+			}
+		}
 	}
 
 	// Calculate pagination
@@ -61,14 +85,15 @@ func (h *Handlers) handleMatchList(chatID int64, msgID int, contestID uint32, pa
 	// Build keyboard
 	var rows [][]tgbotapi.InlineKeyboardButton
 
-	// Match buttons
+	// Match buttons with predictions
 	for i := start; i < end && i < len(resp.Events); i++ {
 		event := resp.Events[i]
+		buttonText := fmt.Sprintf("⚽ %s vs %s", event.HomeTeam, event.AwayTeam)
+		if score, ok := userPredictions[event.Id]; ok {
+			buttonText = fmt.Sprintf("✅ %s vs %s (%s)", event.HomeTeam, event.AwayTeam, score)
+		}
 		rows = append(rows, tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData(
-				fmt.Sprintf("⚽ %s vs %s", event.HomeTeam, event.AwayTeam),
-				fmt.Sprintf("match_%d", event.Id),
-			),
+			tgbotapi.NewInlineKeyboardButtonData(buttonText, fmt.Sprintf("match_%d", event.Id)),
 		))
 	}
 
@@ -121,13 +146,61 @@ func (h *Handlers) handleMatchDetail(chatID int64, msgID int, matchID uint32) {
 		return
 	}
 
+	// Check for existing prediction
+	existingPrediction := ""
+	contestID := session.CurrentContest
+	log.Printf("[DEBUG] handleMatchDetail: matchID=%d, contestID=%d, userID=%d", matchID, contestID, session.UserID)
+	
+	if contestID > 0 {
+		// Add user_id to gRPC metadata for bot authentication
+		predCtx := metadata.AppendToOutgoingContext(ctx, "x-user-id", strconv.FormatUint(uint64(session.UserID), 10))
+		
+		predResp, err := h.clients.Prediction.GetUserPredictions(predCtx, &predictionpb.GetUserPredictionsRequest{
+			ContestId: contestID,
+		})
+		
+		if err != nil {
+			log.Printf("[DEBUG] GetUserPredictions error: %v", err)
+		} else if predResp != nil && predResp.Predictions != nil {
+			log.Printf("[DEBUG] Found %d predictions", len(predResp.Predictions))
+			for _, pred := range predResp.Predictions {
+				log.Printf("[DEBUG] Prediction: eventId=%d, data=%s", pred.EventId, pred.PredictionData)
+				if pred.EventId == matchID {
+					// Parse prediction data to extract score
+					var predData struct {
+						Type      string `json:"type"`
+						HomeScore *int   `json:"home_score"`
+						AwayScore *int   `json:"away_score"`
+					}
+					if json.Unmarshal([]byte(pred.PredictionData), &predData) == nil {
+						if predData.Type == "any_other" {
+							existingPrediction = "\n\n✅ <b>Твой прогноз:</b> Any other"
+						} else if predData.HomeScore != nil && predData.AwayScore != nil {
+							existingPrediction = fmt.Sprintf("\n\n✅ <b>Твой прогноз:</b> %d : %d", *predData.HomeScore, *predData.AwayScore)
+						}
+						log.Printf("[DEBUG] Matched! existingPrediction=%s", existingPrediction)
+					}
+					break
+				}
+			}
+		}
+	} else {
+		log.Printf("[DEBUG] contestID is 0, skipping prediction lookup")
+	}
+
 	// Build message
-	text := fmt.Sprintf("%s<b>%s vs %s</b>\n\n📅 %s\n\n%s",
+	selectText := MsgSelectScore
+	if existingPrediction != "" {
+		selectText = "Выбери новый счёт для изменения прогноза:"
+	}
+	
+	text := fmt.Sprintf("%s<b>%s vs %s</b>\n\n📅 %s%s\n\n%s",
 		MsgMatchDetail,
 		event.HomeTeam,
 		event.AwayTeam,
 		eventTime.Format("Jan 02, 15:04"),
-		MsgSelectScore,
+		existingPrediction,
+		selectText,
 	)
 
 	h.editMessage(chatID, msgID, text, ScorePredictionKeyboard(matchID))
@@ -317,10 +390,11 @@ func (h *Handlers) handleAnyOtherScore(chatID int64, msgID int, matchID uint32) 
 
 // findNextUnpredictedMatch finds next match without prediction
 func (h *Handlers) findNextUnpredictedMatch(ctx context.Context, contestID, userID uint32) (*predictionpb.Event, error) {
-	// Get all scheduled events
+	// Get events for this contest
 	resp, err := h.clients.Prediction.ListEvents(ctx, &predictionpb.ListEventsRequest{
 		SportType: "",
 		Status:    "scheduled",
+		ContestId: contestID,
 	})
 
 	if err != nil || resp == nil || len(resp.Events) == 0 {

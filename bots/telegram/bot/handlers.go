@@ -15,6 +15,7 @@ import (
 	scoringpb "github.com/sports-prediction-contests/shared/proto/scoring"
 	userpb "github.com/sports-prediction-contests/shared/proto/user"
 	"github.com/sports-prediction-contests/telegram-bot/clients"
+	"google.golang.org/grpc/metadata"
 )
 
 type Handlers struct {
@@ -147,8 +148,6 @@ func (h *Handlers) HandleCallback(cb *tgbotapi.CallbackQuery) {
 		h.editMessage(chatID, msgID, MsgWelcome, MainMenuKeyboard())
 	case data == "contests":
 		h.handleContestsCallback(chatID, msgID)
-	case data == "leaderboard":
-		h.handleLeaderboardCallback(chatID, msgID, 0)
 	case data == "mystats":
 		h.handleMyStatsCallback(chatID, msgID)
 	case data == "help":
@@ -414,6 +413,9 @@ func (h *Handlers) handleMyStatsCallback(chatID int64, msgID int) {
 func (h *Handlers) showUserStats(chatID int64, msgID int, userID uint32) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
+
+	// Add user_id to gRPC metadata for bot authentication
+	ctx = metadata.AppendToOutgoingContext(ctx, "x-user-id", strconv.FormatUint(uint64(userID), 10))
 
 	resp, err := h.clients.Scoring.GetUserAnalytics(ctx, &scoringpb.GetUserAnalyticsRequest{
 		UserId:    userID,

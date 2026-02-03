@@ -15,6 +15,7 @@ type EventRepositoryInterface interface {
 	Update(event *models.Event) error
 	Delete(id uint) error
 	List(limit, offset int, sportType, status string) ([]*models.Event, int64, error)
+	ListByContest(contestID uint, sportType, status string) ([]*models.Event, int64, error)
 	GetBySportType(sportType string) ([]*models.Event, error)
 	GetByDateRange(startDate, endDate time.Time) ([]*models.Event, error)
 	GetUpcoming(limit int) ([]*models.Event, error)
@@ -108,6 +109,34 @@ func (r *EventRepository) List(limit, offset int, sportType, status string) ([]*
 
 	// Apply pagination and fetch records
 	err := query.Limit(limit).Offset(offset).Order("event_date ASC").Find(&events).Error
+	return events, total, err
+}
+
+// ListByContest retrieves events for a specific contest
+func (r *EventRepository) ListByContest(contestID uint, sportType, status string) ([]*models.Event, int64, error) {
+	var events []*models.Event
+	var total int64
+
+	// Join with contest_events table to filter by contest
+	query := r.db.Model(&models.Event{}).
+		Joins("INNER JOIN contest_events ce ON ce.event_id = events.id").
+		Where("ce.contest_id = ?", contestID)
+
+	// Apply additional filters
+	if sportType != "" {
+		query = query.Where("events.sport_type = ?", sportType)
+	}
+	if status != "" {
+		query = query.Where("events.status = ?", status)
+	}
+
+	// Count total records
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	// Fetch records
+	err := query.Order("events.event_date ASC").Find(&events).Error
 	return events, total, err
 }
 

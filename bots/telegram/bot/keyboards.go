@@ -9,12 +9,11 @@ import (
 func MainMenuKeyboard() tgbotapi.InlineKeyboardMarkup {
 	return tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData("🏆 Contests", "contests"),
-			tgbotapi.NewInlineKeyboardButtonData("🏅 Leaderboard", "leaderboard"),
+			tgbotapi.NewInlineKeyboardButtonData("🏆 Конкурсы", "contests"),
 		),
 		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData("📊 My Stats", "mystats"),
-			tgbotapi.NewInlineKeyboardButtonData("❓ Help", "help"),
+			tgbotapi.NewInlineKeyboardButtonData("📊 Моя статистика", "mystats"),
+			tgbotapi.NewInlineKeyboardButtonData("❓ Помощь", "help"),
 		),
 	)
 }
@@ -30,7 +29,7 @@ func ContestListKeyboard(contests []ContestInfo) tgbotapi.InlineKeyboardMarkup {
 		))
 	}
 	rows = append(rows, tgbotapi.NewInlineKeyboardRow(
-		tgbotapi.NewInlineKeyboardButtonData("« Back", "back_main"),
+		tgbotapi.NewInlineKeyboardButtonData("« Назад", "back_main"),
 	))
 	return tgbotapi.InlineKeyboardMarkup{InlineKeyboard: rows}
 }
@@ -38,13 +37,13 @@ func ContestListKeyboard(contests []ContestInfo) tgbotapi.InlineKeyboardMarkup {
 func ContestDetailKeyboard(contestID uint32) tgbotapi.InlineKeyboardMarkup {
 	return tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData("⚽ Matches", fmt.Sprintf("matches_%d_1", contestID)),
+			tgbotapi.NewInlineKeyboardButtonData("⚽ Матчи", fmt.Sprintf("matches_%d_1", contestID)),
 		),
 		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData("🏅 Leaderboard", fmt.Sprintf("leaderboard_%d", contestID)),
+			tgbotapi.NewInlineKeyboardButtonData("🏅 Таблица лидеров", fmt.Sprintf("leaderboard_%d", contestID)),
 		),
 		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData("« Back", "contests"),
+			tgbotapi.NewInlineKeyboardButtonData("« Назад", "contests"),
 		),
 	)
 }
@@ -52,7 +51,7 @@ func ContestDetailKeyboard(contestID uint32) tgbotapi.InlineKeyboardMarkup {
 func BackToMainKeyboard() tgbotapi.InlineKeyboardMarkup {
 	return tgbotapi.NewInlineKeyboardMarkup(
 		tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData("« Back to Menu", "back_main"),
+			tgbotapi.NewInlineKeyboardButtonData("« В меню", "back_main"),
 		),
 	)
 }

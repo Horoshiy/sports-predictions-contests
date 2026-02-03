@@ -91,14 +91,30 @@ func (s *PredictionService) SubmitPrediction(ctx context.Context, req *pb.Submit
 		}, nil
 	}
 
+	// If prediction exists, update it (allow changing prediction before match starts)
 	if existingPrediction != nil {
+		existingPrediction.PredictionData = req.PredictionData
+		existingPrediction.SubmittedAt = time.Now().UTC()
+		
+		if err := s.predictionRepo.Update(existingPrediction); err != nil {
+			return &pb.SubmitPredictionResponse{
+				Response: &common.Response{
+					Success:   false,
+					Message:   "Failed to update prediction",
+					Code:      int32(common.ErrorCode_INTERNAL_ERROR),
+					Timestamp: timestamppb.Now(),
+				},
+			}, nil
+		}
+		
 		return &pb.SubmitPredictionResponse{
 			Response: &common.Response{
-				Success:   false,
-				Message:   "Prediction already exists for this event",
-				Code:      int32(common.ErrorCode_ALREADY_EXISTS),
+				Success:   true,
+				Message:   "Prediction updated successfully",
+				Code:      0,
 				Timestamp: timestamppb.Now(),
 			},
+			Prediction: s.modelToPB(existingPrediction),
 		}, nil
 	}
 
@@ -441,7 +457,16 @@ func (s *PredictionService) ListEvents(ctx context.Context, req *pb.ListEventsRe
 		}
 	}
 
-	events, total, err := s.eventRepo.List(limit, offset, req.SportType, req.Status)
+	var events []*models.Event
+	var total int64
+	var err error
+
+	// Filter by contest if contest_id is provided
+	if req.ContestId > 0 {
+		events, total, err = s.eventRepo.ListByContest(uint(req.ContestId), req.SportType, req.Status)
+	} else {
+		events, total, err = s.eventRepo.List(limit, offset, req.SportType, req.Status)
+	}
 	if err != nil {
 		return &pb.ListEventsResponse{
 			Response: &common.Response{
