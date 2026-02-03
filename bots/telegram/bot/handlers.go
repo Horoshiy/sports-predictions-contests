@@ -2,6 +2,7 @@ package bot
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"strconv"
@@ -12,6 +13,7 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	contestpb "github.com/sports-prediction-contests/shared/proto/contest"
 	notificationpb "github.com/sports-prediction-contests/shared/proto/notification"
+	predictionpb "github.com/sports-prediction-contests/shared/proto/prediction"
 	scoringpb "github.com/sports-prediction-contests/shared/proto/scoring"
 	userpb "github.com/sports-prediction-contests/shared/proto/user"
 	"github.com/sports-prediction-contests/telegram-bot/clients"
@@ -198,6 +200,18 @@ func (h *Handlers) HandleCallback(cb *tgbotapi.CallbackQuery) {
 		// Format: pany_matchID
 		id, _ := strconv.ParseUint(strings.TrimPrefix(data, "pany_"), 10, 32)
 		h.handleAnyOtherScore(chatID, msgID, uint32(id))
+	case strings.HasPrefix(data, "risky_submit_"):
+		// Format: risky_submit_matchID
+		id, _ := strconv.ParseUint(strings.TrimPrefix(data, "risky_submit_"), 10, 32)
+		h.handleRiskySubmit(chatID, msgID, uint32(id))
+	case strings.HasPrefix(data, "risky_"):
+		// Format: risky_matchID_eventSlug
+		parts := strings.Split(strings.TrimPrefix(data, "risky_"), "_")
+		if len(parts) >= 2 {
+			matchID, _ := strconv.ParseUint(parts[0], 10, 32)
+			eventSlug := parts[1]
+			h.handleRiskyToggle(chatID, msgID, uint32(matchID), eventSlug)
+		}
 	}
 }
 
@@ -545,6 +559,98 @@ func (h *Handlers) cleanupSessions() {
 			return
 		}
 	}
+}
+
+// Risky prediction state stored per user
+var riskySelections = make(map[string][]string) // key: "chatID_matchID" -> selected slugs
+
+// handleRiskyToggle toggles a risky event selection
+func (h *Handlers) handleRiskyToggle(chatID int64, msgID int, matchID uint32, eventSlug string) {
+	session := h.getSession(chatID)
+	if session == nil {
+		h.editMessage(chatID, msgID, MsgNotLinked, BackToMainKeyboard())
+		return
+	}
+
+	// Get contest rules
+	contestID := session.CurrentContest
+	rulesJSON := "" // TODO: get from contest-service
+	
+	events := getRiskyEvents(rulesJSON)
+	maxSel := getMaxSelections(rulesJSON)
+	
+	// Get or create selections for this match
+	key := fmt.Sprintf("%d_%d", chatID, matchID)
+	selections := riskySelections[key]
+	
+	// Toggle selection
+	selections = toggleSelection(selections, eventSlug, maxSel)
+	riskySelections[key] = selections
+	
+	// Update keyboard
+	keyboard := RiskyEventsKeyboard(matchID, selections, events, maxSel)
+	
+	text := fmt.Sprintf("⚡ <b>Рисковый прогноз</b>\n\nВыбери события, которые произойдут в матче.\n✅ Угадал → +очки\n❌ Не угадал → −очки\n\nКонкурс ID: %d", contestID)
+	h.editMessage(chatID, msgID, text, keyboard)
+}
+
+// handleRiskySubmit submits risky prediction
+func (h *Handlers) handleRiskySubmit(chatID int64, msgID int, matchID uint32) {
+	session := h.getSession(chatID)
+	if session == nil {
+		h.editMessage(chatID, msgID, MsgNotLinked, BackToMainKeyboard())
+		return
+	}
+
+	key := fmt.Sprintf("%d_%d", chatID, matchID)
+	selections := riskySelections[key]
+	
+	if len(selections) == 0 {
+		h.editMessage(chatID, msgID, "⚠️ Выбери хотя бы одно событие", BackToMainKeyboard())
+		return
+	}
+
+	contestID := session.CurrentContest
+	
+	// Create prediction data
+	predData := map[string]interface{}{
+		"type":             "risky",
+		"risky_selections": selections,
+	}
+	predJSON, _ := json.Marshal(predData)
+	
+	// Submit prediction via gRPC
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	
+	ctx = metadata.AppendToOutgoingContext(ctx, "x-user-id", strconv.FormatUint(uint64(session.UserID), 10))
+	
+	resp, err := h.clients.Prediction.SubmitPrediction(ctx, &predictionpb.SubmitPredictionRequest{
+		ContestId:      contestID,
+		EventId:        matchID,
+		PredictionData: string(predJSON),
+	})
+	
+	if err != nil || resp == nil || !resp.Response.Success {
+		errMsg := "Failed to submit prediction"
+		if resp != nil && resp.Response != nil {
+			errMsg = resp.Response.Message
+		}
+		log.Printf("[ERROR] Failed to submit risky prediction: %v", err)
+		h.editMessage(chatID, msgID, "❌ "+errMsg, BackToMainKeyboard())
+		return
+	}
+	
+	// Clear selections
+	delete(riskySelections, key)
+	
+	// Success message
+	rulesJSON := ""
+	events := getRiskyEvents(rulesJSON)
+	selectionNames := formatRiskyPrediction(selections, events)
+	
+	text := fmt.Sprintf("✅ <b>Рисковый прогноз принят!</b>\n\nВыбранные события:\n%s\n\nУдачи! 🍀", selectionNames)
+	h.editMessage(chatID, msgID, text, BackToMainKeyboard())
 }
 
 // Shutdown gracefully stops the handlers and cleanup goroutines
