@@ -1,4 +1,5 @@
 import { Locator, expect } from '@playwright/test'
+import { TIMEOUTS } from '../helpers/test-config'
 import { BasePage } from './BasePage'
 
 /**
@@ -6,6 +7,7 @@ import { BasePage } from './BasePage'
  */
 export class ContestsPage extends BasePage {
   readonly url = '/contests'
+  readonly pageName = 'Contests Page'
 
   // ==================== Locators ====================
 
@@ -137,7 +139,10 @@ export class ContestsPage extends BasePage {
    * Expect contests list to be visible
    */
   async expectContestListVisible(): Promise<void> {
-    await expect(this.contestCards.first()).toBeVisible({ timeout: 10000 })
+    await expect(
+      this.contestCards.first(),
+      'Contest cards should be visible on Contests Page'
+    ).toBeVisible({ timeout: TIMEOUTS.LONG })
   }
 
   /**

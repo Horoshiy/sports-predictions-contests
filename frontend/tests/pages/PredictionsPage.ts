@@ -1,4 +1,5 @@
 import { Locator, expect } from '@playwright/test'
+import { TIMEOUTS } from '../helpers/test-config'
 import { BasePage } from './BasePage'
 
 /**
@@ -6,6 +7,7 @@ import { BasePage } from './BasePage'
  */
 export class PredictionsPage extends BasePage {
   readonly url = '/predictions'
+  readonly pageName = 'Predictions Page'
 
   // ==================== Locators ====================
 

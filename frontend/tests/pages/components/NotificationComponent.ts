@@ -1,4 +1,5 @@
 import { Page, Locator, expect } from '@playwright/test'
+import { TIMEOUTS } from '../../helpers/test-config'
 
 /**
  * Notification Component Page Object (Ant Design Notification)
@@ -56,7 +57,7 @@ export class NotificationComponent {
       info: this.infoNotification,
       warning: this.warningNotification,
     }
-    await locators[type].waitFor({ state: 'visible', timeout: 5000 })
+    await locators[type].waitFor({ state: 'visible', timeout: TIMEOUTS.MEDIUM })
   }
 
   /**
@@ -86,9 +87,12 @@ export class NotificationComponent {
    * Expect success notification
    */
   async expectSuccess(message?: string): Promise<void> {
-    await expect(this.successNotification).toBeVisible({ timeout: 5000 })
+    await expect(
+      this.successNotification,
+      'Success notification should be visible'
+    ).toBeVisible({ timeout: TIMEOUTS.MEDIUM })
     if (message) {
-      await expect(this.message).toContainText(message)
+      await expect(this.message, `Notification should contain "${message}"`).toContainText(message)
     }
   }
 
@@ -96,9 +100,12 @@ export class NotificationComponent {
    * Expect error notification
    */
   async expectError(message?: string): Promise<void> {
-    await expect(this.errorNotification).toBeVisible({ timeout: 5000 })
+    await expect(
+      this.errorNotification,
+      'Error notification should be visible'
+    ).toBeVisible({ timeout: TIMEOUTS.MEDIUM })
     if (message) {
-      await expect(this.message).toContainText(message)
+      await expect(this.message, `Notification should contain "${message}"`).toContainText(message)
     }
   }
 
@@ -106,9 +113,12 @@ export class NotificationComponent {
    * Expect info notification
    */
   async expectInfo(message?: string): Promise<void> {
-    await expect(this.infoNotification).toBeVisible({ timeout: 5000 })
+    await expect(
+      this.infoNotification,
+      'Info notification should be visible'
+    ).toBeVisible({ timeout: TIMEOUTS.MEDIUM })
     if (message) {
-      await expect(this.message).toContainText(message)
+      await expect(this.message, `Notification should contain "${message}"`).toContainText(message)
     }
   }
 
@@ -116,9 +126,12 @@ export class NotificationComponent {
    * Expect warning notification
    */
   async expectWarning(message?: string): Promise<void> {
-    await expect(this.warningNotification).toBeVisible({ timeout: 5000 })
+    await expect(
+      this.warningNotification,
+      'Warning notification should be visible'
+    ).toBeVisible({ timeout: TIMEOUTS.MEDIUM })
     if (message) {
-      await expect(this.message).toContainText(message)
+      await expect(this.message, `Notification should contain "${message}"`).toContainText(message)
     }
   }
 

@@ -1,11 +1,13 @@
 import { Locator, expect } from '@playwright/test'
 import { BasePage } from './BasePage'
+import { TIMEOUTS } from '../helpers/test-config'
 
 /**
  * Login Page Object
  */
 export class LoginPage extends BasePage {
   readonly url = '/login'
+  readonly pageName = 'Login Page'
 
   // ==================== Locators ====================
 
@@ -65,29 +67,32 @@ export class LoginPage extends BasePage {
    * Expect login form to be visible
    */
   async expectLoginFormVisible(): Promise<void> {
-    await expect(this.emailInput).toBeVisible()
-    await expect(this.passwordInput).toBeVisible()
-    await expect(this.loginButton).toBeVisible()
+    await expect(this.emailInput, 'Email input should be visible').toBeVisible()
+    await expect(this.passwordInput, 'Password input should be visible').toBeVisible()
+    await expect(this.loginButton, 'Login button should be visible').toBeVisible()
   }
 
   /**
    * Expect error notification to be visible
    */
   async expectErrorVisible(): Promise<void> {
-    await expect(this.errorMessage).toBeVisible({ timeout: 5000 })
+    await expect(
+      this.errorMessage,
+      'Error notification should be visible after failed login'
+    ).toBeVisible({ timeout: TIMEOUTS.MEDIUM })
   }
 
   /**
    * Expect to be on login page
    */
   async expectOnLoginPage(): Promise<void> {
-    await expect(this.page).toHaveURL('/login')
+    await expect(this.page, 'Should be on login page').toHaveURL('/login')
   }
 
   /**
    * Expect page title
    */
   async expectTitle(title: string): Promise<void> {
-    await expect(this.pageTitle).toContainText(title)
+    await expect(this.pageTitle, `Page title should contain "${title}"`).toContainText(title)
   }
 }

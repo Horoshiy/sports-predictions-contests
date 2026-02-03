@@ -1,4 +1,5 @@
 import { Page, Locator, expect } from '@playwright/test'
+import { TIMEOUTS } from '../helpers/test-config'
 
 /**
  * Base Page Object class - all page objects extend this
@@ -6,6 +7,7 @@ import { Page, Locator, expect } from '@playwright/test'
 export abstract class BasePage {
   protected page: Page
   abstract readonly url: string
+  abstract readonly pageName: string  // For better error messages
 
   constructor(page: Page) {
     this.page = page
@@ -45,7 +47,7 @@ export abstract class BasePage {
    */
   protected async isVisible(selector: string): Promise<boolean> {
     try {
-      await this.page.waitForSelector(selector, { timeout: 3000 })
+      await this.page.waitForSelector(selector, { timeout: TIMEOUTS.SHORT })
       return true
     } catch {
       return false
@@ -104,14 +106,17 @@ export abstract class BasePage {
    * Wait for Ant Design notification
    */
   protected async waitForNotification(type: 'success' | 'error' | 'info' | 'warning'): Promise<void> {
-    await this.page.waitForSelector(`.ant-notification-notice-${type}`, { timeout: 5000 })
+    await this.page.waitForSelector(`.ant-notification-notice-${type}`, { timeout: TIMEOUTS.MEDIUM })
   }
 
   /**
    * Expect notification to appear
    */
   protected async expectNotification(type: 'success' | 'error'): Promise<void> {
-    await expect(this.page.locator(`.ant-notification-notice-${type}`)).toBeVisible({ timeout: 5000 })
+    await expect(
+      this.page.locator(`.ant-notification-notice-${type}`),
+      `Expected ${type} notification on ${this.pageName}`
+    ).toBeVisible({ timeout: TIMEOUTS.MEDIUM })
   }
 
   /**
@@ -153,6 +158,28 @@ export abstract class BasePage {
    * Wait for loading spinner to disappear
    */
   protected async waitForLoadingComplete(): Promise<void> {
-    await this.page.waitForSelector('.ant-spin', { state: 'hidden', timeout: 10000 }).catch(() => {})
+    await this.page.waitForSelector('.ant-spin', { state: 'hidden', timeout: TIMEOUTS.LONG }).catch(() => {})
+  }
+
+  /**
+   * Get locator with data-testid
+   */
+  protected getByTestId(testId: string): Locator {
+    return this.page.locator(`[data-testid="${testId}"]`)
+  }
+
+  /**
+   * Click with retry for flaky operations
+   */
+  protected async clickWithRetry(locator: Locator, maxRetries = 3): Promise<void> {
+    for (let i = 0; i < maxRetries; i++) {
+      try {
+        await locator.click({ timeout: TIMEOUTS.SHORT })
+        return
+      } catch (e) {
+        if (i === maxRetries - 1) throw e
+        await this.page.waitForTimeout(500)
+      }
+    }
   }
 }
