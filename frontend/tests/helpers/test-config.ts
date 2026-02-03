@@ -2,11 +2,11 @@
  * Test configuration
  */
 export const TEST_CONFIG = {
-  // Regular test user (non-admin)
+  // Regular test user (use admin for tests)
   testUser: {
-    email: process.env.TEST_USER_EMAIL || 'testuser@example.com',
-    password: process.env.TEST_USER_PASSWORD || 'TestUser123!',
-    name: 'Test User',
+    email: process.env.TEST_USER_EMAIL || 'admin@example.com',
+    password: process.env.TEST_USER_PASSWORD || 'admin123',
+    name: 'Admin User',
   },
   // Admin user for admin-only features
   testAdmin: {

@@ -2,8 +2,8 @@ export const SELECTORS = {
   auth: {
     emailInput: 'input[type="email"]',
     passwordInput: 'input[type="password"]',
-    loginButton: 'button:has-text("Login")',
-    registerButton: 'button:has-text("Register")',
+    loginButton: 'button:has-text("Sign In")',
+    registerButton: 'button:has-text("Sign Up"), button:has-text("Register")',
     logoutButton: 'button:has-text("Logout")',
     usernameInput: 'input[placeholder*="username"]',
     displayNameInput: 'input[placeholder*="display name"]',

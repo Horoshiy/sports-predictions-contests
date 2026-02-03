@@ -4,7 +4,8 @@ import { TEST_CONFIG, TIMEOUTS } from '../helpers/test-config'
 
 test.describe('Authentication', () => {
   test.beforeEach(async ({ page }) => {
-    // Clear storage before each test
+    // Navigate first, then clear storage (can't access localStorage on about:blank)
+    await page.goto('/login')
     await page.evaluate(() => localStorage.clear())
   })
 

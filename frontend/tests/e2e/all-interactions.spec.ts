@@ -187,18 +187,22 @@ test.describe('All Clickable Elements', () => {
 
   test.describe('Protected Routes', () => {
     test('contests page redirects to login when not authenticated', async ({ contestsPage, page }) => {
+      // Navigate first, then clear to ensure no auth, then navigate again
+      await page.goto('/login')
       await page.evaluate(() => localStorage.clear())
       await contestsPage.goto()
       await expect(page).toHaveURL('/login')
     })
 
     test('predictions page redirects to login when not authenticated', async ({ predictionsPage, page }) => {
+      await page.goto('/login')
       await page.evaluate(() => localStorage.clear())
       await predictionsPage.goto()
       await expect(page).toHaveURL('/login')
     })
 
     test('profile page redirects to login when not authenticated', async ({ profilePage, page }) => {
+      await page.goto('/login')
       await page.evaluate(() => localStorage.clear())
       await profilePage.goto()
       await expect(page).toHaveURL('/login')
