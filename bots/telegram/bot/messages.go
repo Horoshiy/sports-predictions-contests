@@ -76,10 +76,13 @@ func FormatContest(id uint32, title, sportType, status string) string {
 	if status == "active" {
 		emoji = "🟢"
 	}
-	// Handle Totalizator (mixed sport type)
+	// Handle special contest types
 	displaySport := sportType
-	if sportType == "" || sportType == "mixed" || sportType == "totalizator" {
+	switch sportType {
+	case "", "mixed", "totalizator":
 		displaySport = "🎰 Тотализатор"
+	case "relay":
+		displaySport = "🏃 Эстафета"
 	}
 	return fmt.Sprintf("%s <b>%s</b>\nТип: %s | ID: %d\n", emoji, title, displaySport, id)
 }
