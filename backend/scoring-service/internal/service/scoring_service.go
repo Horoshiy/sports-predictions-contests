@@ -10,6 +10,7 @@ import (
 	"github.com/sports-prediction-contests/scoring-service/internal/models"
 	"github.com/sports-prediction-contests/scoring-service/internal/repository"
 	"github.com/sports-prediction-contests/shared/auth"
+	"github.com/sports-prediction-contests/shared/scoring"
 	pb "github.com/sports-prediction-contests/shared/proto/scoring"
 	"github.com/sports-prediction-contests/shared/proto/common"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -289,8 +290,15 @@ func (s *ScoringService) calculatePoints(prediction PredictionData, result Resul
 	}
 }
 
-// calculateExactScorePoints calculates points for exact score predictions
+// calculateExactScorePoints calculates points for exact score predictions (uses default rules)
 func (s *ScoringService) calculateExactScorePoints(prediction PredictionData, result ResultData, details map[string]interface{}) (float64, map[string]interface{}) {
+	// Use default rules for backward compatibility
+	defaultRules := scoring.DefaultStandardRules()
+	return s.calculateExactScorePointsWithRules(prediction, result, details, &defaultRules)
+}
+
+// calculateExactScorePointsWithRules calculates points using custom scoring rules
+func (s *ScoringService) calculateExactScorePointsWithRules(prediction PredictionData, result ResultData, details map[string]interface{}, rules *scoring.StandardScoringRules) (float64, map[string]interface{}) {
 	if prediction.HomeScore == nil || prediction.AwayScore == nil {
 		details["error"] = "Missing score prediction"
 		return 0, details
@@ -302,29 +310,135 @@ func (s *ScoringService) calculateExactScorePoints(prediction PredictionData, re
 	details["predicted_score"] = fmt.Sprintf("%d-%d", predictedHome, predictedAway)
 	details["actual_score"] = fmt.Sprintf("%d-%d", result.HomeScore, result.AwayScore)
 
-	// Exact match: 10 points
-	if predictedHome == result.HomeScore && predictedAway == result.AwayScore {
-		details["match_type"] = "exact"
-		return 10, details
+	// Handle "any_other" prediction type
+	if prediction.Type == "any_other" {
+		isOther := result.HomeScore > 4 || result.AwayScore > 4
+		details["result_is_other"] = isOther
+		if isOther {
+			details["match_type"] = "any_other_correct"
+			return rules.AnyOther, details
+		}
+		details["match_type"] = "any_other_incorrect"
+		return 0, details
 	}
 
-	// Correct goal difference: 5 points
+	// Exact match
+	if predictedHome == result.HomeScore && predictedAway == result.AwayScore {
+		details["match_type"] = "exact"
+		return rules.ExactScore, details
+	}
+
+	// Correct goal difference
 	predictedDiff := predictedHome - predictedAway
 	actualDiff := result.HomeScore - result.AwayScore
 	if predictedDiff == actualDiff {
 		details["match_type"] = "goal_difference"
-		return 5, details
+		return rules.GoalDifference, details
 	}
 
-	// Correct winner: 3 points
+	// Correct winner with possible team goals bonus
 	predictedWinner := s.determineWinner(predictedHome, predictedAway)
-	if predictedWinner == result.Winner {
-		details["match_type"] = "winner"
-		return 3, details
+	actualWinner := s.determineWinner(result.HomeScore, result.AwayScore)
+	
+	if predictedWinner == actualWinner {
+		// Check if one team's goals match
+		homeGoalsMatch := predictedHome == result.HomeScore
+		awayGoalsMatch := predictedAway == result.AwayScore
+		
+		if homeGoalsMatch || awayGoalsMatch {
+			details["match_type"] = "outcome_plus_team_goals"
+			details["home_goals_match"] = homeGoalsMatch
+			details["away_goals_match"] = awayGoalsMatch
+			return rules.CorrectOutcome + rules.OutcomePlusTeamGoals, details
+		}
+		
+		details["match_type"] = "correct_outcome"
+		return rules.CorrectOutcome, details
 	}
 
 	details["match_type"] = "none"
 	return 0, details
+}
+
+// CalculateWithContestRules calculates score using contest-specific rules
+func (s *ScoringService) CalculateWithContestRules(predictionData, resultData, rulesJSON string) (float64, map[string]interface{}) {
+	var prediction PredictionData
+	if err := json.Unmarshal([]byte(predictionData), &prediction); err != nil {
+		return 0, map[string]interface{}{"error": "Invalid prediction data"}
+	}
+
+	var result ResultData
+	if err := json.Unmarshal([]byte(resultData), &result); err != nil {
+		return 0, map[string]interface{}{"error": "Invalid result data"}
+	}
+
+	rules, err := scoring.ParseRules(rulesJSON)
+	if err != nil {
+		return 0, map[string]interface{}{"error": "Invalid rules: " + err.Error()}
+	}
+
+	details := map[string]interface{}{
+		"prediction_type": prediction.Type,
+		"contest_type":    rules.Type,
+	}
+
+	switch rules.Type {
+	case scoring.ContestTypeStandard:
+		return s.calculateExactScorePointsWithRules(prediction, result, details, rules.Standard)
+	case scoring.ContestTypeRisky:
+		return s.calculateRiskyPoints(prediction, result, details, rules.Risky)
+	default:
+		details["error"] = "Unknown contest type"
+		return 0, details
+	}
+}
+
+// calculateRiskyPoints calculates points for risky predictions
+func (s *ScoringService) calculateRiskyPoints(prediction PredictionData, result ResultData, details map[string]interface{}, rules *scoring.RiskyScoringRules) (float64, map[string]interface{}) {
+	// Risky predictions store selected events in prediction.Props or a custom field
+	// For now, we'll use a simple calculation based on the prediction data
+	
+	// Parse risky selections from prediction data (expected format: {"risky_selections": ["penalty", "red_card"]})
+	type RiskyPredictionData struct {
+		Selections []string `json:"risky_selections"`
+	}
+	
+	// Try to extract risky selections from the Value field
+	selectionsData, ok := prediction.Value.(map[string]interface{})
+	if !ok {
+		details["error"] = "Invalid risky prediction format"
+		return 0, details
+	}
+	
+	selectionsRaw, ok := selectionsData["risky_selections"].([]interface{})
+	if !ok {
+		details["error"] = "Missing risky_selections"
+		return 0, details
+	}
+	
+	selections := make([]string, len(selectionsRaw))
+	for i, v := range selectionsRaw {
+		selections[i], _ = v.(string)
+	}
+	
+	// Get outcomes from result stats
+	outcomes := make(map[string]bool)
+	if result.Stats != nil {
+		for key, val := range result.Stats {
+			if boolVal, ok := val.(bool); ok {
+				outcomes[key] = boolVal
+			}
+		}
+	}
+	
+	calc := scoring.NewCalculator(&scoring.ContestRules{Type: scoring.ContestTypeRisky, Risky: rules})
+	calcResult := calc.CalculateRisky(selections, outcomes)
+	
+	for k, v := range calcResult.Details {
+		details[k] = v
+	}
+	
+	return calcResult.Points, details
 }
 
 // calculateWinnerPoints calculates points for winner predictions

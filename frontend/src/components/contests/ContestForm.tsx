@@ -1,9 +1,10 @@
 import React from 'react'
-import { Modal, Form, Input, Select, Button, DatePicker, InputNumber } from 'antd'
+import { Modal, Form, Input, Select, Button, DatePicker, InputNumber, Collapse } from 'antd'
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { contestSchema, type ContestFormData } from '../../utils/validation'
 import type { Contest } from '../../types/contest.types'
+import { ScoringRulesEditor, type ContestRules } from './ScoringRulesEditor'
 import dayjs from 'dayjs'
 
 interface ContestFormProps {
@@ -103,11 +104,35 @@ export const ContestForm: React.FC<ContestFormProps> = ({
             </Select>
           </Form.Item>
         )} />
-        <Controller name="rules" control={control} render={({ field }) => (
-          <Form.Item label="Rules" validateStatus={errors.rules ? 'error' : ''} help={errors.rules?.message}>
-            <Input.TextArea {...field} rows={4} disabled={loading} />
-          </Form.Item>
-        )} />
+        <Controller name="rules" control={control} render={({ field }) => {
+          // Parse rules JSON or use default
+          let rulesValue: ContestRules | undefined
+          try {
+            if (field.value && typeof field.value === 'string') {
+              rulesValue = JSON.parse(field.value)
+            }
+          } catch {
+            // Invalid JSON, will use default
+          }
+          
+          return (
+            <Form.Item validateStatus={errors.rules ? 'error' : ''} help={errors.rules?.message}>
+              <Collapse
+                items={[{
+                  key: 'scoring',
+                  label: 'Правила подсчёта очков',
+                  children: (
+                    <ScoringRulesEditor
+                      value={rulesValue}
+                      onChange={(newRules) => field.onChange(JSON.stringify(newRules))}
+                    />
+                  ),
+                }]}
+                defaultActiveKey={isEditing ? [] : ['scoring']}
+              />
+            </Form.Item>
+          )
+        }} />
         <Form.Item label="Contest Period" required>
           <Input.Group compact>
             <Controller name="startDate" control={control} render={({ field }) => (
