@@ -325,6 +325,47 @@ message GetContestEventCountResponse {
   int32 event_count = 2;
 }
 
+// Relay (team contest) messages
+message RelayAssignment {
+  uint64 user_id = 1;
+  uint64 event_id = 2;
+  Event event = 3;  // populated on response
+}
+
+message SetRelayAssignmentsRequest {
+  uint64 contest_id = 1;
+  uint64 team_id = 2;
+  repeated RelayAssignment assignments = 3;
+}
+
+message SetRelayAssignmentsResponse {
+  common.Response response = 1;
+  int32 assigned_count = 2;
+}
+
+message GetTeamAssignmentsRequest {
+  uint64 contest_id = 1;
+  uint64 team_id = 2;
+}
+
+message GetTeamAssignmentsResponse {
+  common.Response response = 1;
+  repeated RelayAssignment assignments = 2;
+  int32 total_events = 3;
+  int32 assigned_events = 4;
+}
+
+message GetUserRelayEventsRequest {
+  uint64 contest_id = 1;
+  uint64 team_id = 2;  // optional, if user is in multiple teams
+}
+
+message GetUserRelayEventsResponse {
+  common.Response response = 1;
+  repeated Event events = 2;
+  uint64 team_id = 3;
+}
+
 // Prediction Service
 service PredictionService {
   // Prediction management
@@ -390,6 +431,24 @@ service PredictionService {
   rpc GetContestEventCount(GetContestEventCountRequest) returns (GetContestEventCountResponse) {
     option (google.api.http) = {
       get: "/v1/contests/{contest_id}/events/count"
+    };
+  }
+  
+  // Relay (team contest) management
+  rpc SetRelayAssignments(SetRelayAssignmentsRequest) returns (SetRelayAssignmentsResponse) {
+    option (google.api.http) = {
+      post: "/v1/relay/{contest_id}/teams/{team_id}/assignments"
+      body: "*"
+    };
+  }
+  rpc GetTeamAssignments(GetTeamAssignmentsRequest) returns (GetTeamAssignmentsResponse) {
+    option (google.api.http) = {
+      get: "/v1/relay/{contest_id}/teams/{team_id}/assignments"
+    };
+  }
+  rpc GetUserRelayEvents(GetUserRelayEventsRequest) returns (GetUserRelayEventsResponse) {
+    option (google.api.http) = {
+      get: "/v1/relay/{contest_id}/my-events"
     };
   }
   

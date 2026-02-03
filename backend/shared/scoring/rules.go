@@ -12,6 +12,7 @@ const (
 	ContestTypeStandard    ContestType = "standard"
 	ContestTypeRisky       ContestType = "risky"
 	ContestTypeTotalizator ContestType = "totalizator"
+	ContestTypeRelay       ContestType = "relay"
 )
 
 // StandardScoringRules defines points for standard contest
@@ -45,12 +46,22 @@ type TotalizatorRules struct {
 	Scoring    StandardScoringRules `json:"scoring"`     // scoring rules for all matches
 }
 
+// RelayRules defines rules for relay (team) contest
+// Captain assigns matches to team members, team score is sum of all members
+type RelayRules struct {
+	TeamSize      int                  `json:"team_size"`       // members per team (2-10)
+	EventCount    int                  `json:"event_count"`     // total matches in contest (5-50)
+	Scoring       StandardScoringRules `json:"scoring"`         // scoring rules
+	AllowReassign bool                 `json:"allow_reassign"`  // can captain reassign after start
+}
+
 // ContestRules combines all rule types
 type ContestRules struct {
 	Type        ContestType           `json:"type"`
 	Standard    *StandardScoringRules `json:"scoring,omitempty"`
 	Risky       *RiskyScoringRules    `json:"risky,omitempty"`
 	Totalizator *TotalizatorRules     `json:"totalizator,omitempty"`
+	Relay       *RelayRules           `json:"relay,omitempty"`
 }
 
 // DefaultStandardRules returns default scoring for standard contests
@@ -96,6 +107,16 @@ func DefaultTotalizatorRules() TotalizatorRules {
 	}
 }
 
+// DefaultRelayRules returns default relay (team) rules
+func DefaultRelayRules() RelayRules {
+	return RelayRules{
+		TeamSize:      5,
+		EventCount:    15,
+		Scoring:       DefaultStandardRules(),
+		AllowReassign: true,
+	}
+}
+
 // ParseRules parses JSON rules string into ContestRules
 func ParseRules(rulesJSON string) (*ContestRules, error) {
 	if rulesJSON == "" {
@@ -132,6 +153,11 @@ func ParseRules(rulesJSON string) (*ContestRules, error) {
 		rules.Totalizator = &defaultTotalizator
 	}
 
+	if rules.Type == ContestTypeRelay && rules.Relay == nil {
+		defaultRelay := DefaultRelayRules()
+		rules.Relay = &defaultRelay
+	}
+
 	return &rules, nil
 }
 
@@ -146,8 +172,14 @@ func (r *ContestRules) ToJSON() (string, error) {
 
 // Validate checks if rules are valid
 func (r *ContestRules) Validate() error {
-	if r.Type != ContestTypeStandard && r.Type != ContestTypeRisky && r.Type != ContestTypeTotalizator {
-		return errors.New("invalid contest type: must be 'standard', 'risky', or 'totalizator'")
+	validTypes := map[ContestType]bool{
+		ContestTypeStandard:    true,
+		ContestTypeRisky:       true,
+		ContestTypeTotalizator: true,
+		ContestTypeRelay:       true,
+	}
+	if !validTypes[r.Type] {
+		return errors.New("invalid contest type: must be 'standard', 'risky', 'totalizator', or 'relay'")
 	}
 
 	if r.Type == ContestTypeStandard {
@@ -181,6 +213,22 @@ func (r *ContestRules) Validate() error {
 		}
 		if r.Totalizator.Scoring.ExactScore < 0 || r.Totalizator.Scoring.GoalDifference < 0 ||
 			r.Totalizator.Scoring.CorrectOutcome < 0 || r.Totalizator.Scoring.AnyOther < 0 {
+			return errors.New("scoring points cannot be negative")
+		}
+	}
+
+	if r.Type == ContestTypeRelay {
+		if r.Relay == nil {
+			return errors.New("relay rules required for relay contest")
+		}
+		if r.Relay.TeamSize < 2 || r.Relay.TeamSize > 10 {
+			return errors.New("team_size must be between 2 and 10")
+		}
+		if r.Relay.EventCount < 5 || r.Relay.EventCount > 50 {
+			return errors.New("event_count must be between 5 and 50")
+		}
+		if r.Relay.Scoring.ExactScore < 0 || r.Relay.Scoring.GoalDifference < 0 ||
+			r.Relay.Scoring.CorrectOutcome < 0 || r.Relay.Scoring.AnyOther < 0 {
 			return errors.New("scoring points cannot be negative")
 		}
 	}

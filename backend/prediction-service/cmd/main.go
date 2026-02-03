@@ -39,6 +39,7 @@ func main() {
 		&models.RiskyEventType{},
 		&models.MatchRiskyEvent{},
 		&models.RiskyPrediction{},
+		&models.RelayEventAssignment{},
 	); err != nil {
 		log.Fatalf("Failed to migrate database: %v", err)
 	}
@@ -55,9 +56,10 @@ func main() {
 	eventRepo := repository.NewEventRepository(db)
 	propTypeRepo := repository.NewPropTypeRepository(db)
 	riskyEventRepo := repository.NewRiskyEventRepository(db)
+	relayRepo := repository.NewRelayRepository(db)
 
 	// Initialize services
-	predictionService := service.NewPredictionService(predictionRepo, eventRepo, propTypeRepo, riskyEventRepo, contestClient)
+	predictionService := service.NewPredictionService(predictionRepo, eventRepo, propTypeRepo, riskyEventRepo, relayRepo, contestClient)
 
 	// Create gRPC server with JWT interceptor
 	server := grpc.NewServer(

@@ -26,6 +26,7 @@ type PredictionService struct {
 	eventRepo        repository.EventRepositoryInterface
 	propTypeRepo     *repository.PropTypeRepository
 	riskyEventRepo   *repository.RiskyEventRepository
+	relayRepo        repository.RelayRepositoryInterface
 	contestClient    *clients.ContestClient
 }
 
@@ -35,6 +36,7 @@ func NewPredictionService(
 	eventRepo repository.EventRepositoryInterface,
 	propTypeRepo *repository.PropTypeRepository,
 	riskyEventRepo *repository.RiskyEventRepository,
+	relayRepo repository.RelayRepositoryInterface,
 	contestClient *clients.ContestClient,
 ) *PredictionService {
 	return &PredictionService{
@@ -42,6 +44,7 @@ func NewPredictionService(
 		eventRepo:        eventRepo,
 		propTypeRepo:     propTypeRepo,
 		riskyEventRepo:   riskyEventRepo,
+		relayRepo:        relayRepo,
 		contestClient:    contestClient,
 	}
 }
@@ -1146,5 +1149,173 @@ func (s *PredictionService) GetContestEventCount(ctx context.Context, req *pb.Ge
 			Success: true,
 		},
 		EventCount: int32(count),
+	}, nil
+}
+
+// SetRelayAssignments sets event assignments for a team (captain action)
+func (s *PredictionService) SetRelayAssignments(ctx context.Context, req *pb.SetRelayAssignmentsRequest) (*pb.SetRelayAssignmentsResponse, error) {
+	if req.ContestId == 0 || req.TeamId == 0 {
+		return &pb.SetRelayAssignmentsResponse{
+			Response: &common.Response{
+				Success: false,
+				Message: "contest_id and team_id are required",
+			},
+		}, nil
+	}
+
+	// Get captain ID from context (the user making the request)
+	captainID, ok := auth.GetUserIDFromContext(ctx)
+	if !ok {
+		return &pb.SetRelayAssignmentsResponse{
+			Response: &common.Response{
+				Success: false,
+				Message: "unauthorized: user ID not found in context",
+			},
+		}, nil
+	}
+
+	// TODO: Verify that captainID is actually the captain of teamID
+	// This requires calling contest-service or checking user_team_members table
+
+	// Convert proto assignments to repository input
+	assignments := make([]repository.RelayAssignmentInput, len(req.Assignments))
+	for i, a := range req.Assignments {
+		assignments[i] = repository.RelayAssignmentInput{
+			UserID:  uint(a.UserId),
+			EventID: uint(a.EventId),
+		}
+	}
+
+	// Set assignments
+	err := s.relayRepo.SetTeamAssignments(uint(req.ContestId), uint(req.TeamId), uint(captainID), assignments)
+	if err != nil {
+		return &pb.SetRelayAssignmentsResponse{
+			Response: &common.Response{
+				Success: false,
+				Message: err.Error(),
+			},
+		}, nil
+	}
+
+	return &pb.SetRelayAssignmentsResponse{
+		Response: &common.Response{
+			Success: true,
+			Message: "Assignments saved successfully",
+		},
+		AssignedCount: int32(len(assignments)),
+	}, nil
+}
+
+// GetTeamAssignments retrieves all event assignments for a team
+func (s *PredictionService) GetTeamAssignments(ctx context.Context, req *pb.GetTeamAssignmentsRequest) (*pb.GetTeamAssignmentsResponse, error) {
+	if req.ContestId == 0 || req.TeamId == 0 {
+		return &pb.GetTeamAssignmentsResponse{
+			Response: &common.Response{
+				Success: false,
+				Message: "contest_id and team_id are required",
+			},
+		}, nil
+	}
+
+	// Get assignments
+	assignments, err := s.relayRepo.GetTeamAssignments(uint(req.ContestId), uint(req.TeamId))
+	if err != nil {
+		return &pb.GetTeamAssignmentsResponse{
+			Response: &common.Response{
+				Success: false,
+				Message: err.Error(),
+			},
+		}, nil
+	}
+
+	// Get stats
+	stats, err := s.relayRepo.GetAssignmentStats(uint(req.ContestId), uint(req.TeamId))
+	if err != nil {
+		return &pb.GetTeamAssignmentsResponse{
+			Response: &common.Response{
+				Success: false,
+				Message: err.Error(),
+			},
+		}, nil
+	}
+
+	// Convert to proto
+	protoAssignments := make([]*pb.RelayAssignment, len(assignments))
+	for i, a := range assignments {
+		protoAssignments[i] = &pb.RelayAssignment{
+			UserId:  uint64(a.UserID),
+			EventId: uint64(a.EventID),
+			Event:   s.eventModelToPB(&a.Event),
+		}
+	}
+
+	return &pb.GetTeamAssignmentsResponse{
+		Response: &common.Response{
+			Success: true,
+		},
+		Assignments:    protoAssignments,
+		TotalEvents:    int32(stats.TotalEvents),
+		AssignedEvents: int32(stats.AssignedEvents),
+	}, nil
+}
+
+// GetUserRelayEvents retrieves events assigned to the current user
+func (s *PredictionService) GetUserRelayEvents(ctx context.Context, req *pb.GetUserRelayEventsRequest) (*pb.GetUserRelayEventsResponse, error) {
+	if req.ContestId == 0 {
+		return &pb.GetUserRelayEventsResponse{
+			Response: &common.Response{
+				Success: false,
+				Message: "contest_id is required",
+			},
+		}, nil
+	}
+
+	// Get user ID from context
+	userID, ok := auth.GetUserIDFromContext(ctx)
+	if !ok {
+		return &pb.GetUserRelayEventsResponse{
+			Response: &common.Response{
+				Success: false,
+				Message: "unauthorized: user ID not found in context",
+			},
+		}, nil
+	}
+
+	var assignments []*models.RelayEventAssignment
+	var err error
+
+	if req.TeamId > 0 {
+		// Get assignments for specific team
+		assignments, err = s.relayRepo.GetUserAssignmentsForTeam(uint(req.ContestId), uint(req.TeamId), uint(userID))
+	} else {
+		// Get all assignments for user in this contest
+		assignments, err = s.relayRepo.GetUserAssignments(uint(req.ContestId), uint(userID))
+	}
+
+	if err != nil {
+		return &pb.GetUserRelayEventsResponse{
+			Response: &common.Response{
+				Success: false,
+				Message: err.Error(),
+			},
+		}, nil
+	}
+
+	// Extract events
+	events := make([]*pb.Event, len(assignments))
+	var teamID uint64
+	for i, a := range assignments {
+		events[i] = s.eventModelToPB(&a.Event)
+		if teamID == 0 {
+			teamID = uint64(a.TeamID)
+		}
+	}
+
+	return &pb.GetUserRelayEventsResponse{
+		Response: &common.Response{
+			Success: true,
+		},
+		Events: events,
+		TeamId: teamID,
 	}, nil
 }
