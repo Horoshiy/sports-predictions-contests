@@ -11,6 +11,8 @@ interface ContestListProps {
   onCreateContest: () => void
   onEditContest: (contest: Contest) => void
   onViewParticipants: (contest: Contest) => void
+  onSelectContest?: (contest: Contest) => void
+  selectedContestId?: number
 }
 
 const getStatusColor = (status: string) => {
@@ -32,6 +34,8 @@ export const ContestList: React.FC<ContestListProps> = ({
   onCreateContest,
   onEditContest,
   onViewParticipants,
+  onSelectContest,
+  selectedContestId,
 }) => {
   const [searchParams, setSearchParams] = useSearchParams()
   
@@ -141,6 +145,13 @@ export const ContestList: React.FC<ContestListProps> = ({
           total: data?.pagination?.total ?? 0,
           onChange: (page, pageSize) => setPagination({ pageIndex: page - 1, pageSize }),
         }}
+        onRow={(record) => ({
+          onClick: () => onSelectContest?.(record),
+          style: {
+            cursor: onSelectContest ? 'pointer' : 'default',
+            background: selectedContestId === record.id ? '#e6f4ff' : undefined,
+          },
+        })}
       />
     </Space>
   )

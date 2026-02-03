@@ -3,6 +3,7 @@ import { Typography, Card, Tabs, Space } from 'antd'
 import ContestList from '../components/contests/ContestList'
 import ContestForm from '../components/contests/ContestForm'
 import ParticipantList from '../components/contests/ParticipantList'
+import ContestEventsManager from '../components/contests/ContestEventsManager'
 import { LeaderboardTable } from '../components/leaderboard/LeaderboardTable'
 import TeamLeaderboard from '../components/teams/TeamLeaderboard'
 import {
@@ -39,6 +40,10 @@ const ContestsPage: React.FC = () => {
   const handleViewParticipants = (contest: Contest) => {
     setSelectedContest(contest)
     setIsParticipantsOpen(true)
+  }
+
+  const handleSelectContest = (contest: Contest) => {
+    setSelectedContest(contest)
   }
 
   const handleFormSubmit = async (data: ContestFormData) => {
@@ -106,6 +111,8 @@ const ContestsPage: React.FC = () => {
                   onCreateContest={handleCreateContest}
                   onEditContest={handleEditContest}
                   onViewParticipants={handleViewParticipants}
+                  onSelectContest={handleSelectContest}
+                  selectedContestId={selectedContest?.id}
                 />
               ),
             },
@@ -133,6 +140,17 @@ const ContestsPage: React.FC = () => {
               ) : (
                 <div style={{ padding: 48, textAlign: 'center' }}>
                   <Text type="secondary">Select a contest to view team leaderboard</Text>
+                </div>
+              ),
+            },
+            {
+              key: '4',
+              label: 'Events',
+              children: selectedContest ? (
+                <ContestEventsManager contest={selectedContest} />
+              ) : (
+                <div style={{ padding: 48, textAlign: 'center' }}>
+                  <Text type="secondary">Select a contest to manage its events</Text>
                 </div>
               ),
             },

@@ -1,6 +1,7 @@
-import React from 'react'
-import { Card, Form, InputNumber, Radio, Space, Typography, Divider, List, Switch } from 'antd'
+import React, { useEffect } from 'react'
+import { Card, Form, InputNumber, Radio, Space, Typography, Divider, List, Switch, Spin, Alert } from 'antd'
 import { TrophyOutlined, ThunderboltOutlined, DollarOutlined, TeamOutlined } from '@ant-design/icons'
+import { useRiskyEventTypes } from '../../hooks/use-risky-events'
 
 const { Text } = Typography
 
@@ -60,23 +61,31 @@ const defaultStandardRules: StandardScoringRules = {
   any_other: 4,
 }
 
-const defaultRiskyEvents: RiskyEvent[] = [
+// Fallback events if API fails
+const fallbackRiskyEvents: RiskyEvent[] = [
   { slug: 'penalty', name: 'Будет пенальти', name_en: 'Penalty awarded', points: 3, enabled: true },
   { slug: 'red_card', name: 'Будет удаление', name_en: 'Red card shown', points: 4, enabled: true },
   { slug: 'own_goal', name: 'Будет автогол', name_en: 'Own goal scored', points: 5, enabled: true },
   { slug: 'hat_trick', name: 'Будет хет-трик', name_en: 'Hat-trick scored', points: 6, enabled: true },
   { slug: 'clean_sheet_home', name: 'Хозяева на ноль', name_en: 'Home clean sheet', points: 2, enabled: true },
-  { slug: 'clean_sheet_away', name: 'Гости на ноль', name_en: 'Away clean sheet', points: 3, enabled: true },
-  { slug: 'both_teams_score', name: 'Обе забьют', name_en: 'Both teams score', points: 2, enabled: true },
-  { slug: 'over_3_goals', name: 'Больше 3 голов', name_en: 'Over 3.5 goals', points: 2, enabled: true },
-  { slug: 'first_half_draw', name: 'Ничья в 1-м тайме', name_en: 'First half draw', points: 2, enabled: true },
-  { slug: 'comeback', name: 'Камбэк', name_en: 'Comeback from 0:2+', points: 7, enabled: true },
 ]
 
 export const ScoringRulesEditor: React.FC<ScoringRulesEditorProps> = ({
   value,
   onChange,
 }) => {
+  // Load risky event types from API
+  const { data: apiEventTypes, isLoading: loadingEvents } = useRiskyEventTypes({ activeOnly: true })
+
+  // Convert API event types to RiskyEvent format
+  const availableRiskyEvents: RiskyEvent[] = apiEventTypes?.map(et => ({
+    slug: et.slug,
+    name: et.name,
+    name_en: et.nameEn,
+    points: et.defaultPoints,
+    enabled: true,
+  })) || fallbackRiskyEvents
+
   // Initialize with defaults
   const rules: ContestRules = value || {
     type: 'standard',
@@ -90,7 +99,7 @@ export const ScoringRulesEditor: React.FC<ScoringRulesEditorProps> = ({
     } else if (type === 'risky') {
       newRules.risky = rules.risky || {
         max_selections: 5,
-        events: defaultRiskyEvents.map(e => ({ ...e })),
+        events: availableRiskyEvents.map(e => ({ ...e })),
       }
     } else if (type === 'totalizator') {
       newRules.totalizator = rules.totalizator || {
@@ -253,36 +262,53 @@ export const ScoringRulesEditor: React.FC<ScoringRulesEditorProps> = ({
               Угадал событие → +очки, не угадал → −очки
             </Text>
 
-            <List
-              size="small"
-              dataSource={rules.risky.events}
-              renderItem={(event) => (
-                <List.Item
-                  actions={[
-                    <InputNumber
-                      key="points"
-                      min={1}
-                      max={20}
-                      value={event.points}
-                      onChange={(v) => handleRiskyEventChange(event.slug, 'points', v || 1)}
-                      size="small"
-                      style={{ width: 70 }}
-                    />,
-                    <Switch
-                      key="enabled"
-                      size="small"
-                      checked={event.enabled !== false}
-                      onChange={(v) => handleRiskyEventChange(event.slug, 'enabled', v)}
-                    />,
-                  ]}
-                >
-                  <List.Item.Meta
-                    title={event.name}
-                    description={event.name_en}
+            {loadingEvents ? (
+              <div style={{ textAlign: 'center', padding: 20 }}>
+                <Spin tip="Загрузка событий..." />
+              </div>
+            ) : (
+              <>
+                {apiEventTypes && apiEventTypes.length > 0 && (
+                  <Alert 
+                    message={`Доступно ${apiEventTypes.length} типов событий`}
+                    type="info"
+                    showIcon
+                    style={{ marginBottom: 12 }}
                   />
-                </List.Item>
-              )}
-            />
+                )}
+                <List
+                  size="small"
+                  dataSource={rules.risky.events}
+                  renderItem={(event) => (
+                    <List.Item
+                      actions={[
+                        <InputNumber
+                          key="points"
+                          min={0.5}
+                          max={20}
+                          step={0.5}
+                          value={event.points}
+                          onChange={(v) => handleRiskyEventChange(event.slug, 'points', v || 1)}
+                          size="small"
+                          style={{ width: 80 }}
+                        />,
+                        <Switch
+                          key="enabled"
+                          size="small"
+                          checked={event.enabled !== false}
+                          onChange={(v) => handleRiskyEventChange(event.slug, 'enabled', v)}
+                        />,
+                      ]}
+                    >
+                      <List.Item.Meta
+                        title={event.name}
+                        description={event.name_en}
+                      />
+                    </List.Item>
+                  )}
+                />
+              </>
+            )}
           </>
         )}
 

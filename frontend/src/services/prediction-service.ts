@@ -111,6 +111,10 @@ class PredictionService {
       params.append('status', request.status)
     }
 
+    if (request.contestId) {
+      params.append('contest_id', request.contestId.toString())
+    }
+
     const queryString = params.toString()
     const url = queryString ? `${this.eventsPath}?${queryString}` : this.eventsPath
 

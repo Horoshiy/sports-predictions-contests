@@ -49,6 +49,7 @@ export interface ListEventsRequest {
   sportType?: string
   status?: string
   pagination?: PaginationRequest
+  contestId?: number  // Filter events by contest (optional)
 }
 
 // Response types

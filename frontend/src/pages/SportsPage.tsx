@@ -8,6 +8,7 @@ import TeamList from '../components/sports/TeamList'
 import TeamForm from '../components/sports/TeamForm'
 import MatchList from '../components/sports/MatchList'
 import MatchForm from '../components/sports/MatchForm'
+import RiskyEventTypesManager from '../components/admin/RiskyEventTypesManager'
 import {
   useCreateSport, useUpdateSport,
   useCreateLeague, useUpdateLeague,
@@ -256,6 +257,11 @@ export const SportsPage: React.FC = () => {
                 onEditMatch={(match) => openForm('match', match)}
               />
             ),
+          },
+          {
+            key: 'risky-events',
+            label: 'Risky Events',
+            children: <RiskyEventTypesManager />,
           },
         ]}
       />
