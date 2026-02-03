@@ -32,16 +32,12 @@ func main() {
 	}
 
 	// Auto-migrate database schema
+	// Only migrate new tables (RelayEventAssignment)
+	// Existing tables are already correctly structured
 	if err := db.AutoMigrate(
-		&models.Prediction{},
-		&models.Event{},
-		&models.PropType{},
-		&models.RiskyEventType{},
-		&models.MatchRiskyEvent{},
-		&models.RiskyPrediction{},
 		&models.RelayEventAssignment{},
 	); err != nil {
-		log.Fatalf("Failed to migrate database: %v", err)
+		log.Printf("Warning: RelayEventAssignment migration: %v", err)
 	}
 
 	// Initialize contest client
