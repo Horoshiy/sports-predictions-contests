@@ -10,7 +10,7 @@ import (
 
 // Event represents a sports event that can be predicted
 type Event struct {
-	ID         uint      `gorm:"primaryKey" json:"id"`
+	gorm.Model
 	Title      string    `gorm:"not null" json:"title"`
 	SportType  string    `gorm:"not null;index" json:"sport_type"`
 	HomeTeam   string    `gorm:"not null" json:"home_team"`
@@ -18,7 +18,6 @@ type Event struct {
 	EventDate  time.Time `gorm:"not null;index" json:"event_date"`
 	Status     string    `gorm:"not null;default:'scheduled';index" json:"status"` // "scheduled", "live", "completed", "cancelled"
 	ResultData string    `gorm:"type:jsonb" json:"result_data"` // JSON string for event results
-	gorm.Model
 }
 
 // ValidateTitle checks if the title is valid

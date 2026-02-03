@@ -19,7 +19,7 @@ type RelayEventAssignment struct {
 	AssignedAt time.Time `gorm:"not null;default:CURRENT_TIMESTAMP" json:"assigned_at"`
 	gorm.Model
 
-	// Relationships (optional, for eager loading)
+	// Relationships (optional, for eager loading via Preload)
 	Event Event `gorm:"foreignKey:EventID" json:"event,omitempty"`
 }
 
