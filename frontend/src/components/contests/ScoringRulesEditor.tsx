@@ -1,6 +1,6 @@
 import React from 'react'
 import { Card, Form, InputNumber, Radio, Space, Typography, Divider, List, Switch } from 'antd'
-import { TrophyOutlined, ThunderboltOutlined, DollarOutlined } from '@ant-design/icons'
+import { TrophyOutlined, ThunderboltOutlined, DollarOutlined, TeamOutlined } from '@ant-design/icons'
 
 const { Text } = Typography
 
@@ -31,11 +31,19 @@ export interface TotalizatorRules {
   scoring: StandardScoringRules
 }
 
+export interface RelayRules {
+  team_size: number
+  event_count: number
+  scoring: StandardScoringRules
+  allow_reassign: boolean
+}
+
 export interface ContestRules {
-  type: 'standard' | 'risky' | 'totalizator'
+  type: 'standard' | 'risky' | 'totalizator' | 'relay'
   scoring?: StandardScoringRules
   risky?: RiskyScoringRules
   totalizator?: TotalizatorRules
+  relay?: RelayRules
 }
 
 interface ScoringRulesEditorProps {
@@ -75,7 +83,7 @@ export const ScoringRulesEditor: React.FC<ScoringRulesEditorProps> = ({
     scoring: { ...defaultStandardRules },
   }
 
-  const handleTypeChange = (type: 'standard' | 'risky' | 'totalizator') => {
+  const handleTypeChange = (type: 'standard' | 'risky' | 'totalizator' | 'relay') => {
     const newRules: ContestRules = { type }
     if (type === 'standard') {
       newRules.scoring = rules.scoring || { ...defaultStandardRules }
@@ -88,6 +96,13 @@ export const ScoringRulesEditor: React.FC<ScoringRulesEditorProps> = ({
       newRules.totalizator = rules.totalizator || {
         event_count: 15,
         scoring: { ...defaultStandardRules },
+      }
+    } else if (type === 'relay') {
+      newRules.relay = rules.relay || {
+        team_size: 5,
+        event_count: 15,
+        scoring: { ...defaultStandardRules },
+        allow_reassign: true,
       }
     }
     onChange?.(newRules)
@@ -123,6 +138,27 @@ export const ScoringRulesEditor: React.FC<ScoringRulesEditorProps> = ({
     onChange?.({ ...rules, totalizator: { ...rules.totalizator, scoring: newScoring } })
   }
 
+  const handleRelayTeamSizeChange = (val: number | null) => {
+    if (rules.type !== 'relay' || !rules.relay) return
+    onChange?.({ ...rules, relay: { ...rules.relay, team_size: val || 5 } })
+  }
+
+  const handleRelayEventCountChange = (val: number | null) => {
+    if (rules.type !== 'relay' || !rules.relay) return
+    onChange?.({ ...rules, relay: { ...rules.relay, event_count: val || 15 } })
+  }
+
+  const handleRelayAllowReassignChange = (val: boolean) => {
+    if (rules.type !== 'relay' || !rules.relay) return
+    onChange?.({ ...rules, relay: { ...rules.relay, allow_reassign: val } })
+  }
+
+  const handleRelayScoringChange = (field: keyof StandardScoringRules, val: number | null) => {
+    if (rules.type !== 'relay' || !rules.relay) return
+    const newScoring = { ...rules.relay.scoring, [field]: val || 0 }
+    onChange?.({ ...rules, relay: { ...rules.relay, scoring: newScoring } })
+  }
+
   return (
     <Card title="Правила подсчёта очков" size="small">
       <Form layout="vertical">
@@ -141,6 +177,9 @@ export const ScoringRulesEditor: React.FC<ScoringRulesEditorProps> = ({
             </Radio.Button>
             <Radio.Button value="totalizator">
               <DollarOutlined /> Тотализатор
+            </Radio.Button>
+            <Radio.Button value="relay">
+              <TeamOutlined /> Эстафета
             </Radio.Button>
           </Radio.Group>
         </Form.Item>
@@ -308,6 +347,98 @@ export const ScoringRulesEditor: React.FC<ScoringRulesEditorProps> = ({
                   max={100}
                   value={rules.totalizator.scoring.any_other}
                   onChange={(v) => handleTotalizatorScoringChange('any_other', v)}
+                  addonAfter="очков"
+                />
+              </Form.Item>
+            </Space>
+          </>
+        )}
+
+        {rules.type === 'relay' && rules.relay && (
+          <>
+            <Divider orientation="left">Настройки эстафеты</Divider>
+            <Text type="secondary" style={{ display: 'block', marginBottom: 12 }}>
+              Командный конкурс. Капитан распределяет матчи между участниками команды.
+            </Text>
+            
+            <Space direction="vertical" style={{ width: '100%' }}>
+              <Form.Item label="Участников в команде">
+                <InputNumber
+                  min={2}
+                  max={10}
+                  value={rules.relay.team_size}
+                  onChange={handleRelayTeamSizeChange}
+                  addonAfter="человек"
+                />
+              </Form.Item>
+              
+              <Form.Item label="Количество матчей">
+                <InputNumber
+                  min={5}
+                  max={50}
+                  value={rules.relay.event_count}
+                  onChange={handleRelayEventCountChange}
+                  addonAfter="матчей"
+                />
+              </Form.Item>
+
+              <Form.Item label="Переназначение матчей">
+                <Switch
+                  checked={rules.relay.allow_reassign}
+                  onChange={handleRelayAllowReassignChange}
+                  checkedChildren="Разрешено"
+                  unCheckedChildren="Запрещено"
+                />
+                <Text type="secondary" style={{ marginLeft: 8 }}>
+                  Капитан может менять распределение до начала
+                </Text>
+              </Form.Item>
+            </Space>
+
+            <Divider orientation="left">Очки за прогноз</Divider>
+            <Space direction="vertical" style={{ width: '100%' }}>
+              <Form.Item label="Точный счёт" style={{ marginBottom: 8 }}>
+                <InputNumber
+                  min={0}
+                  max={100}
+                  value={rules.relay.scoring.exact_score}
+                  onChange={(v) => handleRelayScoringChange('exact_score', v)}
+                  addonAfter="очков"
+                />
+              </Form.Item>
+              <Form.Item label="Разница мячей" style={{ marginBottom: 8 }}>
+                <InputNumber
+                  min={0}
+                  max={100}
+                  value={rules.relay.scoring.goal_difference}
+                  onChange={(v) => handleRelayScoringChange('goal_difference', v)}
+                  addonAfter="очков"
+                />
+              </Form.Item>
+              <Form.Item label="Верный исход" style={{ marginBottom: 8 }}>
+                <InputNumber
+                  min={0}
+                  max={100}
+                  value={rules.relay.scoring.correct_outcome}
+                  onChange={(v) => handleRelayScoringChange('correct_outcome', v)}
+                  addonAfter="очков"
+                />
+              </Form.Item>
+              <Form.Item label="Исход + голы команды (бонус)" style={{ marginBottom: 8 }}>
+                <InputNumber
+                  min={0}
+                  max={100}
+                  value={rules.relay.scoring.outcome_plus_team_goals}
+                  onChange={(v) => handleRelayScoringChange('outcome_plus_team_goals', v)}
+                  addonAfter="очков"
+                />
+              </Form.Item>
+              <Form.Item label='Прогноз "Другой счёт"' style={{ marginBottom: 8 }}>
+                <InputNumber
+                  min={0}
+                  max={100}
+                  value={rules.relay.scoring.any_other}
+                  onChange={(v) => handleRelayScoringChange('any_other', v)}
                   addonAfter="очков"
                 />
               </Form.Item>
