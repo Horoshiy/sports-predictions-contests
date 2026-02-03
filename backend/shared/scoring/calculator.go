@@ -35,6 +35,12 @@ func (c *Calculator) CalculateStandard(prediction, result ScoreData, isAnyOther 
 		"is_any_other":    isAnyOther,
 	}
 
+	// Nil safety check
+	if c.rules == nil {
+		details["error"] = "nil rules"
+		return CalculationResult{Points: 0, Details: details}
+	}
+
 	scoring := c.rules.Standard
 	if scoring == nil {
 		defaultRules := DefaultStandardRules()
@@ -107,7 +113,8 @@ func (c *Calculator) CalculateRisky(selections []string, outcomes map[string]boo
 		"outcomes":   outcomes,
 	}
 
-	if c.rules.Risky == nil {
+	// Nil safety checks
+	if c.rules == nil || c.rules.Risky == nil {
 		details["error"] = "no risky rules configured"
 		return CalculationResult{Points: 0, Details: details}
 	}

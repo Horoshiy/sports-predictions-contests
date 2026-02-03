@@ -8,6 +8,11 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
+// NOTE: Types below are duplicated from backend/shared/scoring/rules.go
+// This is intentional because the bot is a separate Go module and importing
+// the shared package would require complex module dependencies.
+// Keep these types in sync with the backend definitions.
+
 // RiskyEvent represents a risky event for prediction
 type RiskyEvent struct {
 	Slug   string  `json:"slug"`

@@ -571,9 +571,9 @@ func (h *Handlers) handleRiskyToggle(chatID int64, msgID int, matchID uint32, ev
 		return
 	}
 
-	// Get contest rules
+	// Get contest rules from contest-service
 	contestID := session.CurrentContest
-	rulesJSON := "" // TODO: get from contest-service
+	rulesJSON := h.getContestRules(contestID)
 	
 	events := getRiskyEvents(rulesJSON)
 	maxSel := getMaxSelections(rulesJSON)
@@ -653,12 +653,33 @@ func (h *Handlers) handleRiskySubmit(chatID int64, msgID int, matchID uint32) {
 	}
 	
 	// Success message
-	rulesJSON := ""
+	rulesJSON := h.getContestRules(contestID)
 	events := getRiskyEvents(rulesJSON)
 	selectionNames := formatRiskyPrediction(selections, events)
 	
 	text := fmt.Sprintf("✅ <b>Рисковый прогноз принят!</b>\n\nВыбранные события:\n%s\n\nУдачи! 🍀", selectionNames)
 	h.editMessage(chatID, msgID, text, BackToMainKeyboard())
+}
+
+// getContestRules fetches contest rules from contest-service
+func (h *Handlers) getContestRules(contestID uint32) string {
+	if contestID == 0 {
+		return ""
+	}
+	
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	
+	resp, err := h.clients.Contest.GetContest(ctx, &contestpb.GetContestRequest{
+		Id: contestID,
+	})
+	
+	if err != nil || resp == nil || resp.Contest == nil {
+		log.Printf("[WARN] Failed to get contest rules for ID %d: %v", contestID, err)
+		return ""
+	}
+	
+	return resp.Contest.Rules
 }
 
 // Shutdown gracefully stops the handlers and cleanup goroutines
