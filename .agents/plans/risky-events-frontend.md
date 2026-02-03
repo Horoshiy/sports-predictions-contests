@@ -63,30 +63,30 @@ Endpoints (prediction-service):
 
 ## IMPLEMENTATION PLAN
 
-### Phase 1: Types & Service (Foundation)
+### Phase 1: Types & Service (Foundation) ✅
 
-**Task 1:** Create TypeScript types for risky events
-**Task 2:** Create risky-events-service.ts
+**Task 1:** ✅ Create TypeScript types for risky events
+**Task 2:** ✅ Create risky-events-service.ts
 
-### Phase 2: React Query Hooks
+### Phase 2: React Query Hooks ✅
 
-**Task 3:** Create use-risky-events.ts hooks
+**Task 3:** ✅ Create use-risky-events.ts hooks
 
-### Phase 3: Admin Component (RiskyEventTypesManager)
+### Phase 3: Admin Component (RiskyEventTypesManager) ✅
 
-**Task 4:** Create RiskyEventTypesManager.tsx
-**Task 5:** Create RiskyEventTypeForm.tsx
-**Task 6:** Add "Risky Events" tab to SportsPage.tsx
+**Task 4:** ✅ Create RiskyEventTypesManager.tsx
+**Task 5:** ✅ Create RiskyEventTypeForm.tsx
+**Task 6:** ✅ Add "Risky Events" tab to SportsPage.tsx
 
-### Phase 4: Contest Integration
+### Phase 4: Contest Integration ✅
 
-**Task 7:** Update ScoringRulesEditor.tsx to load events from API
-**Task 8:** Create ContestRiskyEventsSelector.tsx component
+**Task 7:** ✅ Update ScoringRulesEditor.tsx to load events from API
+**Task 8:** ✅ Create ContestRiskyEventsSelector.tsx component
 
-### Phase 5: Match Override Component
+### Phase 5: Match Override Component ✅
 
-**Task 9:** Create MatchRiskyEventsEditor.tsx
-**Task 10:** Integrate into MatchForm.tsx
+**Task 9:** ✅ Create MatchRiskyEventsEditor.tsx
+**Task 10:** ✅ Integrate via ContestEventsManager (+ Events tab in ContestsPage)
 
 ---
 
@@ -567,11 +567,13 @@ interface MatchRiskyEventsEditorProps {
 
 ## ACCEPTANCE CRITERIA
 
-- [ ] Админ может создавать/редактировать/удалять типы рисковых событий
-- [ ] При создании risky конкурса события загружаются из API
-- [ ] Можно выбрать до 10 событий и настроить очки каждого
-- [ ] Для матча можно переопределить очки выбранных событий
-- [ ] После матча можно отметить какие события произошли
+- [x] Админ может создавать/редактировать/удалять типы рисковых событий
+- [x] При создании risky конкурса события загружаются из API
+- [x] Можно выбрать до 10 событий и настроить очки каждого
+- [x] Для матча можно переопределить очки выбранных событий
+- [x] После матча можно отметить какие события произошли
+
+**Note:** Requires gateway routing fix for `/v1/risky-event-types` endpoints
 
 ---
 
