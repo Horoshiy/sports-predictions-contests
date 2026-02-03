@@ -1,141 +1,259 @@
-import { Locator, expect } from '@playwright/test'
-import { TIMEOUTS } from '../helpers/test-config'
+import { Page, Locator, expect } from '@playwright/test'
 import { BasePage } from './BasePage'
+import { TIMEOUTS } from '../helpers/test-config'
 
 /**
  * Analytics Page Object
+ * Handles user analytics dashboard with charts and statistics
  */
 export class AnalyticsPage extends BasePage {
   readonly url = '/analytics'
-  readonly pageName = 'Analytics Page'
+  readonly pageName = 'Analytics Dashboard'
 
-  // ==================== Locators ====================
+  // Time range selector
+  private readonly timeRangeSelector = '.ant-segmented'
 
-  get accuracyChart(): Locator {
-    return this.page.locator('.recharts-wrapper, .accuracy-chart').first()
+  // Statistic cards selectors
+  private readonly statisticCards = '.ant-statistic'
+  private readonly accuracyCard = '.ant-card:has(.ant-statistic-title:has-text("Accuracy"))'
+  private readonly totalPointsCard = '.ant-card:has(.ant-statistic-title:has-text("Total Points"))'
+  private readonly totalPredictionsCard = '.ant-card:has(.ant-statistic-title:has-text("Total Predictions"))'
+  private readonly correctPredictionsCard = '.ant-card:has(.ant-statistic-title:has-text("Correct"))'
+
+  // Chart containers
+  private readonly accuracyChart = '.ant-card:has-text("Accuracy")'
+  private readonly sportBreakdownChart = '.ant-card:has-text("Sport")'
+  private readonly platformComparisonSection = '.ant-card:has-text("Platform")'
+
+  // Export button
+  private readonly exportButton = 'button:has-text("Export")'
+
+  constructor(page: Page) {
+    super(page)
   }
 
-  get sportBreakdown(): Locator {
-    return this.page.locator('.sport-breakdown, .recharts-pie')
-  }
-
-  get platformComparison(): Locator {
-    return this.page.locator('.platform-comparison')
-  }
-
-  get exportButton(): Locator {
-    return this.page.locator('button:has-text("Export")')
-  }
-
-  get dateFilter(): Locator {
-    return this.page.locator('.ant-picker-range')
-  }
-
-  get statsCards(): Locator {
-    return this.page.locator('.ant-statistic')
-  }
-
-  get tabs(): Locator {
-    return this.page.locator('.ant-tabs-tab')
-  }
-
-  get charts(): Locator {
-    return this.page.locator('.recharts-wrapper')
-  }
-
-  get filterDropdown(): Locator {
-    return this.page.locator('.ant-select')
-  }
-
-  // ==================== Actions ====================
+  // ==================== Time Range Selection ====================
 
   /**
-   * Filter by date range
+   * Select time range
    */
-  async filterByDateRange(startDate: string, endDate: string): Promise<void> {
-    await this.dateFilter.click()
-    await this.page.fill('.ant-picker-input input', startDate)
-    await this.page.keyboard.press('Tab')
-    await this.page.fill('.ant-picker-input:nth-child(2) input', endDate)
-    await this.page.keyboard.press('Enter')
+  async selectTimeRange(range: '7d' | '30d' | '90d' | 'all'): Promise<void> {
+    const labels: Record<string, string> = {
+      '7d': '7 Days',
+      '30d': '30 Days',
+      '90d': '90 Days',
+      'all': 'All Time',
+    }
+    await this.page.click(`${this.timeRangeSelector} .ant-segmented-item:has-text("${labels[range]}")`)
     await this.waitForLoadingComplete()
   }
 
   /**
-   * Export data
+   * Get current time range
    */
-  async exportData(format: string = 'CSV'): Promise<void> {
-    await this.exportButton.click()
-    if (format !== 'CSV') {
-      await this.page.click(`.ant-dropdown-menu-item:has-text("${format}")`)
+  async getCurrentTimeRange(): Promise<string> {
+    const selected = this.page.locator(`${this.timeRangeSelector} .ant-segmented-item-selected`)
+    return await selected.textContent() || ''
+  }
+
+  // ==================== Statistics Retrieval ====================
+
+  /**
+   * Get accuracy percentage
+   */
+  async getAccuracy(): Promise<string | null> {
+    const value = this.page.locator(`${this.accuracyCard} .ant-statistic-content-value`)
+    return await value.textContent()
+  }
+
+  /**
+   * Get total points
+   */
+  async getTotalPoints(): Promise<string | null> {
+    const value = this.page.locator(`${this.totalPointsCard} .ant-statistic-content-value`)
+    return await value.textContent()
+  }
+
+  /**
+   * Get total predictions count
+   */
+  async getTotalPredictions(): Promise<string | null> {
+    const value = this.page.locator(`${this.totalPredictionsCard} .ant-statistic-content-value`)
+    return await value.textContent()
+  }
+
+  /**
+   * Get correct predictions count
+   */
+  async getCorrectPredictions(): Promise<string | null> {
+    const value = this.page.locator(`${this.correctPredictionsCard} .ant-statistic-content-value`)
+    return await value.textContent()
+  }
+
+  /**
+   * Get all statistics as object
+   */
+  async getAllStatistics(): Promise<{
+    accuracy: string | null
+    totalPoints: string | null
+    totalPredictions: string | null
+    correctPredictions: string | null
+  }> {
+    return {
+      accuracy: await this.getAccuracy(),
+      totalPoints: await this.getTotalPoints(),
+      totalPredictions: await this.getTotalPredictions(),
+      correctPredictions: await this.getCorrectPredictions(),
     }
   }
 
+  // ==================== Charts ====================
+
   /**
-   * Switch to a tab
+   * Check if accuracy chart is visible
    */
-  async switchTab(tabName: string): Promise<void> {
-    await this.page.click(`.ant-tabs-tab:has-text("${tabName}")`)
-    await this.waitForLoadingComplete()
+  async isAccuracyChartVisible(): Promise<boolean> {
+    return await this.isVisible(this.accuracyChart)
   }
 
   /**
-   * Apply filter
+   * Check if sport breakdown chart is visible
    */
-  async applyFilter(filterName: string, value: string): Promise<void> {
-    await this.filterDropdown.click()
-    await this.page.click(`.ant-select-item:has-text("${value}")`)
-    await this.waitForLoadingComplete()
+  async isSportBreakdownVisible(): Promise<boolean> {
+    return await this.isVisible(this.sportBreakdownChart)
+  }
+
+  /**
+   * Check if platform comparison is visible
+   */
+  async isPlatformComparisonVisible(): Promise<boolean> {
+    return await this.isVisible(this.platformComparisonSection)
+  }
+
+  // ==================== Export ====================
+
+  /**
+   * Click export button
+   */
+  async clickExport(): Promise<void> {
+    await this.page.click(this.exportButton)
+  }
+
+  /**
+   * Export analytics data
+   * Returns the download promise for verification
+   */
+  async exportData(): Promise<void> {
+    const downloadPromise = this.page.waitForEvent('download')
+    await this.clickExport()
+    await downloadPromise
+  }
+
+  // ==================== Page State ====================
+
+  /**
+   * Check if page is loading
+   */
+  async isLoading(): Promise<boolean> {
+    return await this.isVisible('.ant-spin')
+  }
+
+  /**
+   * Check if error alert is shown
+   */
+  async hasError(): Promise<boolean> {
+    return await this.isVisible('.ant-alert-error')
+  }
+
+  /**
+   * Get error message
+   */
+  async getErrorMessage(): Promise<string | null> {
+    const alert = this.page.locator('.ant-alert-error .ant-alert-description')
+    if (await alert.isVisible()) {
+      return await alert.textContent()
+    }
+    return null
+  }
+
+  /**
+   * Check if no data alert is shown
+   */
+  async hasNoData(): Promise<boolean> {
+    return await this.isVisible('.ant-alert-info:has-text("No data")')
   }
 
   // ==================== Assertions ====================
 
   /**
-   * Expect charts to be loaded
+   * Assert page loaded successfully
    */
-  async expectChartsLoaded(): Promise<void> {
-    await expect(this.charts.first()).toBeVisible({ timeout: 10000 })
+  async expectPageLoaded(): Promise<void> {
+    await expect(
+      this.page.locator('h2:has-text("Analytics Dashboard")'),
+      'Expected Analytics Dashboard title'
+    ).toBeVisible()
   }
 
   /**
-   * Expect accuracy chart visible
+   * Assert statistics cards are visible
    */
-  async expectAccuracyChartVisible(): Promise<void> {
-    await expect(this.accuracyChart).toBeVisible()
+  async expectStatisticsVisible(): Promise<void> {
+    await expect(
+      this.page.locator(this.accuracyCard),
+      'Expected Accuracy card'
+    ).toBeVisible()
+    await expect(
+      this.page.locator(this.totalPointsCard),
+      'Expected Total Points card'
+    ).toBeVisible()
+    await expect(
+      this.page.locator(this.totalPredictionsCard),
+      'Expected Total Predictions card'
+    ).toBeVisible()
+    await expect(
+      this.page.locator(this.correctPredictionsCard),
+      'Expected Correct Predictions card'
+    ).toBeVisible()
   }
 
   /**
-   * Expect sport breakdown visible
+   * Assert time range is selected
    */
-  async expectSportBreakdownVisible(): Promise<void> {
-    await expect(this.sportBreakdown).toBeVisible()
+  async expectTimeRangeSelected(range: '7 Days' | '30 Days' | '90 Days' | 'All Time'): Promise<void> {
+    await expect(
+      this.page.locator(`${this.timeRangeSelector} .ant-segmented-item-selected:has-text("${range}")`),
+      `Expected "${range}" to be selected`
+    ).toBeVisible()
   }
 
   /**
-   * Expect stats cards visible
+   * Assert accuracy value is valid (contains %)
    */
-  async expectStatsVisible(): Promise<void> {
-    await expect(this.statsCards.first()).toBeVisible()
+  async expectValidAccuracy(): Promise<void> {
+    const accuracy = await this.getAccuracy()
+    expect(accuracy).not.toBeNull()
+    expect(accuracy).toContain('%')
   }
 
   /**
-   * Expect data exported notification
+   * Assert no error state
    */
-  async expectDataExported(): Promise<void> {
-    await this.expectNotification('success')
+  async expectNoError(): Promise<void> {
+    await expect(
+      this.page.locator('.ant-alert-error'),
+      'Expected no error alert'
+    ).toBeHidden()
   }
 
   /**
-   * Expect to be on analytics page
+   * Assert charts are rendered
    */
-  async expectOnAnalyticsPage(): Promise<void> {
-    await expect(this.page).toHaveURL('/analytics')
-  }
-
-  /**
-   * Expect chart count
-   */
-  async expectChartCount(count: number): Promise<void> {
-    await expect(this.charts).toHaveCount(count)
+  async expectChartsRendered(): Promise<void> {
+    // Wait for charts to load (they contain canvas or svg elements)
+    await expect(
+      this.page.locator(`${this.accuracyChart} canvas, ${this.accuracyChart} svg`),
+      'Expected accuracy chart to be rendered'
+    ).toBeVisible({ timeout: TIMEOUTS.MEDIUM })
   }
 }

@@ -1,180 +1,247 @@
 import { Page, Locator, expect } from '@playwright/test'
+import { TIMEOUTS } from '../../helpers/test-config'
 
 /**
- * Header Component Page Object
+ * Header Component Object
+ * Handles navigation menu and user dropdown
  */
 export class HeaderComponent {
-  private page: Page
+  private readonly page: Page
+
+  // Header selectors
+  private readonly header = 'header'
+  private readonly logo = 'header div:has-text("Sports Prediction Contests")'
+  private readonly navigationMenu = 'header .ant-menu'
+  private readonly userDropdown = 'header .ant-dropdown-trigger, header .ant-avatar'
+  private readonly welcomeText = 'header span:has-text("Welcome")'
+
+  // Menu items
+  private readonly menuItems = {
+    contests: '.ant-menu-item:has-text("Contests")',
+    teams: '.ant-menu-item:has-text("Teams")',
+    predictions: '.ant-menu-item:has-text("Predictions")',
+    sports: '.ant-menu-item:has-text("Sports")',
+    analytics: '.ant-menu-item:has-text("Analytics")',
+  }
+
+  // Dropdown menu items
+  private readonly dropdownMenu = '.ant-dropdown'
+  private readonly profileMenuItem = '.ant-dropdown-menu-item:has-text("Profile")'
+  private readonly logoutMenuItem = '.ant-dropdown-menu-item:has-text("Logout")'
 
   constructor(page: Page) {
     this.page = page
   }
 
-  // ==================== Locators ====================
+  // ==================== Navigation ====================
 
-  get logo(): Locator {
-    return this.page.locator('header .logo, header a:first-child')
+  /**
+   * Navigate to Contests page
+   */
+  async goToContests(): Promise<void> {
+    await this.page.click(this.menuItems.contests)
+    await this.page.waitForURL('**/contests')
   }
 
-  get contestsLink(): Locator {
-    return this.page.locator('a[href="/contests"]')
+  /**
+   * Navigate to Teams page
+   */
+  async goToTeams(): Promise<void> {
+    await this.page.click(this.menuItems.teams)
+    await this.page.waitForURL('**/teams')
   }
 
-  get predictionsLink(): Locator {
-    return this.page.locator('a[href="/predictions"]')
+  /**
+   * Navigate to Predictions page
+   */
+  async goToPredictions(): Promise<void> {
+    await this.page.click(this.menuItems.predictions)
+    await this.page.waitForURL('**/predictions')
   }
 
-  get teamsLink(): Locator {
-    return this.page.locator('a[href="/teams"]')
+  /**
+   * Navigate to Sports page
+   */
+  async goToSports(): Promise<void> {
+    await this.page.click(this.menuItems.sports)
+    await this.page.waitForURL('**/sports')
   }
 
-  get sportsLink(): Locator {
-    return this.page.locator('a[href="/sports"]')
+  /**
+   * Navigate to Analytics page
+   */
+  async goToAnalytics(): Promise<void> {
+    await this.page.click(this.menuItems.analytics)
+    await this.page.waitForURL('**/analytics')
   }
-
-  get analyticsLink(): Locator {
-    return this.page.locator('a[href="/analytics"]')
-  }
-
-  get profileLink(): Locator {
-    return this.page.locator('a[href="/profile"]')
-  }
-
-  get userMenu(): Locator {
-    return this.page.locator('.ant-dropdown-trigger, .ant-avatar')
-  }
-
-  get logoutButton(): Locator {
-    return this.page.locator('text=Logout')
-  }
-
-  get header(): Locator {
-    return this.page.locator('header')
-  }
-
-  get menuItems(): Locator {
-    return this.page.locator('.ant-menu-item')
-  }
-
-  // ==================== Actions ====================
 
   /**
    * Click logo to go home
    */
   async clickLogo(): Promise<void> {
-    await this.logo.click()
+    await this.page.click(this.logo)
   }
 
-  /**
-   * Navigate to a page
-   */
-  async navigateTo(pageName: 'contests' | 'predictions' | 'teams' | 'sports' | 'analytics'): Promise<void> {
-    const links = {
-      contests: this.contestsLink,
-      predictions: this.predictionsLink,
-      teams: this.teamsLink,
-      sports: this.sportsLink,
-      analytics: this.analyticsLink,
-    }
-    await links[pageName].click()
-  }
+  // ==================== User Menu ====================
 
   /**
-   * Navigate to contests
-   */
-  async goToContests(): Promise<void> {
-    await this.contestsLink.click()
-  }
-
-  /**
-   * Navigate to predictions
-   */
-  async goToPredictions(): Promise<void> {
-    await this.predictionsLink.click()
-  }
-
-  /**
-   * Navigate to teams
-   */
-  async goToTeams(): Promise<void> {
-    await this.teamsLink.click()
-  }
-
-  /**
-   * Navigate to sports
-   */
-  async goToSports(): Promise<void> {
-    await this.sportsLink.click()
-  }
-
-  /**
-   * Navigate to analytics
-   */
-  async goToAnalytics(): Promise<void> {
-    await this.analyticsLink.click()
-  }
-
-  /**
-   * Open user menu dropdown
+   * Open user dropdown menu
    */
   async openUserMenu(): Promise<void> {
-    await this.userMenu.click()
+    await this.page.click(this.userDropdown)
+    await this.page.waitForSelector(this.dropdownMenu, { state: 'visible' })
   }
 
   /**
-   * Go to profile (via user menu)
+   * Navigate to profile page via dropdown
    */
   async goToProfile(): Promise<void> {
     await this.openUserMenu()
-    await this.profileLink.click()
+    await this.page.click(this.profileMenuItem)
+    await this.page.waitForURL('**/profile')
   }
 
   /**
-   * Logout
+   * Logout via dropdown
    */
   async logout(): Promise<void> {
     await this.openUserMenu()
-    await this.logoutButton.click()
+    await this.page.click(this.logoutMenuItem)
+    await this.page.waitForURL('**/login')
+  }
+
+  // ==================== State Checks ====================
+
+  /**
+   * Check if user is logged in (header shows user menu)
+   */
+  async isLoggedIn(): Promise<boolean> {
+    try {
+      await this.page.waitForSelector(this.welcomeText, { timeout: TIMEOUTS.SHORT })
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  /**
+   * Get welcome text (includes username)
+   */
+  async getWelcomeText(): Promise<string | null> {
+    const element = this.page.locator(this.welcomeText)
+    if (await element.isVisible()) {
+      return await element.textContent()
+    }
+    return null
+  }
+
+  /**
+   * Get username from welcome text
+   */
+  async getUsername(): Promise<string | null> {
+    const welcomeText = await this.getWelcomeText()
+    if (welcomeText) {
+      // Extract name from "Welcome, <name>"
+      const match = welcomeText.match(/Welcome,\s*(.+)/)
+      return match ? match[1].trim() : null
+    }
+    return null
+  }
+
+  /**
+   * Check if navigation menu is visible
+   */
+  async isNavigationVisible(): Promise<boolean> {
+    return await this.page.locator(this.navigationMenu).isVisible()
+  }
+
+  /**
+   * Get active menu item
+   */
+  async getActiveMenuItem(): Promise<string | null> {
+    const activeItem = this.page.locator('.ant-menu-item-selected')
+    if (await activeItem.isVisible()) {
+      return await activeItem.textContent()
+    }
+    return null
+  }
+
+  /**
+   * Check if menu item is visible
+   */
+  async isMenuItemVisible(item: 'contests' | 'teams' | 'predictions' | 'sports' | 'analytics'): Promise<boolean> {
+    return await this.page.locator(this.menuItems[item]).isVisible()
   }
 
   // ==================== Assertions ====================
 
   /**
-   * Expect user to be logged in
-   */
-  async expectUserLoggedIn(userName?: string): Promise<void> {
-    await expect(this.userMenu).toBeVisible()
-    if (userName) {
-      await expect(this.page.locator(`text=Welcome, ${userName}`)).toBeVisible()
-    }
-  }
-
-  /**
-   * Expect active menu item
-   */
-  async expectActiveMenuItem(item: string): Promise<void> {
-    await expect(this.page.locator(`.ant-menu-item-selected:has-text("${item}")`)).toBeVisible()
-  }
-
-  /**
-   * Expect header visible
+   * Assert header is visible
    */
   async expectHeaderVisible(): Promise<void> {
-    await expect(this.header).toBeVisible()
+    await expect(
+      this.page.locator(this.header),
+      'Expected header to be visible'
+    ).toBeVisible()
   }
 
   /**
-   * Expect navigation links visible
+   * Assert user is logged in
    */
-  async expectNavigationVisible(): Promise<void> {
-    await expect(this.contestsLink).toBeVisible()
-    await expect(this.predictionsLink).toBeVisible()
+  async expectLoggedIn(): Promise<void> {
+    await expect(
+      this.page.locator(this.welcomeText),
+      'Expected user to be logged in'
+    ).toBeVisible()
   }
 
   /**
-   * Expect logout success (redirected to login)
+   * Assert user is logged out
    */
   async expectLoggedOut(): Promise<void> {
-    await expect(this.page).toHaveURL('/login')
+    await expect(
+      this.page.locator(this.welcomeText),
+      'Expected user to be logged out'
+    ).toBeHidden()
+  }
+
+  /**
+   * Assert menu item is active
+   */
+  async expectMenuItemActive(item: 'Contests' | 'Teams' | 'Predictions' | 'Sports' | 'Analytics'): Promise<void> {
+    await expect(
+      this.page.locator(`.ant-menu-item-selected:has-text("${item}")`),
+      `Expected "${item}" menu item to be active`
+    ).toBeVisible()
+  }
+
+  /**
+   * Assert username matches
+   */
+  async expectUsername(expectedName: string): Promise<void> {
+    const username = await this.getUsername()
+    expect(username).toBe(expectedName)
+  }
+
+  /**
+   * Assert navigation contains expected items
+   */
+  async expectNavigationItems(): Promise<void> {
+    await expect(
+      this.page.locator(this.menuItems.contests),
+      'Expected Contests menu item'
+    ).toBeVisible()
+    await expect(
+      this.page.locator(this.menuItems.predictions),
+      'Expected Predictions menu item'
+    ).toBeVisible()
+    await expect(
+      this.page.locator(this.menuItems.sports),
+      'Expected Sports menu item'
+    ).toBeVisible()
+    await expect(
+      this.page.locator(this.menuItems.analytics),
+      'Expected Analytics menu item'
+    ).toBeVisible()
   }
 }

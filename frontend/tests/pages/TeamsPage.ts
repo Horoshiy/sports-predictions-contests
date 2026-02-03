@@ -1,200 +1,288 @@
-import { Locator, expect } from '@playwright/test'
-import { TIMEOUTS } from '../helpers/test-config'
+import { Page, Locator, expect } from '@playwright/test'
 import { BasePage } from './BasePage'
+import { TIMEOUTS } from '../helpers/test-config'
 
 /**
  * Teams Page Object
+ * Handles team management: My Teams, All Teams, Join Team
  */
 export class TeamsPage extends BasePage {
   readonly url = '/teams'
-  readonly pageName = 'Teams Page'
+  readonly pageName = 'Teams'
 
-  // ==================== Locators ====================
-
-  get createTeamButton(): Locator {
-    return this.page.locator('button:has-text("Create Team")')
+  // Tab selectors
+  private readonly tabs = {
+    myTeams: '.ant-tabs-tab:has-text("My Teams")',
+    allTeams: '.ant-tabs-tab:has-text("All Teams")',
+    joinTeam: '.ant-tabs-tab:has-text("Join Team")',
   }
 
-  get teamCards(): Locator {
-    return this.page.locator('.ant-card')
+  // Common selectors
+  private readonly table = '.ant-table'
+  private readonly createTeamButton = 'button:has-text("Create Team")'
+  private readonly teamFormModal = '.ant-modal'
+  private readonly teamDetailsModal = '[data-testid="team-details-modal"]'
+  private readonly joinTeamForm = '[data-testid="join-team-form"]'
+
+  constructor(page: Page) {
+    super(page)
   }
 
-  get joinTeamForm(): Locator {
-    return this.page.locator('[data-testid="join-team-form"], form:has(input[placeholder*="code" i])')
-  }
-
-  get inviteCodeInput(): Locator {
-    return this.page.locator('input[placeholder*="invite" i], input[placeholder*="code" i]')
-  }
-
-  get teamDetailsModal(): Locator {
-    return this.page.locator('.ant-modal, [data-testid="team-details-modal"]')
-  }
-
-  get membersList(): Locator {
-    return this.page.locator('.ant-list, .members-list')
-  }
-
-  get teamNameInput(): Locator {
-    return this.page.locator('input[placeholder*="team name" i], input[placeholder*="name" i]').first()
-  }
-
-  get teamDescriptionInput(): Locator {
-    return this.page.locator('textarea')
-  }
-
-  get joinButton(): Locator {
-    return this.page.locator('button:has-text("Join")')
-  }
-
-  get leaveTeamButton(): Locator {
-    return this.page.locator('button:has-text("Leave")')
-  }
-
-  get inviteButton(): Locator {
-    return this.page.locator('button:has-text("Invite")')
-  }
-
-  get deleteTeamButton(): Locator {
-    return this.page.locator('button:has-text("Delete")')
-  }
-
-  get submitButton(): Locator {
-    return this.page.locator('.ant-modal-footer button.ant-btn-primary')
-  }
-
-  get inviteCodeDisplay(): Locator {
-    return this.page.locator('.invite-code, code, .ant-typography-copy')
-  }
-
-  // ==================== Actions ====================
+  // ==================== Navigation ====================
 
   /**
-   * Click create team button
+   * Switch to My Teams tab
    */
-  async clickCreateTeam(): Promise<void> {
-    await this.createTeamButton.click()
+  async goToMyTeamsTab(): Promise<void> {
+    await this.page.click(this.tabs.myTeams)
+    await this.waitForLoadingComplete()
+  }
+
+  /**
+   * Switch to All Teams tab
+   */
+  async goToAllTeamsTab(): Promise<void> {
+    await this.page.click(this.tabs.allTeams)
+    await this.waitForLoadingComplete()
+  }
+
+  /**
+   * Switch to Join Team tab
+   */
+  async goToJoinTeamTab(): Promise<void> {
+    await this.page.click(this.tabs.joinTeam)
+  }
+
+  /**
+   * Get active tab name
+   */
+  async getActiveTab(): Promise<string> {
+    const activeTab = this.page.locator('.ant-tabs-tab-active')
+    return await activeTab.textContent() || ''
+  }
+
+  // ==================== Team Creation ====================
+
+  /**
+   * Open create team form
+   */
+  async openCreateTeamForm(): Promise<void> {
+    await this.page.click(this.createTeamButton)
     await this.waitForModal()
   }
 
   /**
    * Create a new team
    */
-  async createTeam(name: string, description: string = ''): Promise<void> {
-    await this.clickCreateTeam()
-    await this.teamNameInput.fill(name)
+  async createTeam(name: string, description?: string, maxMembers?: number): Promise<void> {
+    await this.openCreateTeamForm()
+    await this.fillTeamForm(name, description, maxMembers)
+    await this.submitForm()
+  }
+
+  /**
+   * Fill team form fields
+   */
+  async fillTeamForm(name: string, description?: string, maxMembers?: number): Promise<void> {
+    await this.fillAntdInputByLabel('Name', name)
     if (description) {
-      await this.teamDescriptionInput.fill(description)
+      await this.fillAntdInputByLabel('Description', description)
     }
-    await this.submitButton.click()
+    if (maxMembers) {
+      await this.fillAntdInputByLabel('Max Members', maxMembers.toString())
+    }
+  }
+
+  /**
+   * Submit form in modal
+   */
+  async submitForm(): Promise<void> {
+    await this.page.click('.ant-modal-footer button.ant-btn-primary')
     await this.waitForModalClosed()
   }
 
   /**
-   * Join team by invite code
+   * Cancel form
    */
-  async joinTeamByCode(code: string): Promise<void> {
-    await this.inviteCodeInput.fill(code)
-    await this.joinButton.click()
+  async cancelForm(): Promise<void> {
+    await this.clickModalCancel()
+    await this.waitForModalClosed()
+  }
+
+  // ==================== Team Actions ====================
+
+  /**
+   * View team members
+   */
+  async viewTeamMembers(teamName: string): Promise<void> {
+    const row = this.page.locator(`${this.table} tbody tr:has-text("${teamName}")`)
+    await row.locator('button:has-text("Members"), button:has-text("View")').click()
+    await this.page.waitForSelector(this.teamDetailsModal, { state: 'visible' })
   }
 
   /**
-   * Get team card by index
+   * Edit team
    */
-  getTeamCard(index: number): Locator {
-    return this.teamCards.nth(index)
-  }
-
-  /**
-   * Open team details by index
-   */
-  async openTeamDetails(index: number): Promise<void> {
-    await this.getTeamCard(index).click()
+  async editTeam(teamName: string): Promise<void> {
+    const row = this.page.locator(`${this.table} tbody tr:has-text("${teamName}")`)
+    await row.locator('button:has-text("Edit")').click()
     await this.waitForModal()
   }
 
   /**
-   * Leave current team
+   * Close team details modal
+   */
+  async closeTeamDetails(): Promise<void> {
+    await this.page.click(`${this.teamDetailsModal} button:has-text("Close")`)
+    await this.page.waitForSelector(this.teamDetailsModal, { state: 'hidden' })
+  }
+
+  // ==================== Join Team ====================
+
+  /**
+   * Join team with invite code
+   */
+  async joinTeamWithCode(inviteCode: string): Promise<void> {
+    await this.goToJoinTeamTab()
+    await this.page.fill(`${this.joinTeamForm} input[placeholder*="invite"]`, inviteCode)
+    await this.page.click(`${this.joinTeamForm} button[type="submit"]`)
+  }
+
+  /**
+   * Get join team error message
+   */
+  async getJoinTeamError(): Promise<string | null> {
+    const errorSpan = this.page.locator(`${this.joinTeamForm} span[style*="color"]`)
+    if (await errorSpan.isVisible()) {
+      return await errorSpan.textContent()
+    }
+    return null
+  }
+
+  // ==================== Team Details Modal ====================
+
+  /**
+   * Go to Team Info tab in modal
+   */
+  async goToTeamInfoTab(): Promise<void> {
+    await this.page.click(`${this.teamDetailsModal} .ant-tabs-tab:has-text("Team Info")`)
+  }
+
+  /**
+   * Go to Members tab in modal
+   */
+  async goToMembersTab(): Promise<void> {
+    await this.page.click(`${this.teamDetailsModal} .ant-tabs-tab:has-text("Members")`)
+  }
+
+  /**
+   * Go to Invite Code tab in modal
+   */
+  async goToInviteCodeTab(): Promise<void> {
+    await this.page.click(`${this.teamDetailsModal} .ant-tabs-tab:has-text("Invite Code")`)
+  }
+
+  /**
+   * Get invite code from modal
+   */
+  async getInviteCode(): Promise<string | null> {
+    await this.goToInviteCodeTab()
+    const codeElement = this.page.locator(`${this.teamDetailsModal} [data-testid="invite-code"], ${this.teamDetailsModal} code, ${this.teamDetailsModal} .ant-typography-copy-success`)
+    if (await codeElement.isVisible()) {
+      return await codeElement.textContent()
+    }
+    return null
+  }
+
+  /**
+   * Leave team (non-captain)
    */
   async leaveTeam(): Promise<void> {
-    await this.leaveTeamButton.click()
-    // Confirm in modal
-    await this.clickModalOk()
+    await this.page.click(`${this.teamDetailsModal} button:has-text("Leave Team")`)
+    await this.page.click('.ant-popconfirm-buttons button.ant-btn-primary')
+    await this.waitForLoadingComplete()
   }
 
   /**
-   * Click invite button to show invite code
-   */
-  async clickInvite(): Promise<void> {
-    await this.inviteButton.click()
-  }
-
-  /**
-   * Remove a team member (captain action)
-   */
-  async removeMember(memberIndex: number): Promise<void> {
-    await this.membersList.locator('button:has-text("Remove")').nth(memberIndex).click()
-    await this.clickModalOk()
-  }
-
-  /**
-   * Delete team (captain action)
+   * Delete team (captain only)
    */
   async deleteTeam(): Promise<void> {
-    await this.deleteTeamButton.click()
-    await this.clickModalOk()
+    await this.page.click(`${this.teamDetailsModal} button:has-text("Delete Team")`)
+    await this.page.click('.ant-popconfirm-buttons button.ant-btn-primary')
+    await this.waitForLoadingComplete()
+  }
+
+  // ==================== Table Operations ====================
+
+  /**
+   * Get teams count in current tab
+   */
+  async getTeamsCount(): Promise<number> {
+    return await this.getTableRowCount()
+  }
+
+  /**
+   * Check if team exists in table
+   */
+  async teamExistsInTable(teamName: string): Promise<boolean> {
+    return await this.isVisible(`${this.table} tbody tr:has-text("${teamName}")`)
+  }
+
+  /**
+   * Get team member count from table
+   */
+  async getTeamMemberCount(teamName: string): Promise<string | null> {
+    const row = this.page.locator(`${this.table} tbody tr:has-text("${teamName}")`)
+    const membersCell = row.locator('td').nth(2) // Assuming members is 3rd column
+    return await membersCell.textContent()
   }
 
   // ==================== Assertions ====================
 
   /**
-   * Expect teams list visible
+   * Assert team is in table
    */
-  async expectTeamsListVisible(): Promise<void> {
-    await expect(this.teamCards.first()).toBeVisible({ timeout: 10000 })
+  async expectTeamInTable(teamName: string): Promise<void> {
+    await expect(
+      this.page.locator(`${this.table} tbody tr:has-text("${teamName}")`),
+      `Expected "${teamName}" to be in teams table`
+    ).toBeVisible()
   }
 
   /**
-   * Expect team created notification
+   * Assert team is NOT in table
    */
-  async expectTeamCreated(name: string): Promise<void> {
-    await this.expectNotification('success')
-    await expect(this.page.locator(`.ant-card:has-text("${name}")`)).toBeVisible()
+  async expectTeamNotInTable(teamName: string): Promise<void> {
+    await expect(
+      this.page.locator(`${this.table} tbody tr:has-text("${teamName}")`),
+      `Expected "${teamName}" to NOT be in teams table`
+    ).toBeHidden()
   }
 
   /**
-   * Expect member count
-   */
-  async expectMemberCount(count: number): Promise<void> {
-    const members = this.membersList.locator('.ant-list-item')
-    await expect(members).toHaveCount(count)
-  }
-
-  /**
-   * Expect team details modal visible
+   * Assert team details modal is visible
    */
   async expectTeamDetailsVisible(): Promise<void> {
-    await expect(this.teamDetailsModal).toBeVisible()
+    await expect(
+      this.page.locator(this.teamDetailsModal),
+      'Expected team details modal to be visible'
+    ).toBeVisible()
   }
 
   /**
-   * Expect to be on teams page
+   * Assert tab is active
    */
-  async expectOnTeamsPage(): Promise<void> {
-    await expect(this.page).toHaveURL('/teams')
+  async expectTabActive(tabName: 'My Teams' | 'All Teams' | 'Join Team'): Promise<void> {
+    await expect(
+      this.page.locator(`.ant-tabs-tab-active:has-text("${tabName}")`),
+      `Expected "${tabName}" tab to be active`
+    ).toBeVisible()
   }
 
   /**
-   * Expect invite code visible
+   * Assert success notification after team operation
    */
-  async expectInviteCodeVisible(): Promise<void> {
-    await expect(this.inviteCodeDisplay).toBeVisible()
-  }
-
-  /**
-   * Expect no teams message
-   */
-  async expectNoTeams(): Promise<void> {
-    await expect(this.page.locator('text=No teams')).toBeVisible()
+  async expectSuccessNotification(): Promise<void> {
+    await this.expectNotification('success')
   }
 }
