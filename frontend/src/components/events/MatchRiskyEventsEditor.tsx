@@ -27,7 +27,6 @@ import {
   useSetMatchEventOutcome,
 } from '../../hooks/use-risky-events'
 import type { MatchRiskyEvent } from '../../types/risky-events.types'
-import { RISKY_EVENT_CATEGORIES } from '../../types/risky-events.types'
 
 const { Text, Title } = Typography
 

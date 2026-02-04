@@ -67,6 +67,26 @@ var riskyEventsCache = &RiskyEventsCache{
 	cacheDuration: 5 * time.Minute,
 }
 
+func init() {
+	// Start cache cleanup goroutine
+	go riskyEventsCache.startCleanup()
+}
+
+// startCleanup periodically removes expired cache entries to prevent memory leak
+func (c *RiskyEventsCache) startCleanup() {
+	ticker := time.NewTicker(10 * time.Minute)
+	for range ticker.C {
+		c.mu.Lock()
+		now := time.Now()
+		for key, entry := range c.matchEvents {
+			if now.After(entry.expiry) {
+				delete(c.matchEvents, key)
+			}
+		}
+		c.mu.Unlock()
+	}
+}
+
 // fetchGlobalRiskyEvents fetches all risky event types from API
 func (h *Handlers) fetchGlobalRiskyEvents() ([]RiskyEvent, error) {
 	riskyEventsCache.mu.RLock()

@@ -77,6 +77,13 @@ class RiskyEventsService {
     const response = await grpcClient.get<GetMatchRiskyEventsResponse>(
       `/v1/events/${request.eventId}/risky-events?${params}`
     )
+    
+    // Validate response structure
+    if (!response || typeof response !== 'object') {
+      console.warn('[RiskyEventsService] Unexpected response format from getMatchEvents')
+      return { events: [], maxSelections: 5 }
+    }
+    
     return {
       events: response.events || [],
       maxSelections: response.maxSelections || 5,
